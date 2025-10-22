@@ -102,3 +102,32 @@ def search(request):
         'query': query,
     }
     return render(request, 'catalog/search_results.html', context)
+
+
+def about(request):
+    """About us page"""
+    return render(request, 'catalog/about.html')
+
+
+def contact(request):
+    """Contact us page"""
+    from django.http import JsonResponse
+
+    if request.method == 'POST':
+        # Handle contact form submission
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        phone = request.POST.get('phone')
+        subject = request.POST.get('subject')
+        message = request.POST.get('message')
+
+        # Here you can add logic to save to database or send email
+        # For now, just return success
+        messages.success(request, f'Terima kasih {name}! Pesan Anda telah diterima.')
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True})
+
+        return redirect('catalog:contact')
+
+    return render(request, 'catalog/contact.html')
