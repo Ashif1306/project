@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Home - Kaloriz{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section bg-light py-5">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6">
+        <h1 class="display-4 font-weight-bold">Selamat Datang di Kaloriz</h1>
+        <p class="lead">Temukan berbagai produk berkualitas dengan harga terbaik</p>
+        <a href="{% url 'catalog:product_list' %}" class="btn btn-primary btn-lg">
+          <i class="fas fa-shopping-bag"></i> Belanja Sekarang
+        </a>
+      </div>
+      <div class="col-lg-6">
+        <img src="{% static 'images/hero-shopping.svg' %}" alt="Shopping" class="img-fluid"
+             onerror="this.src='https://via.placeholder.com/500x400?text=Kaloriz+Shop'">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Categories Section -->
+{% if categories %}
+<section class="categories-section py-5">
+  <div class="container">
+    <h2 class="text-center mb-4">Kategori Produk</h2>
+    <div class="row">
+      {% for category in categories %}
+      <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm hover-shadow">
+          <div class="card-body text-center">
+            <i class="fas fa-box fa-3x text-primary mb-3"></i>
+            <h5 class="card-title">{{ category.name }}</h5>
+            <p class="card-text text-muted">{{ category.description|truncatewords:10 }}</p>
+            <a href="{% url 'catalog:category_detail' category.slug %}" class="btn btn-outline-primary">
+              Lihat Produk
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- Featured Products Section -->
+<section class="products-section py-5 bg-light">
+  <div class="container">
+    <h2 class="text-center mb-4">Produk Unggulan</h2>
+
+    {% if featured_products %}
+    <div class="row">
+      {% for product in featured_products %}
+      <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+        <div class="card h-100 shadow-sm hover-shadow">
+          {% if product.image %}
+            <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
+          {% else %}
+            <img src="https://via.placeholder.com/300x200?text={{ product.name }}" class="card-img-top" alt="{{ product.name }}">
+          {% endif %}
+
+          <div class="card-body">
+            {% if product.is_on_sale %}
+              <span class="badge badge-danger mb-2">Diskon {{ product.get_discount_percentage }}%</span>
+            {% endif %}
+
+            <h5 class="card-title">{{ product.name|truncatewords:5 }}</h5>
+            <p class="card-text text-muted small">{{ product.description|truncatewords:10 }}</p>
+
+            <div class="mb-2">
+              {% if product.is_on_sale %}
+                <span class="text-muted"><s>Rp {{ product.price|floatformat:0 }}</s></span><br>
+                <span class="h5 text-danger font-weight-bold">Rp {{ product.get_display_price|floatformat:0 }}</span>
+              {% else %}
+                <span class="h5 text-primary font-weight-bold">Rp {{ product.price|floatformat:0 }}</span>
+              {% endif %}
+            </div>
+
+            <small class="text-muted">
+              <i class="fas fa-box"></i> Stok: {{ product.stock }}
+            </small>
+          </div>
+
+          <div class="card-footer bg-white">
+            <a href="{% url 'catalog:product_detail' product.slug %}" class="btn btn-primary btn-block">
+              <i class="fas fa-info-circle"></i> Detail
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="text-center mt-4">
+      <a href="{% url 'catalog:product_list' %}" class="btn btn-lg btn-outline-primary">
+        Lihat Semua Produk <i class="fas fa-arrow-right"></i>
+      </a>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center">
+      <i class="fas fa-info-circle"></i> Belum ada produk tersedia.
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<style>
+.hover-shadow:hover {
+  transform: translateY(-5px);
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+}
+</style>
+{% endblock %}

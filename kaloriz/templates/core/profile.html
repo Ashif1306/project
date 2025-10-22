@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Profil - Kaloriz{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="mb-4"><i class="fas fa-user-circle"></i> Profil Saya</h2>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Informasi Profil</h5>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" class="form-control" value="{{ user.username }}" disabled>
+            </div>
+
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" class="form-control" value="{{ user.email }}" disabled>
+            </div>
+
+            <hr>
+
+            <h5 class="mb-3">Alamat Pengiriman</h5>
+
+            <div class="form-group">
+              <label for="phone">Nomor Telepon</label>
+              <input type="tel" class="form-control" id="phone" name="phone" value="{{ profile.phone }}">
+            </div>
+
+            <div class="form-group">
+              <label for="address">Alamat</label>
+              <textarea class="form-control" id="address" name="address" rows="3">{{ profile.address }}</textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="city">Kota</label>
+                <input type="text" class="form-control" id="city" name="city" value="{{ profile.city }}">
+              </div>
+              <div class="form-group col-md-6">
+                <label for="postal_code">Kode Pos</label>
+                <input type="text" class="form-control" id="postal_code" name="postal_code" value="{{ profile.postal_code }}">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> Simpan Perubahan
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow mb-3">
+        <div class="card-body text-center">
+          <i class="fas fa-user-circle fa-5x text-primary mb-3"></i>
+          <h5>{{ user.username }}</h5>
+          <p class="text-muted">{{ user.email }}</p>
+        </div>
+      </div>
+
+      <div class="card shadow">
+        <div class="card-body">
+          <a href="{% url 'core:order_list' %}" class="btn btn-outline-primary btn-block">
+            <i class="fas fa-receipt"></i> Pesanan Saya
+          </a>
+          <a href="{% url 'core:cart' %}" class="btn btn-outline-success btn-block">
+            <i class="fas fa-shopping-cart"></i> Keranjang
+          </a>
+          <a href="{% url 'core:logout' %}" class="btn btn-outline-danger btn-block">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

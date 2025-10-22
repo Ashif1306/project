@@ -1,19 +1,104 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Q
+from .models import Product, Category
+
 
 def home(request):
-    return render(request, "catalog/index.html")
+    """Homepage with featured products"""
+    featured_products = Product.objects.filter(available=True)[:8]
+    categories = Category.objects.all()[:6]
 
-def menu(request):
-    return render(request, "catalog/menu.html")
+    context = {
+        'featured_products': featured_products,
+        'categories': categories,
+    }
+    return render(request, 'catalog/home.html', context)
 
-def about(request):
-    return render(request, "catalog/about.html")
 
-def book(request):
-    return render(request, "catalog/book.html")
-from django.shortcuts import render
+def product_list(request):
+    """List all available products with filtering and search"""
+    products = Product.objects.filter(available=True)
+    categories = Category.objects.all()
 
-def home(request):  return render(request, "catalog/index.html")
-def menu(request):  return render(request, "catalog/menu.html")
-def about(request): return render(request, "catalog/about.html")
-def book(request):  return render(request, "catalog/book.html")
+    # Filter by category
+    category_slug = request.GET.get('category')
+    if category_slug:
+        category = get_object_or_404(Category, slug=category_slug)
+        products = products.filter(category=category)
+
+    # Search functionality
+    search_query = request.GET.get('search')
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+
+    # Filter by price range
+    min_price = request.GET.get('min_price')
+    max_price = request.GET.get('max_price')
+    if min_price:
+        products = products.filter(price__gte=min_price)
+    if max_price:
+        products = products.filter(price__lte=max_price)
+
+    # Sort
+    sort_by = request.GET.get('sort', '-created_at')
+    if sort_by in ['price', '-price', 'name', '-name', '-created_at']:
+        products = products.order_by(sort_by)
+
+    context = {
+        'products': products,
+        'categories': categories,
+        'current_category': category_slug,
+        'search_query': search_query,
+    }
+    return render(request, 'catalog/product_list.html', context)
+
+
+def product_detail(request, slug):
+    """Product detail page"""
+    product = get_object_or_404(Product, slug=slug, available=True)
+    related_products = Product.objects.filter(
+        category=product.category,
+        available=True
+    ).exclude(id=product.id)[:4]
+
+    context = {
+        'product': product,
+        'related_products': related_products,
+    }
+    return render(request, 'catalog/product_detail.html', context)
+
+
+def category_detail(request, slug):
+    """Category page showing all products in category"""
+    category = get_object_or_404(Category, slug=slug)
+    products = Product.objects.filter(category=category, available=True)
+
+    context = {
+        'category': category,
+        'products': products,
+    }
+    return render(request, 'catalog/category_detail.html', context)
+
+
+def search(request):
+    """Search products"""
+    query = request.GET.get('q', '')
+    products = Product.objects.filter(available=True)
+
+    if query:
+        products = products.filter(
+            Q(name__icontains=query) |
+            Q(description__icontains=query) |
+            Q(category__name__icontains=query)
+        )
+
+    context = {
+        'products': products,
+        'query': query,
+    }
+    return render(request, 'catalog/search_results.html', context)

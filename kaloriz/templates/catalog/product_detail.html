@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }} - Kaloriz{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'catalog:home' %}">Home</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'catalog:product_list' %}">Produk</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'catalog:category_detail' product.category.slug %}">{{ product.category.name }}</a></li>
+      <li class="breadcrumb-item active">{{ product.name }}</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <!-- Product Image -->
+    <div class="col-md-5">
+      <div class="card shadow">
+        {% if product.image %}
+          <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
+        {% else %}
+          <img src="https://via.placeholder.com/500x500?text={{ product.name }}" class="card-img-top" alt="{{ product.name }}">
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Product Info -->
+    <div class="col-md-7">
+      <h1 class="mb-3">{{ product.name }}</h1>
+
+      {% if product.is_on_sale %}
+        <span class="badge badge-danger badge-lg mb-3">Diskon {{ product.get_discount_percentage }}%</span>
+      {% endif %}
+
+      <div class="mb-3">
+        <small class="text-muted">Kategori:</small>
+        <a href="{% url 'catalog:category_detail' product.category.slug %}" class="badge badge-info">
+          {{ product.category.name }}
+        </a>
+      </div>
+
+      <!-- Price -->
+      <div class="mb-4">
+        {% if product.is_on_sale %}
+          <h4 class="text-muted"><s>Rp {{ product.price|floatformat:0 }}</s></h4>
+          <h2 class="text-danger font-weight-bold">Rp {{ product.get_display_price|floatformat:0 }}</h2>
+          <p class="text-success">Hemat Rp {{ product.price|floatformat:0|add:"-"|add:product.get_display_price|floatformat:0 }}</p>
+        {% else %}
+          <h2 class="text-primary font-weight-bold">Rp {{ product.price|floatformat:0 }}</h2>
+        {% endif %}
+      </div>
+
+      <!-- Stock -->
+      <div class="mb-4">
+        <p>
+          <i class="fas fa-box text-primary"></i>
+          <strong>Stok:</strong>
+          {% if product.stock > 0 %}
+            <span class="text-success">{{ product.stock }} tersedia</span>
+          {% else %}
+            <span class="text-danger">Habis</span>
+          {% endif %}
+        </p>
+      </div>
+
+      <!-- Description -->
+      <div class="mb-4">
+        <h5>Deskripsi Produk</h5>
+        <p>{{ product.description|linebreaks }}</p>
+      </div>
+
+      <!-- Add to Cart -->
+      {% if user.is_authenticated %}
+        {% if product.stock > 0 %}
+          <form method="post" action="{% url 'core:add_to_cart' product.id %}">
+            {% csrf_token %}
+            <div class="form-row align-items-center mb-3">
+              <div class="col-auto">
+                <label for="quantity">Jumlah:</label>
+              </div>
+              <div class="col-auto">
+                <input type="number" name="quantity" id="quantity" class="form-control" value="1" min="1" max="{{ product.stock }}" style="width: 100px;">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="fas fa-cart-plus"></i> Tambah ke Keranjang
+            </button>
+          </form>
+        {% else %}
+          <button class="btn btn-secondary btn-lg" disabled>
+            <i class="fas fa-times"></i> Stok Habis
+          </button>
+        {% endif %}
+      {% else %}
+        <a href="{% url 'core:login' %}?next={{ request.path }}" class="btn btn-primary btn-lg">
+          <i class="fas fa-sign-in-alt"></i> Login untuk Membeli
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Related Products -->
+  {% if related_products %}
+  <div class="mt-5">
+    <h3 class="mb-4">Produk Terkait</h3>
+    <div class="row">
+      {% for related in related_products %}
+      <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+        <div class="card h-100 shadow-sm hover-shadow">
+          {% if related.image %}
+            <img src="{{ related.image.url }}" class="card-img-top" alt="{{ related.name }}" style="height: 200px; object-fit: cover;">
+          {% else %}
+            <img src="https://via.placeholder.com/300x200?text={{ related.name }}" class="card-img-top" alt="{{ related.name }}">
+          {% endif %}
+
+          <div class="card-body">
+            <h5 class="card-title">{{ related.name|truncatewords:5 }}</h5>
+            <p class="h6 text-primary">Rp {{ related.get_display_price|floatformat:0 }}</p>
+          </div>
+
+          <div class="card-footer bg-white">
+            <a href="{% url 'catalog:product_detail' related.slug %}" class="btn btn-sm btn-outline-primary btn-block">
+              Lihat Detail
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.hover-shadow:hover {
+  transform: translateY(-5px);
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+}
+</style>
+{% endblock %}
