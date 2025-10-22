@@ -3,21 +3,129 @@
 
 {% block title %}Home - Kaloriz{% endblock %}
 
+{% block extra_head %}
+<style>
+  .hero-banner {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%),
+                url('https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1600&h=600&fit=crop');
+    background-size: cover;
+    background-position: center;
+    color: white;
+    padding: 100px 0;
+    margin-bottom: 50px;
+  }
+
+  .hero-banner h1 {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  }
+
+  .hero-banner .lead {
+    font-size: 1.5rem;
+    margin-bottom: 30px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+  }
+
+  .hero-banner .btn {
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+
+  .stats-section {
+    background: #f8f9fa;
+    padding: 40px 0;
+  }
+
+  .stat-item {
+    text-align: center;
+    padding: 20px;
+  }
+
+  .stat-item i {
+    font-size: 3rem;
+    color: #667eea;
+    margin-bottom: 15px;
+  }
+
+  .stat-item h3 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
+  }
+
+  .stat-item p {
+    color: #666;
+    font-size: 1.1rem;
+  }
+
+  .category-icon {
+    font-size: 4rem;
+    color: #667eea;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .hero-banner h1 {
+      font-size: 2rem;
+    }
+    .hero-banner .lead {
+      font-size: 1.2rem;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- Hero Section -->
-<section class="hero-section bg-light py-5">
+<!-- Hero Banner Section -->
+<section class="hero-banner">
   <div class="container">
-    <div class="row align-items-center">
-      <div class="col-lg-6">
-        <h1 class="display-4 font-weight-bold">Selamat Datang di Kaloriz</h1>
-        <p class="lead">Temukan berbagai produk berkualitas dengan harga terbaik</p>
-        <a href="{% url 'catalog:product_list' %}" class="btn btn-primary btn-lg">
-          <i class="fas fa-shopping-bag"></i> Belanja Sekarang
-        </a>
+    <div class="row justify-content-center text-center">
+      <div class="col-lg-10">
+        <h1 class="animate__animated animate__fadeInDown">Selamat Datang di Kaloriz</h1>
+        <p class="lead animate__animated animate__fadeInUp">
+          Belanja Mudah, Harga Terbaik, Produk Berkualitas
+        </p>
+        <p class="mb-4">Temukan ribuan produk pilihan dengan harga spesial hanya untuk Anda</p>
+        <div class="mt-4">
+          <a href="{% url 'catalog:product_list' %}" class="btn btn-light btn-lg mr-3 mb-2">
+            <i class="fas fa-shopping-bag"></i> Belanja Sekarang
+          </a>
+          <a href="{% url 'catalog:about' %}" class="btn btn-outline-light btn-lg mb-2">
+            <i class="fas fa-info-circle"></i> Tentang Kami
+          </a>
+        </div>
       </div>
-      <div class="col-lg-6">
-        <img src="{% static 'images/hero-shopping.svg' %}" alt="Shopping" class="img-fluid"
-             onerror="this.src='https://via.placeholder.com/500x400?text=Kaloriz+Shop'">
+    </div>
+  </div>
+</section>
+
+<!-- Stats Section -->
+<section class="stats-section">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-4">
+        <div class="stat-item">
+          <i class="fas fa-box-open"></i>
+          <h3>{{ products_count|default:"12" }}+</h3>
+          <p>Produk Tersedia</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-item">
+          <i class="fas fa-users"></i>
+          <h3>1000+</h3>
+          <p>Pelanggan Puas</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-item">
+          <i class="fas fa-truck"></i>
+          <h3>24/7</h3>
+          <p>Pengiriman Cepat</p>
+        </div>
       </div>
     </div>
   </div>
@@ -28,16 +136,24 @@
 <section class="categories-section py-5">
   <div class="container">
     <h2 class="text-center mb-4">Kategori Produk</h2>
+    <p class="text-center text-muted mb-5">Jelajahi berbagai kategori produk kami</p>
     <div class="row">
       {% for category in categories %}
-      <div class="col-md-4 mb-3">
-        <div class="card h-100 shadow-sm hover-shadow">
+      <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm hover-shadow" style="border-top: 4px solid #667eea;">
           <div class="card-body text-center">
-            <i class="fas fa-box fa-3x text-primary mb-3"></i>
-            <h5 class="card-title">{{ category.name }}</h5>
+            <i class="category-icon fas
+              {% if 'elektronik' in category.name|lower %}fa-laptop
+              {% elif 'fashion' in category.name|lower %}fa-tshirt
+              {% elif 'makanan' in category.name|lower %}fa-utensils
+              {% elif 'buku' in category.name|lower %}fa-book
+              {% elif 'olahraga' in category.name|lower %}fa-dumbbell
+              {% else %}fa-box{% endif %}">
+            </i>
+            <h5 class="card-title font-weight-bold">{{ category.name }}</h5>
             <p class="card-text text-muted">{{ category.description|truncatewords:10 }}</p>
-            <a href="{% url 'catalog:category_detail' category.slug %}" class="btn btn-outline-primary">
-              Lihat Produk
+            <a href="{% url 'catalog:category_detail' category.slug %}" class="btn btn-primary">
+              <i class="fas fa-arrow-right"></i> Lihat Produk
             </a>
           </div>
         </div>
@@ -51,30 +167,36 @@
 <!-- Featured Products Section -->
 <section class="products-section py-5 bg-light">
   <div class="container">
-    <h2 class="text-center mb-4">Produk Unggulan</h2>
+    <h2 class="text-center mb-2">Produk Unggulan</h2>
+    <p class="text-center text-muted mb-5">Produk pilihan dengan penawaran terbaik</p>
 
     {% if featured_products %}
     <div class="row">
       {% for product in featured_products %}
       <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
         <div class="card h-100 shadow-sm hover-shadow">
-          {% if product.image %}
-            <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
-          {% else %}
-            <img src="https://via.placeholder.com/300x200?text={{ product.name }}" class="card-img-top" alt="{{ product.name }}">
-          {% endif %}
-
-          <div class="card-body">
-            {% if product.is_on_sale %}
-              <span class="badge badge-danger mb-2">Diskon {{ product.get_discount_percentage }}%</span>
+          <div class="position-relative">
+            {% if product.image %}
+              <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
+            {% else %}
+              <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop"
+                   class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
             {% endif %}
 
-            <h5 class="card-title">{{ product.name|truncatewords:5 }}</h5>
-            <p class="card-text text-muted small">{{ product.description|truncatewords:10 }}</p>
+            {% if product.is_on_sale %}
+              <span class="badge badge-danger position-absolute" style="top: 10px; right: 10px; font-size: 0.9rem;">
+                -{{ product.get_discount_percentage }}%
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="card-body">
+            <h5 class="card-title" style="min-height: 50px;">{{ product.name|truncatewords:5 }}</h5>
+            <p class="card-text text-muted small" style="min-height: 40px;">{{ product.description|truncatewords:8 }}</p>
 
             <div class="mb-2">
               {% if product.is_on_sale %}
-                <span class="text-muted"><s>Rp {{ product.price|floatformat:0 }}</s></span><br>
+                <small class="text-muted"><s>Rp {{ product.price|floatformat:0 }}</s></small><br>
                 <span class="h5 text-danger font-weight-bold">Rp {{ product.get_display_price|floatformat:0 }}</span>
               {% else %}
                 <span class="h5 text-primary font-weight-bold">Rp {{ product.price|floatformat:0 }}</span>
@@ -86,9 +208,9 @@
             </small>
           </div>
 
-          <div class="card-footer bg-white">
+          <div class="card-footer bg-white border-top-0">
             <a href="{% url 'catalog:product_detail' product.slug %}" class="btn btn-primary btn-block">
-              <i class="fas fa-info-circle"></i> Detail
+              <i class="fas fa-info-circle"></i> Lihat Detail
             </a>
           </div>
         </div>
@@ -109,11 +231,65 @@
   </div>
 </section>
 
+<!-- Why Choose Us Section -->
+<section class="why-us-section py-5">
+  <div class="container">
+    <h2 class="text-center mb-5">Mengapa Pilih Kaloriz?</h2>
+    <div class="row">
+      <div class="col-md-3 col-sm-6 mb-4">
+        <div class="text-center">
+          <div class="mb-3">
+            <i class="fas fa-shield-alt fa-3x text-primary"></i>
+          </div>
+          <h5>Produk Original</h5>
+          <p class="text-muted">100% produk original bergaransi</p>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6 mb-4">
+        <div class="text-center">
+          <div class="mb-3">
+            <i class="fas fa-shipping-fast fa-3x text-primary"></i>
+          </div>
+          <h5>Pengiriman Cepat</h5>
+          <p class="text-muted">Pengiriman ke seluruh Indonesia</p>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6 mb-4">
+        <div class="text-center">
+          <div class="mb-3">
+            <i class="fas fa-lock fa-3x text-primary"></i>
+          </div>
+          <h5>Pembayaran Aman</h5>
+          <p class="text-muted">Transaksi dijamin aman</p>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6 mb-4">
+        <div class="text-center">
+          <div class="mb-3">
+            <i class="fas fa-headset fa-3x text-primary"></i>
+          </div>
+          <h5>Customer Service</h5>
+          <p class="text-muted">Siap melayani 24/7</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <style>
+.hover-shadow {
+  transition: all 0.3s ease;
+}
+
 .hover-shadow:hover {
   transform: translateY(-5px);
-  transition: all 0.3s ease;
   box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+}
+
+.card {
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
 }
 </style>
 {% endblock %}
