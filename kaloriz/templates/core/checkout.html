@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout - Kaloriz{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="mb-4"><i class="fas fa-credit-card"></i> Checkout</h2>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Informasi Pengiriman</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'core:place_order' %}">
+            {% csrf_token %}
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="full_name">Nama Lengkap *</label>
+                <input type="text" class="form-control" id="full_name" name="full_name"
+                       value="{% if profile %}{{ user.get_full_name }}{% endif %}" required>
+              </div>
+              <div class="form-group col-md-6">
+                <label for="email">Email *</label>
+                <input type="email" class="form-control" id="email" name="email"
+                       value="{{ user.email }}" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="phone">Nomor Telepon *</label>
+              <input type="tel" class="form-control" id="phone" name="phone"
+                     value="{% if profile %}{{ profile.phone }}{% endif %}" required>
+            </div>
+
+            <div class="form-group">
+              <label for="address">Alamat Lengkap *</label>
+              <textarea class="form-control" id="address" name="address" rows="3" required>{% if profile %}{{ profile.address }}{% endif %}</textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="city">Kota *</label>
+                <input type="text" class="form-control" id="city" name="city"
+                       value="{% if profile %}{{ profile.city }}{% endif %}" required>
+              </div>
+              <div class="form-group col-md-6">
+                <label for="postal_code">Kode Pos *</label>
+                <input type="text" class="form-control" id="postal_code" name="postal_code"
+                       value="{% if profile %}{{ profile.postal_code }}{% endif %}" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="notes">Catatan (Opsional)</label>
+              <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-success btn-lg btn-block">
+              <i class="fas fa-check-circle"></i> Buat Pesanan
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0">Ringkasan Pesanan</h5>
+        </div>
+        <div class="card-body">
+          <h6 class="mb-3">Item ({{ cart.get_total_items }})</h6>
+          {% for item in cart.items.all %}
+          <div class="d-flex justify-content-between mb-2">
+            <small>{{ item.product.name }} x{{ item.quantity }}</small>
+            <small>Rp {{ item.get_subtotal|floatformat:0 }}</small>
+          </div>
+          {% endfor %}
+
+          <hr>
+
+          <div class="d-flex justify-content-between mb-2">
+            <span>Subtotal</span>
+            <span>Rp {{ cart.get_total|floatformat:0 }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Ongkir</span>
+            <span>Rp 10.000</span>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between">
+            <strong>Total</strong>
+            <strong class="text-success">Rp {{ cart.get_total|add:"10000"|floatformat:0 }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Keranjang Belanja - Kaloriz{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="mb-4"><i class="fas fa-shopping-cart"></i> Keranjang Belanja</h2>
+
+  {% if cart.items.all %}
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card shadow">
+        <div class="card-body">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Produk</th>
+                <th>Harga</th>
+                <th>Jumlah</th>
+                <th>Subtotal</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in cart.items.all %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    {% if item.product.image %}
+                      <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" style="width: 60px; height: 60px; object-fit: cover;" class="mr-3">
+                    {% endif %}
+                    <div>
+                      <a href="{% url 'catalog:product_detail' item.product.slug %}">
+                        <strong>{{ item.product.name }}</strong>
+                      </a>
+                      <br>
+                      <small class="text-muted">{{ item.product.category.name }}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>Rp {{ item.product.get_display_price|floatformat:0 }}</td>
+                <td>
+                  <form method="post" action="{% url 'core:update_cart_item' item.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <div class="input-group" style="width: 130px;">
+                      <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product.stock }}" class="form-control form-control-sm">
+                      <div class="input-group-append">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                          <i class="fas fa-check"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </td>
+                <td><strong>Rp {{ item.get_subtotal|floatformat:0 }}</strong></td>
+                <td>
+                  <form method="post" action="{% url 'core:remove_from_cart' item.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Hapus item ini?')">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div class="text-right">
+            <form method="post" action="{% url 'core:clear_cart' %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Kosongkan keranjang?')">
+                <i class="fas fa-trash-alt"></i> Kosongkan Keranjang
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Ringkasan Belanja</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            <span>Subtotal ({{ cart.get_total_items }} item)</span>
+            <span>Rp {{ cart.get_total|floatformat:0 }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Ongkir</span>
+            <span>Rp 10.000</span>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between mb-3">
+            <strong>Total</strong>
+            <strong class="text-primary">Rp {{ cart.get_total|add:"10000"|floatformat:0 }}</strong>
+          </div>
+
+          <a href="{% url 'core:checkout' %}" class="btn btn-primary btn-block btn-lg">
+            <i class="fas fa-credit-card"></i> Checkout
+          </a>
+
+          <a href="{% url 'catalog:product_list' %}" class="btn btn-outline-secondary btn-block mt-2">
+            <i class="fas fa-arrow-left"></i> Lanjut Belanja
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <i class="fas fa-shopping-cart fa-5x text-muted mb-4"></i>
+    <h4>Keranjang Anda Kosong</h4>
+    <p class="text-muted">Mulai belanja sekarang!</p>
+    <a href="{% url 'catalog:product_list' %}" class="btn btn-primary">
+      <i class="fas fa-shopping-bag"></i> Belanja Sekarang
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

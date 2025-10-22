@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ category.name }} - Kaloriz{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="mb-4">
+    <h2><i class="fas fa-box"></i> {{ category.name }}</h2>
+    {% if category.description %}
+      <p class="text-muted">{{ category.description }}</p>
+    {% endif %}
+  </div>
+
+  {% if products %}
+  <div class="row">
+    {% for product in products %}
+    <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+      <div class="card h-100 shadow-sm hover-shadow">
+        {% if product.image %}
+          <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
+        {% else %}
+          <img src="https://via.placeholder.com/300x200?text={{ product.name }}" class="card-img-top" alt="{{ product.name }}">
+        {% endif %}
+
+        <div class="card-body">
+          {% if product.is_on_sale %}
+            <span class="badge badge-danger mb-2">Diskon {{ product.get_discount_percentage }}%</span>
+          {% endif %}
+
+          <h5 class="card-title">{{ product.name|truncatewords:5 }}</h5>
+          <p class="card-text text-muted small">{{ product.description|truncatewords:10 }}</p>
+
+          <div class="mb-2">
+            {% if product.is_on_sale %}
+              <span class="text-muted"><s>Rp {{ product.price|floatformat:0 }}</s></span><br>
+              <span class="h5 text-danger font-weight-bold">Rp {{ product.get_display_price|floatformat:0 }}</span>
+            {% else %}
+              <span class="h5 text-primary font-weight-bold">Rp {{ product.price|floatformat:0 }}</span>
+            {% endif %}
+          </div>
+
+          <small class="text-muted">
+            <i class="fas fa-box"></i> Stok: {{ product.stock }}
+          </small>
+        </div>
+
+        <div class="card-footer bg-white">
+          <a href="{% url 'catalog:product_detail' product.slug %}" class="btn btn-primary btn-block">
+            <i class="fas fa-info-circle"></i> Detail
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-info text-center">
+    <i class="fas fa-info-circle"></i> Belum ada produk dalam kategori ini.
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.hover-shadow:hover {
+  transform: translateY(-5px);
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+}
+</style>
+{% endblock %}
