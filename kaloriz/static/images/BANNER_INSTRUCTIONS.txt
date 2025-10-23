@@ -1,0 +1,10 @@
+<!--
+  INSTRUKSI UPLOAD BANNER:
+
+  1. Siapkan file banner Anda (format: JPG atau PNG)
+  2. Ukuran yang disarankan: 1920x1080 pixels (ratio 16:9)
+  3. Nama file: banner.jpg atau banner.png
+  4. Upload ke folder: kaloriz/static/images/
+
+  Banner akan otomatis muncul di homepage dengan ratio 16:9
+-->

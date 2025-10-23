@@ -6,13 +6,31 @@
 {% block extra_head %}
 <style>
   .hero-banner {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%),
-                url('https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1600&h=600&fit=crop');
-    background-size: cover;
-    background-position: center;
-    color: white;
-    padding: 100px 0;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
     margin-bottom: 50px;
+  }
+
+  .hero-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .hero-banner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.7) 0%, rgba(118, 75, 162, 0.7) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
   }
 
   .hero-banner h1 {
@@ -79,23 +97,28 @@
 {% endblock %}
 
 {% block content %}
-<!-- Hero Banner Section -->
+<!-- Hero Banner Section 16:9 -->
 <section class="hero-banner">
-  <div class="container">
-    <div class="row justify-content-center text-center">
-      <div class="col-lg-10">
-        <h1 class="animate__animated animate__fadeInDown">Selamat Datang di Kaloriz</h1>
-        <p class="lead animate__animated animate__fadeInUp">
-          Belanja Mudah, Harga Terbaik, Produk Berkualitas
-        </p>
-        <p class="mb-4">Temukan ribuan produk pilihan dengan harga spesial hanya untuk Anda</p>
-        <div class="mt-4">
-          <a href="{% url 'catalog:product_list' %}" class="btn btn-light btn-lg mr-3 mb-2">
-            <i class="fas fa-shopping-bag"></i> Belanja Sekarang
-          </a>
-          <a href="{% url 'catalog:about' %}" class="btn btn-outline-light btn-lg mb-2">
-            <i class="fas fa-info-circle"></i> Tentang Kami
-          </a>
+  <img src="{% static 'images/banner.jpg' %}" alt="Banner Kaloriz"
+       onerror="this.src='https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1920&h=1080&fit=crop'">
+
+  <div class="hero-banner-overlay">
+    <div class="container">
+      <div class="row justify-content-center text-center">
+        <div class="col-lg-10">
+          <h1 class="animate__animated animate__fadeInDown">Selamat Datang di Kaloriz</h1>
+          <p class="lead animate__animated animate__fadeInUp">
+            Belanja Mudah, Harga Terbaik, Produk Berkualitas
+          </p>
+          <p class="mb-4">Temukan ribuan produk pilihan dengan harga spesial hanya untuk Anda</p>
+          <div class="mt-4">
+            <a href="{% url 'catalog:product_list' %}" class="btn btn-light btn-lg mr-3 mb-2">
+              <i class="fas fa-shopping-bag"></i> Belanja Sekarang
+            </a>
+            <a href="{% url 'catalog:about' %}" class="btn btn-outline-light btn-lg mb-2">
+              <i class="fas fa-info-circle"></i> Tentang Kami
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -174,7 +197,7 @@
     <div class="row">
       {% for product in featured_products %}
       <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-        <div class="card h-100 shadow-sm hover-shadow">
+        <div class="card h-100 shadow-sm hover-shadow product-card" onclick="window.location.href='{% url 'catalog:product_detail' product.slug %}'" style="cursor: pointer;">
           <div class="position-relative">
             {% if product.image %}
               <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 200px; object-fit: cover;">
@@ -191,8 +214,7 @@
           </div>
 
           <div class="card-body">
-            <h5 class="card-title" style="min-height: 50px;">{{ product.name|truncatewords:5 }}</h5>
-            <p class="card-text text-muted small" style="min-height: 40px;">{{ product.description|truncatewords:8 }}</p>
+            <h5 class="card-title mb-3">{{ product.name|truncatewords:5 }}</h5>
 
             <div class="mb-2">
               {% if product.is_on_sale %}
@@ -202,19 +224,10 @@
                 <span class="h5 text-primary font-weight-bold">Rp {{ product.price|floatformat:0 }}</span>
               {% endif %}
             </div>
-
-            <small class="text-muted">
-              <i class="fas fa-box"></i> Stok: {{ product.stock }}
-            </small>
           </div>
 
-          <div class="card-footer bg-white border-top-0">
+          <div class="card-footer bg-white border-top-0" onclick="event.stopPropagation();">
             <div class="row no-gutters">
-              <div class="col-12 mb-2">
-                <a href="{% url 'catalog:product_detail' product.slug %}" class="btn btn-sm btn-outline-secondary btn-block">
-                  <i class="fas fa-info-circle"></i> Detail
-                </a>
-              </div>
               {% if user.is_authenticated %}
                 <div class="col-6 pr-1">
                   <form method="post" action="{% url 'core:add_to_cart' product.id %}" class="m-0">
