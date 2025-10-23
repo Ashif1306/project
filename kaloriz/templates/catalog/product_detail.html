@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load price_filters %}
 
 {% block title %}{{ product.name }} - Kaloriz{% endblock %}
 
@@ -43,11 +44,10 @@
       <!-- Price -->
       <div class="mb-4">
         {% if product.is_on_sale %}
-          <h4 class="text-muted"><s>Rp {{ product.price|floatformat:0 }}</s></h4>
-          <h2 class="text-danger font-weight-bold">Rp {{ product.get_display_price|floatformat:0 }}</h2>
-          <p class="text-success">Hemat Rp {{ product.price|floatformat:0|add:"-"|add:product.get_display_price|floatformat:0 }}</p>
+          <h4 class="text-muted"><s>Rp {{ product.price|dot_separator }}</s></h4>
+          <h2 class="text-danger font-weight-bold">Rp {{ product.get_display_price|dot_separator }}</h2>
         {% else %}
-          <h2 class="text-primary font-weight-bold">Rp {{ product.price|floatformat:0 }}</h2>
+          <h2 class="text-primary font-weight-bold">Rp {{ product.price|dot_separator }}</h2>
         {% endif %}
       </div>
 
@@ -100,6 +100,57 @@
     </div>
   </div>
 
+  <!-- Testimonials Carousel -->
+  {% if testimonials %}
+  <div class="mt-5 mb-5">
+    <h3 class="text-center mb-4">Testimoni Pelanggan</h3>
+    <div class="testimonial-carousel-container">
+      <div class="testimonial-carousel" id="testimonialCarousel">
+        {% for testimonial in testimonials %}
+        <div class="testimonial-card" data-index="{{ forloop.counter0 }}">
+          <div class="testimonial-content">
+            <div class="rating mb-2">
+              {% for i in "12345" %}
+                {% if forloop.counter <= testimonial.rating %}
+                  <i class="fas fa-star text-warning"></i>
+                {% else %}
+                  <i class="far fa-star text-warning"></i>
+                {% endif %}
+              {% endfor %}
+            </div>
+            <p class="testimonial-text">"{{ testimonial.review }}"</p>
+            <div class="testimonial-author mt-3">
+              <div class="d-flex align-items-center">
+                <div class="author-photo mr-3">
+                  {% if testimonial.photo %}
+                    <img src="{{ testimonial.photo.url }}" alt="{{ testimonial.user.username }}">
+                  {% else %}
+                    <div class="photo-placeholder">{{ testimonial.user.username|slice:":1"|upper }}</div>
+                  {% endif %}
+                </div>
+                <div>
+                  <strong>{{ testimonial.user.get_full_name|default:testimonial.user.username }}</strong>
+                  <br>
+                  <small class="text-muted">{{ testimonial.created_at|date:"d M Y" }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Navigation Arrows -->
+      <button class="carousel-arrow carousel-arrow-left" onclick="moveCarousel(-1)">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <button class="carousel-arrow carousel-arrow-right" onclick="moveCarousel(1)">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Related Products -->
   {% if related_products %}
   <div class="mt-5">
@@ -138,5 +189,217 @@
   transition: all 0.3s ease;
   box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
 }
+
+/* Testimonial Carousel Styles */
+.testimonial-carousel-container {
+  position: relative;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px 60px;
+}
+
+.testimonial-carousel {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  min-height: 300px;
+}
+
+.testimonial-card {
+  background: #2d3748;
+  border-radius: 15px;
+  padding: 30px;
+  color: white;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  transition: all 0.5s ease;
+  opacity: 1;
+}
+
+.testimonial-card.slide-out-left {
+  animation: slideOutLeft 0.5s ease forwards;
+}
+
+.testimonial-card.slide-out-right {
+  animation: slideOutRight 0.5s ease forwards;
+}
+
+.testimonial-card.slide-in-left {
+  animation: slideInLeft 0.5s ease forwards;
+}
+
+.testimonial-card.slide-in-right {
+  animation: slideInRight 0.5s ease forwards;
+}
+
+@keyframes slideOutLeft {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-100%); opacity: 0; }
+}
+
+@keyframes slideOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.testimonial-text {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  font-style: italic;
+  margin: 20px 0;
+}
+
+.author-photo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #ffc107;
+}
+
+.author-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #ffc107;
+  color: #2d3748;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #ffc107;
+  color: #2d3748;
+  border: none;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.3s ease;
+  z-index: 10;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.carousel-arrow:hover {
+  background: #ffdd57;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.carousel-arrow-left {
+  left: 0;
+}
+
+.carousel-arrow-right {
+  right: 0;
+}
+
+.rating i {
+  font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+  .testimonial-carousel {
+    grid-template-columns: 1fr;
+  }
+
+  .testimonial-carousel-container {
+    padding: 20px 40px;
+  }
+}
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentIndex = 0;
+const testimonialCards = document.querySelectorAll('.testimonial-card');
+const totalTestimonials = testimonialCards.length;
+const itemsPerPage = 2;
+let isAnimating = false;
+
+function updateCarousel() {
+  testimonialCards.forEach((card, index) => {
+    if (index >= currentIndex && index < currentIndex + itemsPerPage) {
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+function moveCarousel(direction) {
+  if (isAnimating || totalTestimonials <= itemsPerPage) return;
+
+  isAnimating = true;
+
+  // Get visible cards
+  const visibleCards = Array.from(testimonialCards).slice(currentIndex, currentIndex + itemsPerPage);
+
+  // Animate out
+  visibleCards.forEach(card => {
+    card.classList.add(direction > 0 ? 'slide-out-left' : 'slide-out-right');
+  });
+
+  setTimeout(() => {
+    // Update index
+    currentIndex += direction * itemsPerPage;
+
+    // Loop around
+    if (currentIndex >= totalTestimonials) {
+      currentIndex = 0;
+    } else if (currentIndex < 0) {
+      currentIndex = Math.max(0, totalTestimonials - itemsPerPage);
+    }
+
+    // Remove animation classes
+    testimonialCards.forEach(card => {
+      card.classList.remove('slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right');
+    });
+
+    // Update display
+    updateCarousel();
+
+    // Get new visible cards
+    const newVisibleCards = Array.from(testimonialCards).slice(currentIndex, currentIndex + itemsPerPage);
+
+    // Animate in
+    newVisibleCards.forEach(card => {
+      card.classList.add(direction > 0 ? 'slide-in-right' : 'slide-in-left');
+    });
+
+    setTimeout(() => {
+      testimonialCards.forEach(card => {
+        card.classList.remove('slide-in-left', 'slide-in-right');
+      });
+      isAnimating = false;
+    }, 500);
+  }, 500);
+}
+
+// Initialize
+if (testimonialCards.length > 0) {
+  updateCarousel();
+}
+</script>
 {% endblock %}

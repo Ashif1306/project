@@ -26,4 +26,10 @@ urlpatterns = [
 
     # Profile URLs
     path('profile/', views.profile_view, name='profile'),
+    path('profile/settings/', views.profile_settings, name='profile_settings'),
+
+    # Watchlist URLs
+    path('watchlist/', views.watchlist_view, name='watchlist'),
+    path('watchlist/add/<int:product_id>/', views.add_to_watchlist, name='add_to_watchlist'),
+    path('watchlist/remove/<int:watchlist_id>/', views.remove_from_watchlist, name='remove_from_watchlist'),
 ]

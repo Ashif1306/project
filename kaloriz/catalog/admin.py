@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product
+from .models import Category, Product, Testimonial
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -29,5 +29,24 @@ class ProductAdmin(admin.ModelAdmin):
         }),
         ('Media', {
             'fields': ('image',)
+        }),
+    )
+
+
+@admin.register(Testimonial)
+class TestimonialAdmin(admin.ModelAdmin):
+    list_display = ['user', 'product', 'rating', 'is_approved', 'created_at']
+    list_filter = ['is_approved', 'rating', 'created_at']
+    search_fields = ['user__username', 'product__name', 'review']
+    readonly_fields = ['created_at', 'updated_at']
+    list_editable = ['is_approved']
+    date_hierarchy = 'created_at'
+
+    fieldsets = (
+        ('Informasi Testimoni', {
+            'fields': ('product', 'user', 'rating', 'review', 'photo', 'is_approved')
+        }),
+        ('Timestamp', {
+            'fields': ('created_at', 'updated_at')
         }),
     )
