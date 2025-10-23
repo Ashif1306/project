@@ -112,11 +112,19 @@ class OrderItem(models.Model):
 
 
 class UserProfile(models.Model):
+    GENDER_CHOICES = [
+        ('M', 'Laki-laki'),
+        ('F', 'Perempuan'),
+        ('O', 'Lainnya'),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', verbose_name="Pengguna")
     phone = models.CharField(max_length=20, blank=True, verbose_name="Nomor Telepon")
     address = models.TextField(blank=True, verbose_name="Alamat")
     city = models.CharField(max_length=100, blank=True, verbose_name="Kota")
     postal_code = models.CharField(max_length=10, blank=True, verbose_name="Kode Pos")
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True, verbose_name="Jenis Kelamin")
+    birth_date = models.DateField(null=True, blank=True, verbose_name="Tanggal Lahir")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -126,3 +134,18 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"Profil - {self.user.username}"
+
+
+class Watchlist(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='watchlists', verbose_name="Pengguna")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='watchlisted_by', verbose_name="Produk")
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Watchlist"
+        verbose_name_plural = "Watchlist"
+        unique_together = ['user', 'product']
+        ordering = ['-added_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.product.name}"

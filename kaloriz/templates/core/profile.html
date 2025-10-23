@@ -4,57 +4,73 @@
 
 {% block content %}
 <div class="container my-5">
-  <h2 class="mb-4"><i class="fas fa-user-circle"></i> Profil Saya</h2>
+  <h2 class="mb-4"><i class="fas fa-user-circle"></i> Profil Pengguna</h2>
 
   <div class="row">
     <div class="col-md-8">
       <div class="card shadow">
         <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">Informasi Profil</h5>
+          <h5 class="mb-0"><i class="fas fa-info-circle"></i> Informasi Pelanggan</h5>
         </div>
         <div class="card-body">
-          <form method="post">
-            {% csrf_token %}
-
-            <div class="form-group">
-              <label>Username</label>
-              <input type="text" class="form-control" value="{{ user.username }}" disabled>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="font-weight-bold">Nama Lengkap:</label>
+              <p>{{ user.get_full_name|default:"-" }}</p>
             </div>
-
-            <div class="form-group">
-              <label>Email</label>
-              <input type="email" class="form-control" value="{{ user.email }}" disabled>
+            <div class="col-md-6">
+              <label class="font-weight-bold">Username:</label>
+              <p>{{ user.username }}</p>
             </div>
+          </div>
 
-            <hr>
-
-            <h5 class="mb-3">Alamat Pengiriman</h5>
-
-            <div class="form-group">
-              <label for="phone">Nomor Telepon</label>
-              <input type="tel" class="form-control" id="phone" name="phone" value="{{ profile.phone }}">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="font-weight-bold">Alamat Email:</label>
+              <p>{{ user.email|default:"-" }}</p>
             </div>
-
-            <div class="form-group">
-              <label for="address">Alamat</label>
-              <textarea class="form-control" id="address" name="address" rows="3">{{ profile.address }}</textarea>
+            <div class="col-md-6">
+              <label class="font-weight-bold">Nomor Telepon:</label>
+              <p>{{ profile.phone|default:"-" }}</p>
             </div>
+          </div>
 
-            <div class="form-row">
-              <div class="form-group col-md-6">
-                <label for="city">Kota</label>
-                <input type="text" class="form-control" id="city" name="city" value="{{ profile.city }}">
-              </div>
-              <div class="form-group col-md-6">
-                <label for="postal_code">Kode Pos</label>
-                <input type="text" class="form-control" id="postal_code" name="postal_code" value="{{ profile.postal_code }}">
-              </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="font-weight-bold">Jenis Kelamin:</label>
+              <p>{{ profile.get_gender_display|default:"-" }}</p>
             </div>
+            <div class="col-md-6">
+              <label class="font-weight-bold">Tanggal Lahir:</label>
+              <p>{{ profile.birth_date|date:"d F Y"|default:"-" }}</p>
+            </div>
+          </div>
 
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-save"></i> Simpan Perubahan
-            </button>
-          </form>
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <label class="font-weight-bold">Alamat Utama:</label>
+              <p>{{ profile.address|default:"-" }}</p>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="font-weight-bold">Kota:</label>
+              <p>{{ profile.city|default:"-" }}</p>
+            </div>
+            <div class="col-md-6">
+              <label class="font-weight-bold">Kode Pos:</label>
+              <p>{{ profile.postal_code|default:"-" }}</p>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="text-right">
+            <a href="{% url 'core:profile_settings' %}" class="btn btn-primary">
+              <i class="fas fa-edit"></i> Edit Profil
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -62,22 +78,30 @@
     <div class="col-md-4">
       <div class="card shadow mb-3">
         <div class="card-body text-center">
-          <i class="fas fa-user-circle fa-5x text-primary mb-3"></i>
+          <div class="mb-3">
+            <i class="fas fa-user-circle" style="font-size: 100px; color: #007bff;"></i>
+          </div>
           <h5>{{ user.username }}</h5>
-          <p class="text-muted">{{ user.email }}</p>
+          <p class="text-muted">Member sejak {{ user.date_joined|date:"d M Y" }}</p>
         </div>
       </div>
 
       <div class="card shadow">
-        <div class="card-body">
-          <a href="{% url 'core:order_list' %}" class="btn btn-outline-primary btn-block">
+        <div class="card-header bg-secondary text-white">
+          <h6 class="mb-0">Menu Cepat</h6>
+        </div>
+        <div class="list-group list-group-flush">
+          <a href="{% url 'core:profile' %}" class="list-group-item list-group-item-action active">
+            <i class="fas fa-user-circle"></i> Profil
+          </a>
+          <a href="{% url 'core:watchlist' %}" class="list-group-item list-group-item-action">
+            <i class="fas fa-heart"></i> Watchlist
+          </a>
+          <a href="{% url 'core:order_list' %}" class="list-group-item list-group-item-action">
             <i class="fas fa-receipt"></i> Pesanan Saya
           </a>
-          <a href="{% url 'core:cart' %}" class="btn btn-outline-success btn-block">
-            <i class="fas fa-shopping-cart"></i> Keranjang
-          </a>
-          <a href="{% url 'core:logout' %}" class="btn btn-outline-danger btn-block">
-            <i class="fas fa-sign-out-alt"></i> Logout
+          <a href="{% url 'core:profile_settings' %}" class="list-group-item list-group-item-action">
+            <i class="fas fa-cog"></i> Pengaturan
           </a>
         </div>
       </div>

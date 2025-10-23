@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
-from .models import Product, Category
+from .models import Product, Category, Testimonial
 
 
 def home(request):
@@ -66,9 +66,16 @@ def product_detail(request, slug):
         available=True
     ).exclude(id=product.id)[:4]
 
+    # Get approved testimonials for this product
+    testimonials = Testimonial.objects.filter(
+        product=product,
+        is_approved=True
+    ).select_related('user')[:10]
+
     context = {
         'product': product,
         'related_products': related_products,
+        'testimonials': testimonials,
     }
     return render(request, 'catalog/product_detail.html', context)
 

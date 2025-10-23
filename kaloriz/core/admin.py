@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cart, CartItem, Order, OrderItem, UserProfile
+from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist
 
 admin.site.site_header = "Kaloriz Admin"
 admin.site.site_title = "Kaloriz Admin"
@@ -61,6 +61,16 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'phone', 'city', 'created_at']
+    list_display = ['user', 'phone', 'city', 'gender', 'birth_date', 'created_at']
     search_fields = ['user__username', 'user__email', 'phone']
     readonly_fields = ['created_at', 'updated_at']
+    list_filter = ['gender', 'created_at']
+
+
+@admin.register(Watchlist)
+class WatchlistAdmin(admin.ModelAdmin):
+    list_display = ['user', 'product', 'added_at']
+    list_filter = ['added_at']
+    search_fields = ['user__username', 'product__name']
+    readonly_fields = ['added_at']
+    date_hierarchy = 'added_at'

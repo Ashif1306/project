@@ -31,6 +31,7 @@ ALLOWED_HOSTS = ['*']  # Allow all hosts for development/testing
 # Application definition
 
 INSTALLED_APPS = [
+    "jazzmin",  # Must be before django.contrib.admin
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -123,3 +124,75 @@ MEDIA_ROOT = BASE_DIR / "media"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Jazzmin settings
+JAZZMIN_SETTINGS = {
+    "site_title": "Kaloriz Admin",
+    "site_header": "Kaloriz",
+    "site_brand": "Kaloriz E-Commerce",
+    "site_logo": None,
+    "welcome_sign": "Selamat Datang di Kaloriz Admin",
+    "copyright": "Kaloriz",
+    "search_model": ["auth.User", "catalog.Product", "core.Order"],
+
+    # Icons
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "catalog.Category": "fas fa-tags",
+        "catalog.Product": "fas fa-box",
+        "catalog.Testimonial": "fas fa-star",
+        "core.Cart": "fas fa-shopping-cart",
+        "core.Order": "fas fa-receipt",
+        "core.UserProfile": "fas fa-user-circle",
+        "core.Watchlist": "fas fa-heart",
+    },
+
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "hide_apps": [],
+    "hide_models": [],
+    "order_with_respect_to": ["auth", "catalog", "core"],
+
+    # UI Customization
+    "custom_css": None,
+    "custom_js": None,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": "navbar-dark",
+    "accent": "accent-primary",
+    "navbar": "navbar-dark navbar-dark",
+    "no_navbar_border": False,
+    "navbar_fixed": True,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "flatly",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success"
+    }
+}

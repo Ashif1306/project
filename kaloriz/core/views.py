@@ -8,7 +8,7 @@ from django.utils import timezone
 from decimal import Decimal
 import uuid
 
-from .models import Cart, CartItem, Order, OrderItem, UserProfile
+from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist
 from catalog.models import Product
 
 
@@ -258,16 +258,82 @@ def profile_view(request):
     """User profile page"""
     profile, created = UserProfile.objects.get_or_create(user=request.user)
 
+    context = {
+        'profile': profile,
+        'user': request.user,
+    }
+    return render(request, 'core/profile.html', context)
+
+
+@login_required
+def profile_settings(request):
+    """User profile settings page"""
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+
     if request.method == 'POST':
+        # Update user info
+        request.user.first_name = request.POST.get('first_name', '')
+        request.user.last_name = request.POST.get('last_name', '')
+        request.user.email = request.POST.get('email', '')
+        request.user.save()
+
+        # Update profile info
         profile.phone = request.POST.get('phone', '')
         profile.address = request.POST.get('address', '')
         profile.city = request.POST.get('city', '')
         profile.postal_code = request.POST.get('postal_code', '')
+        profile.gender = request.POST.get('gender', '')
+
+        birth_date = request.POST.get('birth_date', '')
+        if birth_date:
+            profile.birth_date = birth_date
+
         profile.save()
         messages.success(request, 'Profil berhasil diperbarui.')
-        return redirect('core:profile')
+        return redirect('core:profile_settings')
 
     context = {
         'profile': profile,
+        'user': request.user,
     }
-    return render(request, 'core/profile.html', context)
+    return render(request, 'core/profile_settings.html', context)
+
+
+# Watchlist Views
+@login_required
+def watchlist_view(request):
+    """Display user's watchlist"""
+    watchlist_items = Watchlist.objects.filter(user=request.user).select_related('product')
+
+    context = {
+        'watchlist_items': watchlist_items,
+    }
+    return render(request, 'core/watchlist.html', context)
+
+
+@login_required
+def add_to_watchlist(request, product_id):
+    """Add product to watchlist"""
+    product = get_object_or_404(Product, id=product_id)
+
+    watchlist_item, created = Watchlist.objects.get_or_create(
+        user=request.user,
+        product=product
+    )
+
+    if created:
+        messages.success(request, f'{product.name} berhasil ditambahkan ke watchlist.')
+    else:
+        messages.info(request, f'{product.name} sudah ada di watchlist Anda.')
+
+    return redirect(request.META.get('HTTP_REFERER', 'catalog:home'))
+
+
+@login_required
+def remove_from_watchlist(request, watchlist_id):
+    """Remove item from watchlist"""
+    watchlist_item = get_object_or_404(Watchlist, id=watchlist_id, user=request.user)
+    product_name = watchlist_item.product.name
+    watchlist_item.delete()
+    messages.success(request, f'{product_name} berhasil dihapus dari watchlist.')
+    return redirect('core:watchlist')
