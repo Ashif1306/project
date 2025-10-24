@@ -1,20 +1,21 @@
 {% extends 'base.html' %}
 
-{% block title %}Verifikasi Login - Kaloriz{% endblock %}
+{% block title %}Verifikasi Email - Kaloriz{% endblock %}
 
 {% block content %}
 <div class="container my-5">
   <div class="row justify-content-center">
     <div class="col-md-6 col-lg-5">
       <div class="card shadow">
-        <div class="card-header bg-primary text-white text-center">
-          <h4 class="mb-0"><i class="fas fa-shield-alt"></i> Verifikasi Email</h4>
+        <div class="card-header bg-success text-white text-center">
+          <h4 class="mb-0"><i class="fas fa-envelope-circle-check"></i> Verifikasi Email Anda</h4>
         </div>
         <div class="card-body p-4 text-center">
           <div class="mb-4">
-            <i class="fas fa-envelope-open-text fa-4x text-primary mb-3"></i>
-            <p class="lead">Kode verifikasi telah dikirim ke email:</p>
-            <p class="font-weight-bold">{{ masked_email }}</p>
+            <i class="fas fa-envelope-open-text fa-4x text-success mb-3"></i>
+            <p class="lead">Kode verifikasi telah dikirim ke:</p>
+            <p class="font-weight-bold text-success">{{ masked_email }}</p>
+            <p class="text-muted small">Silakan periksa inbox atau folder spam Anda.</p>
           </div>
 
           <form method="post">
@@ -27,8 +28,8 @@
               <small class="form-text text-muted">Kode berlaku selama 10 menit</small>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block btn-lg">
-              <i class="fas fa-check-circle"></i> Verifikasi
+            <button type="submit" class="btn btn-success btn-block btn-lg">
+              <i class="fas fa-check-circle"></i> Verifikasi & Lanjutkan
             </button>
           </form>
 

@@ -21,9 +21,9 @@ urlpatterns = [
 
     # Auth URLs
     path('register/', views.register_view, name='register'),
+    path('register/verify/', views.verify_email_view, name='verify_email'),
+    path('register/resend/', views.resend_verification_code, name='resend_verification'),
     path('login/', views.login_view, name='login'),
-    path('login/verify/', views.verify_login_view, name='verify_login'),
-    path('login/resend/', views.resend_verification_code, name='resend_verification'),
     path('logout/', views.logout_view, name='logout'),
 
     # Profile URLs
