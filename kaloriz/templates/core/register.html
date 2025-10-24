@@ -5,10 +5,10 @@
 {% block content %}
 <div class="container my-5">
   <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
+    <div class="col-md-8 col-lg-6">
       <div class="card shadow">
         <div class="card-header bg-success text-white text-center">
-          <h4 class="mb-0"><i class="fas fa-user-plus"></i> Register</h4>
+          <h4 class="mb-0"><i class="fas fa-user-plus"></i> Daftar Akun Baru</h4>
         </div>
         <div class="card-body p-4">
           <form method="post">
@@ -20,37 +20,92 @@
               </div>
             {% endif %}
 
+            <!-- Nama Lengkap -->
             <div class="form-group">
-              <label for="{{ form.username.id_for_label }}">Username</label>
-              <input type="text" class="form-control {% if form.username.errors %}is-invalid{% endif %}"
-                     id="{{ form.username.id_for_label }}" name="username" value="{{ form.username.value|default:'' }}" required>
-              {% if form.username.errors %}
-                <div class="invalid-feedback">{{ form.username.errors }}</div>
+              <label for="{{ form.first_name.id_for_label }}">
+                {{ form.first_name.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}
+                <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
               {% endif %}
-              <small class="form-text text-muted">{{ form.username.help_text }}</small>
             </div>
 
+            <!-- Email -->
             <div class="form-group">
-              <label for="{{ form.password1.id_for_label }}">Password</label>
-              <input type="password" class="form-control {% if form.password1.errors %}is-invalid{% endif %}"
-                     id="{{ form.password1.id_for_label }}" name="password1" required>
+              <label for="{{ form.email.id_for_label }}">
+                {{ form.email.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="text-danger small">{{ form.email.errors.0 }}</div>
+              {% endif %}
+              <small class="form-text text-muted">Email akan digunakan untuk login dan verifikasi.</small>
+            </div>
+
+            <!-- Nomor Telepon -->
+            <div class="form-group">
+              <label for="{{ form.phone.id_for_label }}">
+                {{ form.phone.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.phone }}
+              {% if form.phone.errors %}
+                <div class="text-danger small">{{ form.phone.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Tanggal Lahir -->
+            <div class="form-group">
+              <label for="{{ form.birth_date.id_for_label }}">
+                {{ form.birth_date.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.birth_date }}
+              {% if form.birth_date.errors %}
+                <div class="text-danger small">{{ form.birth_date.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+              <label for="{{ form.password1.id_for_label }}">
+                {{ form.password1.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.password1 }}
               {% if form.password1.errors %}
-                <div class="invalid-feedback">{{ form.password1.errors }}</div>
+                <div class="text-danger small">{{ form.password1.errors.0 }}</div>
               {% endif %}
-              <small class="form-text text-muted">{{ form.password1.help_text }}</small>
+              <small class="form-text text-muted">
+                Password harus minimal 8 karakter dan tidak boleh terlalu umum.
+              </small>
             </div>
 
+            <!-- Konfirmasi Password -->
             <div class="form-group">
-              <label for="{{ form.password2.id_for_label }}">Konfirmasi Password</label>
-              <input type="password" class="form-control {% if form.password2.errors %}is-invalid{% endif %}"
-                     id="{{ form.password2.id_for_label }}" name="password2" required>
+              <label for="{{ form.password2.id_for_label }}">
+                {{ form.password2.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.password2 }}
               {% if form.password2.errors %}
-                <div class="invalid-feedback">{{ form.password2.errors }}</div>
+                <div class="text-danger small">{{ form.password2.errors.0 }}</div>
               {% endif %}
             </div>
 
-            <button type="submit" class="btn btn-success btn-block btn-lg">
-              <i class="fas fa-user-plus"></i> Daftar
+            <!-- Terms and Conditions -->
+            <div class="form-group">
+              <div class="form-check">
+                {{ form.agree_to_terms }}
+                <label class="form-check-label" for="{{ form.agree_to_terms.id_for_label }}">
+                  {{ form.agree_to_terms.label }} <span class="text-danger">*</span>
+                  <a href="#" data-toggle="modal" data-target="#termsModal">(Baca Syarat dan Ketentuan)</a>
+                </label>
+                {% if form.agree_to_terms.errors %}
+                  <div class="text-danger small">{{ form.agree_to_terms.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-success btn-block btn-lg mt-4">
+              <i class="fas fa-user-plus"></i> Daftar Sekarang
             </button>
           </form>
 
@@ -60,6 +115,39 @@
             <p class="mb-0">Sudah punya akun? <a href="{% url 'core:login' %}">Login di sini</a></p>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Terms and Conditions Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" role="dialog" aria-labelledby="termsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="termsModalLabel">Syarat dan Ketentuan</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <h6>1. Ketentuan Umum</h6>
+        <p>Dengan mendaftar di Kaloriz, Anda menyetujui untuk mematuhi semua syarat dan ketentuan yang berlaku.</p>
+
+        <h6>2. Privasi Data</h6>
+        <p>Data pribadi Anda akan dijaga kerahasiaannya dan hanya digunakan untuk keperluan transaksi dan komunikasi terkait layanan kami.</p>
+
+        <h6>3. Penggunaan Akun</h6>
+        <p>Anda bertanggung jawab penuh atas keamanan akun dan password Anda. Jangan berbagi informasi login Anda dengan pihak lain.</p>
+
+        <h6>4. Transaksi</h6>
+        <p>Semua transaksi yang dilakukan melalui akun Anda adalah tanggung jawab Anda.</p>
+
+        <h6>5. Perubahan Ketentuan</h6>
+        <p>Kami berhak mengubah syarat dan ketentuan ini sewaktu-waktu. Perubahan akan diberitahukan melalui email atau website.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
       </div>
     </div>
   </div>
