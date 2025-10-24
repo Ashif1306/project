@@ -125,6 +125,19 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Email Configuration
+# For development: emails will be printed to console
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# For production, use SMTP (uncomment and configure these):
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your-email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'your-app-password'
+DEFAULT_FROM_EMAIL = 'noreply@kaloriz.com'
+
 # Jazzmin settings
 JAZZMIN_SETTINGS = {
     "site_title": "Kaloriz Admin",

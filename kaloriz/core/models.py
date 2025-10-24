@@ -2,6 +2,9 @@ from django.db import models
 from django.contrib.auth.models import User
 from catalog.models import Product
 from decimal import Decimal
+import random
+from datetime import timedelta
+from django.utils import timezone
 
 class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carts', verbose_name="Pengguna")
@@ -149,3 +152,50 @@ class Watchlist(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.product.name}"
+
+
+class EmailVerification(models.Model):
+    """Model to store email verification codes for login"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='email_verifications', verbose_name="Pengguna")
+    code = models.CharField(max_length=6, verbose_name="Kode Verifikasi")
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(verbose_name="Kadaluarsa")
+    is_used = models.BooleanField(default=False, verbose_name="Sudah Digunakan")
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name="Alamat IP")
+
+    class Meta:
+        verbose_name = "Verifikasi Email"
+        verbose_name_plural = "Verifikasi Email"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.code}"
+
+    @classmethod
+    def generate_code(cls):
+        """Generate random 6-digit verification code"""
+        return ''.join([str(random.randint(0, 9)) for _ in range(6)])
+
+    @classmethod
+    def create_verification(cls, user, ip_address=None):
+        """Create a new verification code for user"""
+        code = cls.generate_code()
+        expires_at = timezone.now() + timedelta(minutes=10)  # Code expires in 10 minutes
+
+        verification = cls.objects.create(
+            user=user,
+            code=code,
+            expires_at=expires_at,
+            ip_address=ip_address
+        )
+
+        return verification
+
+    def is_valid(self):
+        """Check if verification code is still valid"""
+        return not self.is_used and timezone.now() < self.expires_at
+
+    def mark_as_used(self):
+        """Mark verification code as used"""
+        self.is_used = True
+        self.save()

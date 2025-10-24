@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist
+from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist, EmailVerification
 
 admin.site.site_header = "Kaloriz Admin"
 admin.site.site_title = "Kaloriz Admin"
@@ -74,3 +74,12 @@ class WatchlistAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'product__name']
     readonly_fields = ['added_at']
     date_hierarchy = 'added_at'
+
+
+@admin.register(EmailVerification)
+class EmailVerificationAdmin(admin.ModelAdmin):
+    list_display = ['user', 'code', 'created_at', 'expires_at', 'is_used', 'ip_address']
+    list_filter = ['is_used', 'created_at']
+    search_fields = ['user__username', 'user__email', 'code']
+    readonly_fields = ['created_at']
+    date_hierarchy = 'created_at'
