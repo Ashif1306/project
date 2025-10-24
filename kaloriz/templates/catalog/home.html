@@ -230,14 +230,7 @@
           <!-- Product Info -->
           <div class="product-info" onclick="window.location.href='{% url 'catalog:product_detail' product.slug %}'">
             <!-- Star Rating -->
-            <div class="product-rating">
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star-half-alt"></i>
-              <span class="rating-text">4.5</span>
-            </div>
+            {{ product|rating_stars }}
 
             <!-- Product Name -->
             <h3 class="product-name">{{ product.name|truncatewords:4 }}</h3>
@@ -463,7 +456,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: #2d3748;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
   line-height: 1.4;
   min-height: 2.8em;
   display: -webkit-box;
@@ -476,7 +469,7 @@
 .product-price {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 2px;
   margin-bottom: 15px;
 }
 

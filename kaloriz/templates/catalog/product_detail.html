@@ -74,31 +74,33 @@
       {% if user.is_authenticated %}
         {% if product.stock > 0 %}
           <div class="modern-purchase-section">
-            <!-- Quantity Selector -->
-            <div class="quantity-selector">
-              <button type="button" class="qty-btn" onclick="decreaseQty()">
-                <i class="fas fa-minus"></i>
-              </button>
-              <input type="number" id="quantity" value="1" min="1" max="{{ product.stock }}" readonly>
-              <button type="button" class="qty-btn" onclick="increaseQty({{ product.stock }})">
-                <i class="fas fa-plus"></i>
-              </button>
-            </div>
+            <!-- Row 1: Quantity Selector + Add to Cart -->
+            <div class="purchase-row-1">
+              <!-- Quantity Selector -->
+              <div class="quantity-selector">
+                <button type="button" class="qty-btn" onclick="decreaseQty()">
+                  <i class="fas fa-minus"></i>
+                </button>
+                <input type="number" id="quantity" value="1" min="1" max="{{ product.stock }}" readonly>
+                <button type="button" class="qty-btn" onclick="increaseQty({{ product.stock }})">
+                  <i class="fas fa-plus"></i>
+                </button>
+              </div>
 
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-              <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="display: inline-block;">
+              <!-- Add to Cart Button -->
+              <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="flex: 1;">
                 {% csrf_token %}
                 <input type="hidden" name="quantity" id="cart-quantity" value="1">
                 <button type="submit" class="btn-add-cart">
                   <i class="fas fa-shopping-cart"></i> Add to Cart
                 </button>
               </form>
-
-              <a href="{% url 'catalog:product_detail' product.slug %}" class="btn-buy-now">
-                <i class="fas fa-bolt"></i> Buy It Now
-              </a>
             </div>
+
+            <!-- Row 2: Buy It Now Button -->
+            <a href="{% url 'catalog:product_detail' product.slug %}" class="btn-buy-now">
+              <i class="fas fa-bolt"></i> Buy It Now
+            </a>
           </div>
         {% else %}
           <div class="out-of-stock">
@@ -206,10 +208,16 @@
 /* Modern Purchase Section */
 .modern-purchase-section {
   display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+/* Row 1: Quantity + Add to Cart */
+.purchase-row-1 {
+  display: flex;
   gap: 15px;
   align-items: center;
-  margin-top: 20px;
-  flex-wrap: wrap;
 }
 
 /* Quantity Selector - Oval */
@@ -255,13 +263,6 @@
   outline: none;
 }
 
-/* Action Buttons */
-.action-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 /* Add to Cart Button - White with Red Border */
 .btn-add-cart {
   background: white;
@@ -275,7 +276,9 @@
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
   text-decoration: none;
-  display: inline-block;
+  display: block;
+  width: 100%;
+  text-align: center;
 }
 
 .btn-add-cart:hover {
@@ -289,7 +292,7 @@
   margin-right: 8px;
 }
 
-/* Buy It Now Button - Dark Green */
+/* Buy It Now Button - Dark Green - Full Width */
 .btn-buy-now {
   background: linear-gradient(135deg, #28a745, #1e7e34);
   border: none;
@@ -302,7 +305,9 @@
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
   text-decoration: none;
-  display: inline-block;
+  display: block;
+  width: 100%;
+  text-align: center;
 }
 
 .btn-buy-now:hover {
@@ -329,19 +334,13 @@
 }
 
 @media (max-width: 576px) {
-  .modern-purchase-section {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .action-buttons {
+  .purchase-row-1 {
     flex-direction: column;
   }
 
-  .btn-add-cart,
-  .btn-buy-now {
+  .quantity-selector {
     width: 100%;
-    text-align: center;
+    justify-content: center;
   }
 }
 
