@@ -70,30 +70,43 @@
         <p>{{ product.description|linebreaks }}</p>
       </div>
 
-      <!-- Add to Cart -->
+      <!-- Modern Purchase Section -->
       {% if user.is_authenticated %}
         {% if product.stock > 0 %}
-          <form method="post" action="{% url 'core:add_to_cart' product.id %}">
-            {% csrf_token %}
-            <div class="form-row align-items-center mb-3">
-              <div class="col-auto">
-                <label for="quantity">Jumlah:</label>
-              </div>
-              <div class="col-auto">
-                <input type="number" name="quantity" id="quantity" class="form-control" value="1" min="1" max="{{ product.stock }}" style="width: 100px;">
-              </div>
+          <div class="modern-purchase-section">
+            <!-- Quantity Selector -->
+            <div class="quantity-selector">
+              <button type="button" class="qty-btn" onclick="decreaseQty()">
+                <i class="fas fa-minus"></i>
+              </button>
+              <input type="number" id="quantity" value="1" min="1" max="{{ product.stock }}" readonly>
+              <button type="button" class="qty-btn" onclick="increaseQty({{ product.stock }})">
+                <i class="fas fa-plus"></i>
+              </button>
             </div>
-            <button type="submit" class="btn btn-primary btn-lg">
-              <i class="fas fa-cart-plus"></i> Tambah ke Keranjang
-            </button>
-          </form>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+              <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="display: inline-block;">
+                {% csrf_token %}
+                <input type="hidden" name="quantity" id="cart-quantity" value="1">
+                <button type="submit" class="btn-add-cart">
+                  <i class="fas fa-shopping-cart"></i> Add to Cart
+                </button>
+              </form>
+
+              <a href="{% url 'catalog:product_detail' product.slug %}" class="btn-buy-now">
+                <i class="fas fa-bolt"></i> Buy It Now
+              </a>
+            </div>
+          </div>
         {% else %}
-          <button class="btn btn-secondary btn-lg" disabled>
-            <i class="fas fa-times"></i> Stok Habis
-          </button>
+          <div class="out-of-stock">
+            <i class="fas fa-times-circle"></i> Produk Habis
+          </div>
         {% endif %}
       {% else %}
-        <a href="{% url 'core:login' %}?next={{ request.path }}" class="btn btn-primary btn-lg">
+        <a href="{% url 'core:login' %}?next={{ request.path }}" class="btn-buy-now" style="display: inline-block;">
           <i class="fas fa-sign-in-alt"></i> Login untuk Membeli
         </a>
       {% endif %}
@@ -188,6 +201,148 @@
   transform: translateY(-5px);
   transition: all 0.3s ease;
   box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+}
+
+/* Modern Purchase Section */
+.modern-purchase-section {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+/* Quantity Selector - Oval */
+.quantity-selector {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 50px;
+  padding: 8px 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+}
+
+.quantity-selector:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  border-color: #667eea;
+}
+
+.qty-btn {
+  background: none;
+  border: none;
+  color: #2d3748;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 5px 10px;
+  transition: all 0.3s ease;
+}
+
+.qty-btn:hover {
+  color: #667eea;
+  transform: scale(1.2);
+}
+
+.quantity-selector input {
+  border: none;
+  text-align: center;
+  width: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+  background: transparent;
+  outline: none;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Add to Cart Button - White with Red Border */
+.btn-add-cart {
+  background: white;
+  border: 3px solid #dc3545;
+  color: #2d3748;
+  font-weight: 600;
+  padding: 12px 30px;
+  border-radius: 50px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-add-cart:hover {
+  background: #dc3545;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
+}
+
+.btn-add-cart i {
+  margin-right: 8px;
+}
+
+/* Buy It Now Button - Dark Green */
+.btn-buy-now {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+  border: none;
+  color: white;
+  font-weight: 700;
+  padding: 12px 35px;
+  border-radius: 50px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-buy-now:hover {
+  background: linear-gradient(135deg, #1e7e34, #28a745);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(40, 167, 69, 0.5);
+  color: white;
+  text-decoration: none;
+}
+
+.btn-buy-now i {
+  margin-right: 8px;
+}
+
+/* Out of Stock */
+.out-of-stock {
+  background: #e0e0e0;
+  color: #666;
+  padding: 15px 30px;
+  border-radius: 50px;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 20px;
+}
+
+@media (max-width: 576px) {
+  .modern-purchase-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .btn-add-cart,
+  .btn-buy-now {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 /* Testimonial Carousel Styles */
@@ -332,6 +487,32 @@
 
 {% block extra_js %}
 <script>
+// Quantity Controls
+function increaseQty(maxStock) {
+  const qtyInput = document.getElementById('quantity');
+  const cartQtyInput = document.getElementById('cart-quantity');
+  let currentQty = parseInt(qtyInput.value);
+
+  if (currentQty < maxStock) {
+    currentQty++;
+    qtyInput.value = currentQty;
+    if (cartQtyInput) cartQtyInput.value = currentQty;
+  }
+}
+
+function decreaseQty() {
+  const qtyInput = document.getElementById('quantity');
+  const cartQtyInput = document.getElementById('cart-quantity');
+  let currentQty = parseInt(qtyInput.value);
+
+  if (currentQty > 1) {
+    currentQty--;
+    qtyInput.value = currentQty;
+    if (cartQtyInput) cartQtyInput.value = currentQty;
+  }
+}
+
+// Testimonial Carousel
 let currentIndex = 0;
 const testimonialCards = document.querySelectorAll('.testimonial-card');
 const totalTestimonials = testimonialCards.length;

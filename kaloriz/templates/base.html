@@ -21,70 +21,293 @@
 </head>
 
 <body>
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="position: sticky; top: 0; z-index: 1000;">
+  <!-- Modern Minimalist Navbar -->
+  <nav class="modern-navbar">
     <div class="container">
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+      <div class="navbar-content">
+        <!-- Left Menu -->
+        <div class="navbar-left">
+          <a href="{% url 'catalog:home' %}" class="nav-link-modern">Home</a>
+          <a href="{% url 'catalog:product_list' %}" class="nav-link-modern">Product</a>
+          <a href="{% url 'catalog:about' %}" class="nav-link-modern">Tentang</a>
+          <a href="{% url 'catalog:contact' %}" class="nav-link-modern">Kontak</a>
+        </div>
 
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav mr-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'catalog:home' %}"><i class="fas fa-home"></i> Home</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'catalog:product_list' %}"><i class="fas fa-box"></i> Produk</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'catalog:about' %}"><i class="fas fa-info-circle"></i> Tentang</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'catalog:contact' %}"><i class="fas fa-envelope"></i> Kontak</a>
-          </li>
-        </ul>
+        <!-- Center Logo -->
+        <div class="navbar-center">
+          <a href="{% url 'catalog:home' %}" class="navbar-logo">
+            <img src="{% static 'images/logo.png' %}" alt="Kaloriz" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span style="display: none; font-size: 1.5rem; font-weight: bold; color: #667eea;">Kaloriz</span>
+          </a>
+        </div>
 
-        <!-- Search Form -->
-        <form class="form-inline my-2 my-lg-0 mr-3" action="{% url 'catalog:search' %}" method="get">
-          <input class="form-control mr-2" type="search" name="q" placeholder="Cari produk..." aria-label="Search">
-          <button class="btn btn-outline-light" type="submit"><i class="fas fa-search"></i></button>
-        </form>
-
-        <ul class="navbar-nav">
+        <!-- Right Icons -->
+        <div class="navbar-right">
           {% if user.is_authenticated %}
-            <li class="nav-item">
-              <a class="nav-link position-relative" href="{% url 'core:cart' %}">
-                <i class="fas fa-shopping-cart"></i>
-                {% if cart_count > 0 %}
-                <span class="badge badge-danger position-absolute" style="top: 5px; right: -5px; border-radius: 50%; padding: 3px 6px; font-size: 0.7rem; min-width: 18px;">{{ cart_count }}</span>
-                {% endif %}
-              </a>
-            </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">
-                <i class="fas fa-user"></i> {{ user.username }}
+            <!-- Profile Icon -->
+            <div class="nav-icon-wrapper dropdown">
+              <a href="#" class="nav-icon" id="profileDropdown" data-toggle="dropdown">
+                <i class="fas fa-user"></i>
               </a>
               <div class="dropdown-menu dropdown-menu-right">
                 <a class="dropdown-item" href="{% url 'core:profile' %}"><i class="fas fa-user-circle"></i> Profil</a>
                 <a class="dropdown-item" href="{% url 'core:watchlist' %}"><i class="fas fa-heart"></i> Watchlist</a>
-                <a class="dropdown-item" href="{% url 'core:order_list' %}"><i class="fas fa-receipt"></i> Pesanan Saya</a>
+                <a class="dropdown-item" href="{% url 'core:order_list' %}"><i class="fas fa-receipt"></i> Pesanan</a>
                 <a class="dropdown-item" href="{% url 'core:profile_settings' %}"><i class="fas fa-cog"></i> Pengaturan</a>
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item" href="{% url 'core:logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a>
               </div>
-            </li>
+            </div>
+
+            <!-- Wishlist Icon with Badge -->
+            <div class="nav-icon-wrapper">
+              <a href="{% url 'core:watchlist' %}" class="nav-icon">
+                <i class="fas fa-heart"></i>
+                <span class="icon-badge">3</span>
+              </a>
+            </div>
           {% else %}
-            <li class="nav-item">
-              <a class="nav-link" href="{% url 'core:login' %}"><i class="fas fa-sign-in-alt"></i> Login</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{% url 'core:register' %}"><i class="fas fa-user-plus"></i> Register</a>
-            </li>
+            <div class="nav-icon-wrapper">
+              <a href="{% url 'core:login' %}" class="nav-icon" title="Login">
+                <i class="fas fa-user"></i>
+              </a>
+            </div>
           {% endif %}
-        </ul>
+
+          <!-- Search Bar -->
+          <div class="search-wrapper">
+            <form action="{% url 'catalog:search' %}" method="get" class="search-form">
+              <input type="search" name="q" placeholder="Cari produk..." class="search-input">
+              <button type="submit" class="search-btn">
+                <i class="fas fa-search"></i>
+              </button>
+            </form>
+          </div>
+
+          <!-- Cart Icon with Badge -->
+          {% if user.is_authenticated %}
+          <div class="nav-icon-wrapper">
+            <a href="{% url 'core:cart' %}" class="nav-icon">
+              <i class="fas fa-shopping-cart"></i>
+              {% if cart_count > 0 %}
+              <span class="icon-badge">{{ cart_count }}</span>
+              {% endif %}
+            </a>
+          </div>
+          {% else %}
+          <div class="nav-icon-wrapper">
+            <a href="{% url 'core:login' %}" class="nav-icon">
+              <i class="fas fa-shopping-cart"></i>
+            </a>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Mobile Toggle -->
+        <button class="mobile-toggle" onclick="toggleMobileMenu()">
+          <i class="fas fa-bars"></i>
+        </button>
       </div>
     </div>
   </nav>
+
+  <style>
+  /* Modern Minimalist Navbar */
+  .modern-navbar {
+    background: linear-gradient(135deg, #faf9f7 0%, #fff8f0 100%);
+    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    padding: 15px 0;
+  }
+
+  .navbar-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  /* Left Menu */
+  .navbar-left {
+    display: flex;
+    gap: 30px;
+    flex: 1;
+  }
+
+  .nav-link-modern {
+    color: #2d3748;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    position: relative;
+    padding-bottom: 5px;
+    transition: color 0.3s ease;
+  }
+
+  .nav-link-modern:hover {
+    color: #667eea;
+  }
+
+  .nav-link-modern::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #667eea;
+    transition: width 0.3s ease;
+  }
+
+  .nav-link-modern:hover::after {
+    width: 100%;
+  }
+
+  /* Center Logo */
+  .navbar-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .navbar-logo img {
+    height: 45px;
+    object-fit: contain;
+  }
+
+  /* Right Icons */
+  .navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .nav-icon-wrapper {
+    position: relative;
+  }
+
+  .nav-icon {
+    color: #2d3748;
+    font-size: 1.2rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-block;
+    position: relative;
+  }
+
+  .nav-icon:hover {
+    color: #667eea;
+    transform: scale(1.1);
+  }
+
+  .icon-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  /* Search Bar */
+  .search-wrapper {
+    position: relative;
+  }
+
+  .search-form {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 25px;
+    padding: 5px 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .search-form:focus-within {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  }
+
+  .search-input {
+    border: none;
+    outline: none;
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    width: 180px;
+    background: transparent;
+  }
+
+  .search-btn {
+    background: none;
+    border: none;
+    color: #667eea;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 5px;
+    transition: transform 0.3s ease;
+  }
+
+  .search-btn:hover {
+    transform: scale(1.1);
+  }
+
+  /* Mobile Toggle */
+  .mobile-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #2d3748;
+    cursor: pointer;
+  }
+
+  @media (max-width: 992px) {
+    .navbar-left {
+      display: none;
+    }
+
+    .navbar-center {
+      position: static;
+      transform: none;
+    }
+
+    .mobile-toggle {
+      display: block;
+    }
+
+    .navbar-right {
+      gap: 15px;
+    }
+
+    .search-input {
+      width: 120px;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .search-input {
+      width: 100px;
+      font-size: 0.85rem;
+    }
+
+    .nav-icon {
+      font-size: 1.1rem;
+    }
+
+    .navbar-logo img {
+      height: 35px;
+    }
+  }
+  </style>
 
   <!-- Messages -->
   {% if messages %}
