@@ -15,11 +15,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Kaloriz - Verifikasi Login</h1>
+            <h1>Kaloriz - Verifikasi Email</h1>
         </div>
         <div class="content">
             <h2>Halo, {{ user.first_name|default:user.username }}!</h2>
-            <p>Anda baru saja mencoba login ke akun Kaloriz Anda. Untuk keamanan akun, silakan gunakan kode verifikasi berikut:</p>
+            <p>Terima kasih telah mendaftar di Kaloriz! Untuk menyelesaikan proses registrasi, silakan verifikasi email Anda dengan kode berikut:</p>
 
             <div class="code-box">
                 <div class="code">{{ code }}</div>
@@ -30,10 +30,12 @@
             <ul>
                 <li>Jangan bagikan kode ini kepada siapapun</li>
                 <li>Tim Kaloriz tidak akan pernah meminta kode verifikasi Anda</li>
-                <li>Jika Anda tidak merasa melakukan login, abaikan email ini</li>
+                <li>Jika Anda tidak merasa mendaftar, abaikan email ini</li>
             </ul>
 
-            <p>Terima kasih,<br>Tim Kaloriz</p>
+            <p>Setelah verifikasi berhasil, Anda dapat langsung mulai berbelanja di Kaloriz!</p>
+
+            <p>Terima kasih,<br><strong>Tim Kaloriz</strong></p>
         </div>
         <div class="footer">
             <p>&copy; 2024 Kaloriz. All rights reserved.</p>

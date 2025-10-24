@@ -202,7 +202,7 @@ def order_detail(request, order_number):
 
 # Authentication Views
 def register_view(request):
-    """User registration with custom form"""
+    """User registration with email verification"""
     if request.user.is_authenticated:
         return redirect('catalog:home')
 
@@ -212,13 +212,23 @@ def register_view(request):
             # Save user and profile
             user = form.save()
 
-            # Send welcome email
-            send_welcome_email(user)
+            # Create verification code
+            ip_address = request.META.get('REMOTE_ADDR')
+            verification = EmailVerification.create_verification(user, ip_address)
 
-            # Log the user in automatically
-            login(request, user)
-            messages.success(request, f'Selamat datang, {user.first_name}! Akun Anda berhasil dibuat.')
-            return redirect('catalog:home')
+            # Send verification email
+            if send_verification_email(user, verification):
+                # Store user_id in session for verification step
+                request.session['pending_verification_user_id'] = user.id
+                request.session['verification_id'] = verification.id
+                messages.success(request, f'Akun berhasil dibuat! Kode verifikasi telah dikirim ke {user.email}')
+                return redirect('core:verify_email')
+            else:
+                messages.error(request, 'Gagal mengirim kode verifikasi. Silakan hubungi admin.')
+                # Still allow registration to complete
+                send_welcome_email(user)
+                login(request, user)
+                return redirect('catalog:home')
     else:
         form = CustomUserRegistrationForm()
 
@@ -227,12 +237,12 @@ def register_view(request):
 
 
 def login_view(request):
-    """User login with email verification"""
+    """User login"""
     if request.user.is_authenticated:
         return redirect('catalog:home')
 
     if request.method == 'POST':
-        # Step 1: Authenticate username and password
+        # Try to authenticate with username or email
         username_or_email = request.POST.get('username')
         password = request.POST.get('password')
 
@@ -252,19 +262,10 @@ def login_view(request):
         user = authenticate(username=username, password=password)
 
         if user is not None:
-            # Step 2: Create verification code and send email
-            ip_address = request.META.get('REMOTE_ADDR')
-            verification = EmailVerification.create_verification(user, ip_address)
-
-            # Send verification code via email
-            if send_verification_email(user, verification):
-                # Store user_id in session for verification step
-                request.session['pending_login_user_id'] = user.id
-                request.session['verification_id'] = verification.id
-                messages.info(request, f'Kode verifikasi telah dikirim ke {user.email}')
-                return redirect('core:verify_login')
-            else:
-                messages.error(request, 'Gagal mengirim kode verifikasi. Silakan coba lagi.')
+            login(request, user)
+            messages.success(request, f'Selamat datang, {user.first_name or user.username}!')
+            next_url = request.GET.get('next', 'catalog:home')
+            return redirect(next_url)
         else:
             messages.error(request, 'Username/email atau password salah.')
 
@@ -273,15 +274,15 @@ def login_view(request):
     return render(request, 'core/login.html', context)
 
 
-def verify_login_view(request):
-    """Verify OTP code for login"""
-    # Check if there's a pending login
-    user_id = request.session.get('pending_login_user_id')
+def verify_email_view(request):
+    """Verify email with OTP code after registration"""
+    # Check if there's a pending verification
+    user_id = request.session.get('pending_verification_user_id')
     verification_id = request.session.get('verification_id')
 
     if not user_id or not verification_id:
-        messages.error(request, 'Sesi verifikasi tidak valid. Silakan login kembali.')
-        return redirect('core:login')
+        messages.error(request, 'Sesi verifikasi tidak valid. Silakan daftar kembali.')
+        return redirect('core:register')
 
     if request.method == 'POST':
         code = request.POST.get('code', '').strip()
@@ -297,26 +298,28 @@ def verify_login_view(request):
                     # Log the user in
                     from django.contrib.auth.models import User
                     user = User.objects.get(id=user_id)
+
+                    # Send welcome email after successful verification
+                    send_welcome_email(user)
+
+                    # Log the user in
                     login(request, user)
 
                     # Clear session data
-                    del request.session['pending_login_user_id']
+                    del request.session['pending_verification_user_id']
                     del request.session['verification_id']
 
-                    messages.success(request, f'Selamat datang, {user.first_name or user.username}!')
-                    next_url = request.GET.get('next', 'catalog:home')
-                    return redirect(next_url)
+                    messages.success(request, f'Email berhasil diverifikasi! Selamat datang, {user.first_name}!')
+                    return redirect('catalog:home')
                 else:
                     messages.error(request, 'Kode verifikasi salah. Silakan coba lagi.')
             else:
-                messages.error(request, 'Kode verifikasi sudah kadaluarsa atau sudah digunakan. Silakan login ulang.')
-                del request.session['pending_login_user_id']
-                del request.session['verification_id']
-                return redirect('core:login')
+                messages.error(request, 'Kode verifikasi sudah kadaluarsa. Silakan minta kode baru.')
+                # Don't delete session, allow resend
 
         except EmailVerification.DoesNotExist:
-            messages.error(request, 'Verifikasi tidak ditemukan. Silakan login kembali.')
-            return redirect('core:login')
+            messages.error(request, 'Verifikasi tidak ditemukan. Silakan daftar kembali.')
+            return redirect('core:register')
 
     # Get user email for display
     from django.contrib.auth.models import User
@@ -325,17 +328,18 @@ def verify_login_view(request):
 
     context = {
         'masked_email': masked_email,
+        'is_registration': True,
     }
-    return render(request, 'core/verify_login.html', context)
+    return render(request, 'core/verify_email.html', context)
 
 
 def resend_verification_code(request):
-    """Resend verification code"""
-    user_id = request.session.get('pending_login_user_id')
+    """Resend verification code for email verification"""
+    user_id = request.session.get('pending_verification_user_id')
 
     if not user_id:
         messages.error(request, 'Sesi verifikasi tidak valid.')
-        return redirect('core:login')
+        return redirect('core:register')
 
     from django.contrib.auth.models import User
     user = User.objects.get(id=user_id)
@@ -352,7 +356,7 @@ def resend_verification_code(request):
     else:
         messages.error(request, 'Gagal mengirim kode verifikasi. Silakan coba lagi.')
 
-    return redirect('core:verify_login')
+    return redirect('core:verify_email')
 
 
 @login_required
