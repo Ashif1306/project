@@ -53,28 +53,40 @@ class AddressAdmin(admin.ModelAdmin):
         'full_name',
         'user',
         'phone',
-        'district',
+        'subdistrict_name',
+        'destination_subdistrict_id',
         'postal_code',
+        'is_primary',
         'is_default',
         'created_at'
     ]
-    list_filter = ['is_default', 'district', 'created_at']
-    search_fields = ['full_name', 'user__username', 'user__email', 'phone', 'street']
-    list_select_related = ['user', 'district']
+    list_filter = ['is_primary', 'is_default', 'province_name', 'city_name', 'created_at']
+    search_fields = ['full_name', 'user__username', 'user__email', 'phone', 'address_line', 'subdistrict_name', 'city_name']
+    list_select_related = ['user']
     readonly_fields = ['created_at', 'updated_at']
 
     fieldsets = (
         ('Pemilik', {
             'fields': ('user',)
         }),
-        ('Informasi Penerima', {
+        ('Identitas Penerima', {
             'fields': ('full_name', 'phone')
         }),
-        ('Alamat', {
-            'fields': ('street', 'district', 'postal_code')
+        ('Alamat Tujuan (RajaOngkir)', {
+            'fields': (
+                'address_line',
+                'province_name', 'city_name', 'subdistrict_name', 'destination_subdistrict_id',
+                'postal_code'
+            ),
+            'description': 'Field untuk integrasi RajaOngkir API'
+        }),
+        ('Alamat Lama (Legacy)', {
+            'fields': ('street', 'district'),
+            'classes': ('collapse',),
+            'description': 'Field lama - untuk backward compatibility'
         }),
         ('Status', {
-            'fields': ('is_default',)
+            'fields': ('is_primary', 'is_default')
         }),
         ('Timestamp', {
             'fields': ('created_at', 'updated_at'),

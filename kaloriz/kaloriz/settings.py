@@ -11,9 +11,21 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file if exists
+from pathlib import Path
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                os.environ.setdefault(key.strip(), value.strip())
 
 
 # Quick-start development settings - unsuitable for production
@@ -210,3 +222,15 @@ JAZZMIN_UI_TWEAKS = {
         "success": "btn-success"
     }
 }
+
+# ============================================
+# SHIPPING & RAJAONGKIR CONFIGURATION
+# ============================================
+
+# ID kecamatan asal (gudang) untuk perhitungan ongkir
+# Akan diisi manual setelah integrasi RajaOngkir
+ORIGIN_SUBDISTRICT_ID = int(os.getenv("ORIGIN_SUBDISTRICT_ID", "0"))
+
+# Daftar kurir yang didukung untuk validasi form/checkout
+# Format: kode kurir yang didukung oleh RajaOngkir API
+SUPPORTED_COURIERS = ("jne", "jnt", "sicepat", "tiki", "pos", "anteraja")

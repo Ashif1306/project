@@ -4,6 +4,28 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
 
+def compute_total_weight_gram(cart_items) -> int:
+    """
+    Menghitung total berat dari item keranjang.
+
+    Args:
+        cart_items: iterable dengan .product (punya weight_gram) dan .quantity
+
+    Returns:
+        Total berat dalam gram, minimal 1000 gram (1 kg).
+
+    Example:
+        >>> cart_items = CartItem.objects.filter(cart=cart)
+        >>> total_weight = compute_total_weight_gram(cart_items)
+    """
+    total = 0
+    for item in cart_items:
+        w = getattr(item.product, "weight_gram", 0) or 0
+        q = getattr(item, "quantity", 1) or 1
+        total += w * q
+    return max(1000, int(total))
+
+
 def send_verification_email(user, verification_code):
     """
     Send verification code email to user

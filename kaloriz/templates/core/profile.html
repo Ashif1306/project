@@ -73,6 +73,66 @@
           </div>
         </div>
       </div>
+
+      <!-- Alamat Pengiriman Card -->
+      <div class="card shadow mt-3">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="fas fa-shipping-fast"></i> Alamat Pengiriman (untuk Ongkir)</h5>
+        </div>
+        <div class="card-body">
+          {% if address %}
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="font-weight-bold">Nama Lengkap:</label>
+                <p>{{ address.full_name }}</p>
+              </div>
+              <div class="col-md-6">
+                <label class="font-weight-bold">Nomor Telepon:</label>
+                <p>{{ address.phone }}</p>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-12">
+                <label class="font-weight-bold">Alamat:</label>
+                <p>{{ address.address_line|default:"-" }}</p>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="font-weight-bold">Provinsi:</label>
+                <p>{{ address.province_name|default:"-" }}</p>
+              </div>
+              <div class="col-md-6">
+                <label class="font-weight-bold">Kota:</label>
+                <p>{{ address.city_name|default:"-" }}</p>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="font-weight-bold">Kecamatan:</label>
+                <p>{{ address.subdistrict_name|default:"-" }} {% if address.destination_subdistrict_id %}(ID: {{ address.destination_subdistrict_id }}){% endif %}</p>
+              </div>
+              <div class="col-md-6">
+                <label class="font-weight-bold">Kode Pos:</label>
+                <p>{{ address.postal_code|default:"-" }}</p>
+              </div>
+            </div>
+
+            <hr>
+
+            <div class="text-right">
+              <a href="{% url 'core:profile_address_edit' %}" class="btn btn-success">
+                <i class="fas fa-edit"></i> Edit Alamat Pengiriman
+              </a>
+            </div>
+          {% else %}
+            <p class="text-muted">Belum ada alamat pengiriman. <a href="{% url 'core:profile_address_edit' %}">Lengkapi sekarang</a> untuk perhitungan ongkir yang akurat.</p>
+          {% endif %}
+        </div>
+      </div>
     </div>
 
     <div class="col-md-4">

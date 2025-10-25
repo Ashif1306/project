@@ -421,12 +421,16 @@ def logout_view(request):
 # Profile Views
 @login_required
 def profile_view(request):
-    """User profile page"""
+    """User profile page with address information"""
     profile, created = UserProfile.objects.get_or_create(user=request.user)
+
+    # Get primary shipping address
+    address = Address.objects.filter(user=request.user, is_primary=True).first()
 
     context = {
         'profile': profile,
         'user': request.user,
+        'address': address,
     }
     return render(request, 'core/profile.html', context)
 
@@ -463,6 +467,38 @@ def profile_settings(request):
         'user': request.user,
     }
     return render(request, 'core/profile_settings.html', context)
+
+
+@login_required
+def profile_address_edit(request):
+    """Edit primary shipping address for RajaOngkir integration"""
+    addr = Address.objects.filter(user=request.user, is_primary=True).first()
+    if not addr:
+        addr = Address(
+            user=request.user,
+            full_name=request.user.get_full_name() or request.user.username
+        )
+
+    if request.method == 'POST':
+        form = AddressForm(request.POST, instance=addr)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            # Untuk sekarang provinsi kita set manual ke Sulawesi Selatan
+            if not obj.province_name:
+                obj.province_name = 'Sulawesi Selatan'
+            obj.user = request.user
+            obj.is_primary = True
+            obj.save()
+            messages.success(request, 'Alamat pengiriman berhasil diperbarui.')
+            return redirect('core:profile')
+    else:
+        form = AddressForm(instance=addr)
+
+    context = {
+        'form': form,
+        'address': addr,
+    }
+    return render(request, 'core/profile_address_edit.html', context)
 
 
 # Watchlist Views

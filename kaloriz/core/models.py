@@ -59,13 +59,40 @@ class Order(models.Model):
     order_number = models.CharField(max_length=100, unique=True, verbose_name="Nomor Pesanan")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Status")
 
-    # Shipping information
+    # Shipping information (legacy fields)
     full_name = models.CharField(max_length=200, verbose_name="Nama Lengkap")
     email = models.EmailField(verbose_name="Email")
     phone = models.CharField(max_length=20, verbose_name="Nomor Telepon")
     address = models.TextField(verbose_name="Alamat")
     city = models.CharField(max_length=100, verbose_name="Kota")
     postal_code = models.CharField(max_length=10, verbose_name="Kode Pos")
+
+    # === FIELD PENGIRIMAN UNTUK RAJAONGKIR ===
+    shipping_address = models.ForeignKey(
+        'shipping.Address',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name="Alamat Pengiriman",
+        help_text="Alamat tujuan pengiriman"
+    )
+    selected_courier = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="Kurir Dipilih",
+        help_text="jne/jnt/sicepat/tiki/pos/anteraja"
+    )
+    selected_service_name = models.CharField(
+        max_length=80,
+        blank=True,
+        verbose_name="Layanan Kurir",
+        help_text="REG/YES/OKE/etc"
+    )
+    total_weight_gram = models.PositiveIntegerField(
+        default=1000,
+        verbose_name="Total Berat (gram)",
+        help_text="Total berat pesanan dalam gram"
+    )
 
     # Order totals
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Subtotal")
