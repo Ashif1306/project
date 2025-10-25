@@ -64,12 +64,6 @@
         </p>
       </div>
 
-      <!-- Description -->
-      <div class="mb-4">
-        <h5>Deskripsi Produk</h5>
-        <p>{{ product.description|linebreaks }}</p>
-      </div>
-
       <!-- Modern Purchase Section -->
       {% if user.is_authenticated %}
         {% if product.stock > 0 %}
@@ -98,9 +92,13 @@
             </div>
 
             <!-- Row 2: Buy It Now Button -->
-            <a href="{% url 'catalog:product_detail' product.slug %}" class="btn-buy-now">
-              <i class="fas fa-bolt"></i> Buy It Now
-            </a>
+            <form method="post" action="{% url 'core:buy_now' product.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="quantity" id="buy-now-quantity" value="1">
+              <button type="submit" class="btn-buy-now">
+                <i class="fas fa-bolt"></i> Buy It Now
+              </button>
+            </form>
           </div>
         {% else %}
           <div class="out-of-stock">
@@ -112,6 +110,12 @@
           <i class="fas fa-sign-in-alt"></i> Login untuk Membeli
         </a>
       {% endif %}
+
+      <!-- Description - Now After Buttons -->
+      <div class="mt-4 mb-4">
+        <h5>Deskripsi Produk</h5>
+        <p>{{ product.description|linebreaks }}</p>
+      </div>
     </div>
   </div>
 
@@ -490,24 +494,28 @@
 function increaseQty(maxStock) {
   const qtyInput = document.getElementById('quantity');
   const cartQtyInput = document.getElementById('cart-quantity');
+  const buyNowQtyInput = document.getElementById('buy-now-quantity');
   let currentQty = parseInt(qtyInput.value);
 
   if (currentQty < maxStock) {
     currentQty++;
     qtyInput.value = currentQty;
     if (cartQtyInput) cartQtyInput.value = currentQty;
+    if (buyNowQtyInput) buyNowQtyInput.value = currentQty;
   }
 }
 
 function decreaseQty() {
   const qtyInput = document.getElementById('quantity');
   const cartQtyInput = document.getElementById('cart-quantity');
+  const buyNowQtyInput = document.getElementById('buy-now-quantity');
   let currentQty = parseInt(qtyInput.value);
 
   if (currentQty > 1) {
     currentQty--;
     qtyInput.value = currentQty;
     if (cartQtyInput) cartQtyInput.value = currentQty;
+    if (buyNowQtyInput) buyNowQtyInput.value = currentQty;
   }
 }
 

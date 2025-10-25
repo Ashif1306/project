@@ -5,13 +5,14 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db.models import F
 from django.utils import timezone
+from django.conf import settings
 from decimal import Decimal
 import uuid
 
 from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist, EmailVerification
 from catalog.models import Product
 from .forms import CustomUserRegistrationForm
-from .utils import send_verification_email, send_welcome_email
+from .utils import send_verification_email, send_welcome_email, compute_total_weight_gram
 from shipping.models import District, Address, Shipment
 from shipping.views import calculate_shipping_cost, validate_shipping_data
 from shipping.forms import AddressForm
@@ -100,10 +101,44 @@ def clear_cart(request):
     return redirect('core:cart')
 
 
+@login_required
+def buy_now(request, product_id):
+    """
+    Buy Now - Add product to cart and redirect to checkout immediately
+    Clears cart first to ensure only this product is purchased
+    """
+    if request.method != 'POST':
+        return redirect('catalog:product_detail', slug=product_id)
+
+    product = get_object_or_404(Product, id=product_id, available=True)
+    quantity = int(request.POST.get('quantity', 1))
+
+    # Check stock
+    if product.stock < quantity:
+        messages.error(request, f'Stok {product.name} tidak mencukupi.')
+        return redirect('catalog:product_detail', slug=product.slug)
+
+    # Get or create cart
+    cart, created = Cart.objects.get_or_create(user=request.user)
+
+    # Clear cart to ensure only this product
+    cart.items.all().delete()
+
+    # Add product to cart
+    CartItem.objects.create(
+        cart=cart,
+        product=product,
+        quantity=quantity
+    )
+
+    messages.success(request, f'{product.name} siap untuk checkout!')
+    return redirect('core:checkout')
+
+
 # Checkout Views
 @login_required
 def checkout(request):
-    """Checkout page with shipping integration"""
+    """Checkout page with RajaOngkir shipping integration"""
     cart = get_object_or_404(Cart, user=request.user)
 
     if not cart.items.exists():
@@ -116,32 +151,36 @@ def checkout(request):
     except UserProfile.DoesNotExist:
         profile = None
 
-    # Get user's saved addresses
-    user_addresses = Address.objects.filter(user=request.user).select_related('district')
+    # Get user's saved addresses with RajaOngkir fields
+    user_addresses = Address.objects.filter(user=request.user)
 
     # Get default address if exists
     default_address = user_addresses.filter(is_default=True).first()
 
-    # Get all active districts for shipping
-    districts = District.objects.filter(is_active=True).order_by('name')
+    # If no default address, check if user has any address
+    if not default_address and user_addresses.exists():
+        default_address = user_addresses.first()
 
-    # Address form for adding new address
-    address_form = AddressForm()
+    # Calculate total weight for shipping
+    total_weight_gram = compute_total_weight_gram(cart.items.all())
+
+    # Get supported couriers from settings
+    supported_couriers = getattr(settings, 'SUPPORTED_COURIERS', ['jne', 'jnt', 'sicepat', 'tiki', 'pos', 'anteraja'])
 
     context = {
         'cart': cart,
         'profile': profile,
         'user_addresses': user_addresses,
         'default_address': default_address,
-        'districts': districts,
-        'address_form': address_form,
+        'total_weight_gram': total_weight_gram,
+        'supported_couriers': supported_couriers,
     }
     return render(request, 'core/checkout.html', context)
 
 
 @login_required
 def place_order(request):
-    """Process order placement with shipping integration"""
+    """Process order placement with RajaOngkir shipping integration"""
     if request.method != 'POST':
         return redirect('core:checkout')
 
@@ -157,55 +196,124 @@ def place_order(request):
             messages.error(request, f'Stok {item.product.name} tidak mencukupi.')
             return redirect('core:cart')
 
-    # Validate shipping data (JANGAN PERCAYA DATA DARI CLIENT!)
-    district_id = request.POST.get('district_id')
-    service = request.POST.get('shipping_service')  # 'REG' or 'EXP'
+    # Get shipping data from POST (JANGAN PERCAYA DATA DARI CLIENT!)
+    address_id = request.POST.get('address_id')
+    courier = request.POST.get('courier')
+    selected_service = request.POST.get('selected_service')
+    selected_service_name = request.POST.get('selected_service_name')
+    shipping_cost = request.POST.get('shipping_cost')
 
     try:
-        is_valid, error_message = validate_shipping_data(district_id, service)
-        if not is_valid:
-            messages.error(request, f'Data pengiriman tidak valid: {error_message}')
+        # Validate address exists and belongs to user
+        address = Address.objects.get(id=address_id, user=request.user)
+
+        # Validate required RajaOngkir fields
+        if not address.destination_subdistrict_id:
+            messages.error(request, 'Alamat pengiriman belum memiliki ID kecamatan RajaOngkir.')
             return redirect('core:checkout')
 
-        # Re-lookup shipping cost from database (SERVER-SIDE VALIDATION)
-        subtotal = cart.get_total()
-        shipping_cost, eta, district_name = calculate_shipping_cost(
-            district_id, service, subtotal
-        )
+        # Validate courier
+        supported_couriers = getattr(settings, 'SUPPORTED_COURIERS', ['jne', 'jnt', 'sicepat', 'tiki', 'pos', 'anteraja'])
+        if courier not in supported_couriers:
+            messages.error(request, 'Kurir tidak valid.')
+            return redirect('core:checkout')
 
+        # Validate shipping cost (must be positive number)
+        try:
+            shipping_cost = Decimal(shipping_cost)
+            if shipping_cost < 0:
+                raise ValueError("Shipping cost cannot be negative")
+        except (ValueError, TypeError):
+            messages.error(request, 'Biaya pengiriman tidak valid.')
+            return redirect('core:checkout')
+
+        # SERVER-SIDE VALIDATION: Re-calculate shipping cost via RajaOngkir API
+        # This prevents client from manipulating shipping cost
+        from shipping.services.raja import calculate_cost as rajaongkir_calculate_cost
+
+        origin_subdistrict_id = getattr(settings, 'ORIGIN_SUBDISTRICT_ID', 0)
+        if not origin_subdistrict_id or origin_subdistrict_id == 0:
+            messages.error(request, 'Konfigurasi gudang belum lengkap. Hubungi administrator.')
+            return redirect('core:checkout')
+
+        # Calculate total weight
+        total_weight_gram = compute_total_weight_gram(cart.items.all())
+
+        # Re-fetch cost from RajaOngkir to validate
+        try:
+            api_response = rajaongkir_calculate_cost(
+                origin_subdistrict_id,
+                address.destination_subdistrict_id,
+                total_weight_gram,
+                courier
+            )
+
+            # Validate the service exists and cost matches
+            validated_cost = None
+            validated_etd = 'N/A'
+
+            if api_response.get('data', {}).get('results'):
+                for courier_result in api_response['data']['results']:
+                    for cost_item in courier_result.get('costs', []):
+                        if cost_item['service'] == selected_service:
+                            validated_cost = Decimal(cost_item['cost'][0]['value'])
+                            validated_etd = cost_item['cost'][0].get('etd', 'N/A')
+                            break
+                    if validated_cost:
+                        break
+
+            if validated_cost is None:
+                messages.error(request, 'Layanan pengiriman tidak valid.')
+                return redirect('core:checkout')
+
+            # Use server-validated cost (ignore client cost)
+            shipping_cost = validated_cost
+
+        except Exception as e:
+            messages.error(request, f'Gagal memvalidasi biaya pengiriman: {str(e)}')
+            return redirect('core:checkout')
+
+    except Address.DoesNotExist:
+        messages.error(request, 'Alamat pengiriman tidak valid.')
+        return redirect('core:checkout')
     except Exception as e:
-        messages.error(request, f'Terjadi kesalahan dalam perhitungan ongkir: {str(e)}')
+        messages.error(request, f'Terjadi kesalahan: {str(e)}')
         return redirect('core:checkout')
 
     # Create order
     order_number = f'ORD-{uuid.uuid4().hex[:8].upper()}'
+    subtotal = cart.get_total()
 
     order = Order.objects.create(
         user=request.user,
         order_number=order_number,
-        full_name=request.POST.get('full_name'),
-        email=request.POST.get('email'),
-        phone=request.POST.get('phone'),
-        address=request.POST.get('street'),  # Use 'street' from shipping form
-        city='Makassar',  # Fixed city
-        postal_code=request.POST.get('postal_code'),
+        full_name=address.full_name,
+        email=request.user.email,
+        phone=address.phone,
+        address=address.address_line,
+        city=address.city_name,
+        postal_code=address.postal_code,
         notes=request.POST.get('notes', ''),
         subtotal=subtotal,
         shipping_cost=shipping_cost,
         total=subtotal + shipping_cost,
+        shipping_address=address,
+        selected_courier=courier,
+        selected_service_name=selected_service_name,
+        total_weight_gram=total_weight_gram,
     )
 
     # Create shipment record (snapshot of shipping data)
     Shipment.objects.create(
         order=order,
-        full_name=request.POST.get('full_name'),
-        phone=request.POST.get('phone'),
-        street=request.POST.get('street'),
-        district_name=district_name,
-        postal_code=request.POST.get('postal_code'),
-        service=service,
+        full_name=address.full_name,
+        phone=address.phone,
+        street=address.address_line,
+        district_name=f"{address.subdistrict_name}, {address.city_name}",
+        postal_code=address.postal_code,
+        service=selected_service_name,
         cost=shipping_cost,
-        eta=eta,
+        eta=validated_etd,
     )
 
     # Create order items and update stock
