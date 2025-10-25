@@ -7,6 +7,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("catalog.urls")),
     path("", include("core.urls")),
+    path("shipping/", include("shipping.urls")),  # Shipping module
 ]
 
 if settings.DEBUG:
