@@ -425,7 +425,7 @@ def profile_view(request):
     profile, created = UserProfile.objects.get_or_create(user=request.user)
 
     # Get primary shipping address
-    address = Address.objects.filter(user=request.user, is_primary=True).first()
+    address = Address.objects.filter(user=request.user, is_default=True).first()
 
     context = {
         'profile': profile,
@@ -472,7 +472,7 @@ def profile_settings(request):
 @login_required
 def profile_address_edit(request):
     """Edit primary shipping address for RajaOngkir integration"""
-    addr = Address.objects.filter(user=request.user, is_primary=True).first()
+    addr = Address.objects.filter(user=request.user, is_default=True).first()
     if not addr:
         addr = Address(
             user=request.user,
@@ -487,7 +487,7 @@ def profile_address_edit(request):
             if not obj.province_name:
                 obj.province_name = 'Sulawesi Selatan'
             obj.user = request.user
-            obj.is_primary = True
+            obj.is_default = True
             obj.save()
             messages.success(request, 'Alamat pengiriman berhasil diperbarui.')
             return redirect('core:profile')
