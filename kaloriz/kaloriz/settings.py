@@ -234,3 +234,16 @@ ORIGIN_SUBDISTRICT_ID = int(os.getenv("ORIGIN_SUBDISTRICT_ID", "0"))
 # Daftar kurir yang didukung untuk validasi form/checkout
 # Format: kode kurir yang didukung oleh RajaOngkir API
 SUPPORTED_COURIERS = ("jne", "jnt", "sicepat", "tiki", "pos", "anteraja")
+
+# RajaOngkir API Configuration
+RAJAONGKIR_API_KEY = os.getenv("RAJAONGKIR_API_KEY", "")
+RAJAONGKIR_BASE_URL = "https://rajaongkir.komerce.id/api/v1"
+
+# Warning jika API key belum dikonfigurasi
+if not RAJAONGKIR_API_KEY:
+    import sys
+    print("=" * 70, file=sys.stderr)
+    print("WARNING: RAJAONGKIR_API_KEY tidak ditemukan di .env", file=sys.stderr)
+    print("Fitur perhitungan ongkir tidak akan berfungsi!", file=sys.stderr)
+    print("Silakan tambahkan RAJAONGKIR_API_KEY ke file .env", file=sys.stderr)
+    print("=" * 70, file=sys.stderr)
