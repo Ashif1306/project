@@ -1,2 +1,4 @@
 Django>=5.2.7
 Pillow>=10.0.0
+httpx>=0.27.0
+django-jazzmin>=2.6.0

@@ -227,6 +227,16 @@ JAZZMIN_UI_TWEAKS = {
 # SHIPPING & RAJAONGKIR CONFIGURATION
 # ============================================
 
+# RajaOngkir API Configuration
+RAJAONGKIR_API_KEY = os.getenv("RAJAONGKIR_API_KEY")
+RAJAONGKIR_BASE_URL = "https://rajaongkir.komerce.id/api/v1"
+
+# Warning jika API key kosong
+if not RAJAONGKIR_API_KEY:
+    import sys
+    print("⚠️  WARNING: RAJAONGKIR_API_KEY tidak ditemukan di .env file!", file=sys.stderr)
+    print("⚠️  Integrasi RajaOngkir tidak akan berfungsi tanpa API key.", file=sys.stderr)
+
 # ID kecamatan asal (gudang) untuk perhitungan ongkir
 # Akan diisi manual setelah integrasi RajaOngkir
 ORIGIN_SUBDISTRICT_ID = int(os.getenv("ORIGIN_SUBDISTRICT_ID", "0"))
