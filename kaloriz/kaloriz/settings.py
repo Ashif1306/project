@@ -224,23 +224,11 @@ JAZZMIN_UI_TWEAKS = {
 }
 
 # ============================================
-# SHIPPING & RAJAONGKIR CONFIGURATION
+# SHIPPING CONFIGURATION
 # ============================================
 
-# RajaOngkir API Configuration
-RAJAONGKIR_API_KEY = os.getenv("RAJAONGKIR_API_KEY")
-RAJAONGKIR_BASE_URL = "https://rajaongkir.komerce.id/api/v1"
-
-# Warning jika API key kosong
-if not RAJAONGKIR_API_KEY:
-    import sys
-    print("⚠️  WARNING: RAJAONGKIR_API_KEY tidak ditemukan di .env file!", file=sys.stderr)
-    print("⚠️  Integrasi RajaOngkir tidak akan berfungsi tanpa API key.", file=sys.stderr)
-
-# ID kecamatan asal (gudang) untuk perhitungan ongkir
-# Akan diisi manual setelah integrasi RajaOngkir
-ORIGIN_SUBDISTRICT_ID = int(os.getenv("ORIGIN_SUBDISTRICT_ID", "0"))
-
-# Daftar kurir yang didukung untuk validasi form/checkout
-# Format: kode kurir yang didukung oleh RajaOngkir API
-SUPPORTED_COURIERS = ("jne", "jnt", "sicepat", "tiki", "pos", "anteraja")
+# Flat rate shipping untuk Makassar
+# Tarif pengiriman berdasarkan kecamatan (diatur di District model)
+SHIPPING_ENABLED = True
+DEFAULT_SHIPPING_CITY = "Makassar"
+DEFAULT_SHIPPING_PROVINCE = "Sulawesi Selatan"

@@ -4,16 +4,22 @@ from .models import Address, District
 
 class AddressForm(forms.ModelForm):
     """
-    Form untuk alamat pengiriman dengan dukungan RajaOngkir API
+    Form untuk alamat pengiriman dengan field standard
     """
     class Meta:
         model = Address
         fields = [
-            'full_name', 'phone', 'address_line',
-            'province_name', 'city_name', 'subdistrict_name', 'destination_subdistrict_id',
-            'postal_code', 'is_primary',
+            'label', 'full_name', 'phone',
+            'province', 'city', 'district', 'postal_code',
+            'street_name', 'detail',
+            'latitude', 'longitude',
+            'is_default',
         ]
         widgets = {
+            'label': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Contoh: Rumah, Kantor, Apartemen'
+            }),
             'full_name': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Nama lengkap penerima'
@@ -22,55 +28,58 @@ class AddressForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': '08123456789'
             }),
-            'address_line': forms.TextInput(attrs={
+            'province': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Alamat lengkap (nama jalan, nomor rumah, RT/RW, dll)'
-            }),
-            'province_name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Sulawesi Selatan',
                 'readonly': 'readonly'
             }),
-            'city_name': forms.TextInput(attrs={
+            'city': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Makassar'
+                'readonly': 'readonly'
             }),
-            'subdistrict_name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Contoh: Panakkukang'
-            }),
-            'destination_subdistrict_id': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Contoh: 7371100'
+            'district': forms.Select(attrs={
+                'class': 'form-control'
             }),
             'postal_code': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': '90xxx'
             }),
-            'is_primary': forms.CheckboxInput(attrs={
+            'street_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Contoh: Jl. A.P. Pettarani No. 123'
+            }),
+            'detail': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Detail tambahan: Blok, nomor rumah, patokan, warna cat, dll (opsional)'
+            }),
+            'latitude': forms.HiddenInput(),
+            'longitude': forms.HiddenInput(),
+            'is_default': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
         }
         labels = {
+            'label': 'Label Alamat',
             'full_name': 'Nama Lengkap',
             'phone': 'Nomor Telepon',
-            'address_line': 'Alamat / Jalan',
-            'province_name': 'Provinsi',
-            'city_name': 'Kota',
-            'subdistrict_name': 'Kecamatan',
-            'destination_subdistrict_id': 'ID Kecamatan (RajaOngkir)',
+            'province': 'Provinsi',
+            'city': 'Kota',
+            'district': 'Kecamatan',
             'postal_code': 'Kode Pos',
-            'is_primary': 'Jadikan alamat utama',
-        }
-        help_texts = {
-            'destination_subdistrict_id': 'Masukkan ID kecamatan tujuan. (Nanti bisa diisi otomatis setelah integrasi API.)',
+            'street_name': 'Nama Jalan',
+            'detail': 'Detail Lainnya',
+            'is_default': 'Jadikan alamat utama',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Set default province to Sulawesi Selatan
-        if not self.instance.pk or not self.instance.province_name:
-            self.fields['province_name'].initial = 'Sulawesi Selatan'
+        # Set default province and city
+        if not self.instance.pk:
+            self.fields['province'].initial = 'Sulawesi Selatan'
+            self.fields['city'].initial = 'Makassar'
+
+        # Load active districts only
+        self.fields['district'].queryset = District.objects.filter(is_active=True).order_by('name')
 
     def clean_phone(self):
         """

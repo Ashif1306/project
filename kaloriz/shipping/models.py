@@ -57,7 +57,7 @@ class District(models.Model):
 
 class Address(models.Model):
     """
-    Model untuk alamat pengiriman pelanggan dengan dukungan RajaOngkir API
+    Model untuk alamat pengiriman pelanggan - Standard address fields
     """
     # Validator nomor HP Indonesia
     phone_validator = RegexValidator(
@@ -71,58 +71,65 @@ class Address(models.Model):
         related_name='addresses',
         verbose_name="Pengguna"
     )
+
+    # Basic address information
+    label = models.CharField(
+        max_length=50,
+        default="Rumah",
+        verbose_name="Label Alamat",
+        help_text="Contoh: Rumah, Kantor, Apartemen"
+    )
     full_name = models.CharField(max_length=120, verbose_name="Nama Lengkap")
     phone = models.CharField(
         max_length=30,
         validators=[phone_validator],
         verbose_name="Nomor Telepon"
     )
-    address_line = models.CharField(max_length=255, blank=True, verbose_name="Alamat/Jalan")
 
-    # === FIELD UNTUK RAJAONGKIR API ===
-    # Wajib untuk ongkir: simpan ID kecamatan tujuan (nanti dipakai ke API)
-    destination_subdistrict_id = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name="ID Kecamatan Tujuan",
-        help_text="ID kecamatan tujuan (RajaOngkir)."
+    # Detailed address fields
+    province = models.CharField(
+        max_length=100,
+        default="Sulawesi Selatan",
+        verbose_name="Provinsi"
     )
-
-    # Opsional untuk tampilan/validasi
-    subdistrict_name = models.CharField(
-        max_length=120,
-        blank=True,
-        verbose_name="Kecamatan",
-        help_text="ex: Panakkukang"
+    city = models.CharField(
+        max_length=100,
+        default="Makassar",
+        verbose_name="Kota"
     )
-    city_name = models.CharField(
-        max_length=120,
-        blank=True,
-        verbose_name="Kota",
-        help_text="ex: Makassar"
-    )
-    province_name = models.CharField(
-        max_length=120,
-        blank=True,
-        verbose_name="Provinsi",
-        help_text="Set 'Sulawesi Selatan' saat simpan"
-    )
-    postal_code = models.CharField(max_length=10, blank=True, verbose_name="Kode Pos")
-
-    # === BACKWARD COMPATIBILITY ===
-    # Untuk data lama yang masih menggunakan District lokal
     district = models.ForeignKey(
         District,
         on_delete=models.PROTECT,
+        verbose_name="Kecamatan",
+        help_text="Pilih kecamatan untuk perhitungan ongkir"
+    )
+    postal_code = models.CharField(max_length=10, verbose_name="Kode Pos")
+    street_name = models.CharField(max_length=255, verbose_name="Nama Jalan")
+    detail = models.TextField(
+        blank=True,
+        verbose_name="Detail Lainnya",
+        help_text="Contoh: Blok, nomor rumah, patokan, warna cat, dll"
+    )
+
+    # Map coordinates (optional)
+    latitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
         null=True,
         blank=True,
-        verbose_name="Kecamatan (Lokal)",
-        help_text="Legacy field - gunakan destination_subdistrict_id untuk RajaOngkir"
+        verbose_name="Latitude",
+        help_text="Koordinat latitude (opsional)"
     )
-    street = models.TextField(blank=True, verbose_name="Alamat/Jalan (Legacy)")
+    longitude = models.DecimalField(
+        max_digits=10,
+        decimal_places=7,
+        null=True,
+        blank=True,
+        verbose_name="Longitude",
+        help_text="Koordinat longitude (opsional)"
+    )
 
     is_default = models.BooleanField(default=False, verbose_name="Alamat Utama")
-    is_primary = models.BooleanField(default=True, verbose_name="Alamat Primary")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -136,19 +143,27 @@ class Address(models.Model):
         ]
 
     def __str__(self):
-        location = self.subdistrict_name or (self.district.name if self.district else 'N/A')
-        return f"{self.full_name} — {location}"
+        return f"{self.label} - {self.full_name} ({self.district.name})"
+
+    def get_full_address(self):
+        """Return formatted full address"""
+        parts = [
+            self.street_name,
+            self.detail,
+            self.district.name,
+            self.city,
+            self.province,
+            self.postal_code
+        ]
+        return ", ".join([p for p in parts if p])
 
     def save(self, *args, **kwargs):
         """
-        Pastikan hanya ada satu alamat default/primary per user
+        Pastikan hanya ada satu alamat default per user
         """
         if self.is_default:
             # Set semua alamat user lain jadi non-default
             Address.objects.filter(user=self.user, is_default=True).update(is_default=False)
-        if self.is_primary:
-            # Set semua alamat user lain jadi non-primary
-            Address.objects.filter(user=self.user, is_primary=True).update(is_primary=False)
         super().save(*args, **kwargs)
 
 

@@ -22,15 +22,24 @@ class Cart(models.Model):
         """Calculate total price of all items in cart"""
         return sum(item.get_subtotal() for item in self.items.all())
 
+    def get_selected_total(self):
+        """Calculate total price of selected items only"""
+        return sum(item.get_subtotal() for item in self.items.filter(is_selected=True))
+
     def get_total_items(self):
         """Get total number of items in cart"""
         return sum(item.quantity for item in self.items.all())
+
+    def get_selected_items_count(self):
+        """Get count of selected items"""
+        return self.items.filter(is_selected=True).count()
 
 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items', verbose_name="Keranjang")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Produk")
     quantity = models.PositiveIntegerField(default=1, verbose_name="Jumlah")
+    is_selected = models.BooleanField(default=True, verbose_name="Dipilih untuk Checkout")
     added_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -149,6 +158,13 @@ class UserProfile(models.Model):
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', verbose_name="Pengguna")
+    photo = models.ImageField(
+        upload_to='profile_photos/',
+        blank=True,
+        null=True,
+        verbose_name="Foto Profil",
+        help_text="Upload foto profil Anda"
+    )
     phone = models.CharField(max_length=20, blank=True, verbose_name="Nomor Telepon")
     address = models.TextField(blank=True, verbose_name="Alamat")
     city = models.CharField(max_length=100, blank=True, verbose_name="Kota")
@@ -164,6 +180,12 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"Profil - {self.user.username}"
+
+    def get_photo_url(self):
+        """Return profile photo URL or default avatar"""
+        if self.photo and hasattr(self.photo, 'url'):
+            return self.photo.url
+        return '/static/images/default-avatar.png'
 
 
 class Watchlist(models.Model):

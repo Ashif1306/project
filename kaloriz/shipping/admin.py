@@ -50,43 +50,41 @@ class AddressAdmin(admin.ModelAdmin):
     Admin interface untuk mengelola alamat pelanggan
     """
     list_display = [
+        'label',
         'full_name',
         'user',
         'phone',
-        'subdistrict_name',
-        'destination_subdistrict_id',
+        'district',
         'postal_code',
-        'is_primary',
         'is_default',
         'created_at'
     ]
-    list_filter = ['is_primary', 'is_default', 'province_name', 'city_name', 'created_at']
-    search_fields = ['full_name', 'user__username', 'user__email', 'phone', 'address_line', 'subdistrict_name', 'city_name']
-    list_select_related = ['user']
+    list_filter = ['is_default', 'province', 'city', 'district', 'created_at']
+    search_fields = ['full_name', 'user__username', 'user__email', 'phone', 'street_name', 'detail', 'label']
+    list_select_related = ['user', 'district']
     readonly_fields = ['created_at', 'updated_at']
 
     fieldsets = (
         ('Pemilik', {
             'fields': ('user',)
         }),
-        ('Identitas Penerima', {
-            'fields': ('full_name', 'phone')
+        ('Label & Identitas Penerima', {
+            'fields': ('label', 'full_name', 'phone')
         }),
-        ('Alamat Tujuan (RajaOngkir)', {
+        ('Alamat Lengkap', {
             'fields': (
-                'address_line',
-                'province_name', 'city_name', 'subdistrict_name', 'destination_subdistrict_id',
-                'postal_code'
-            ),
-            'description': 'Field untuk integrasi RajaOngkir API'
+                'province', 'city', 'district',
+                'street_name', 'postal_code',
+                'detail'
+            )
         }),
-        ('Alamat Lama (Legacy)', {
-            'fields': ('street', 'district'),
+        ('Koordinat (Opsional)', {
+            'fields': ('latitude', 'longitude'),
             'classes': ('collapse',),
-            'description': 'Field lama - untuk backward compatibility'
+            'description': 'Koordinat GPS untuk peta'
         }),
         ('Status', {
-            'fields': ('is_primary', 'is_default')
+            'fields': ('is_default',)
         }),
         ('Timestamp', {
             'fields': ('created_at', 'updated_at'),
