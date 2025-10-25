@@ -37,6 +37,42 @@ class Product(models.Model):
     image = models.ImageField(upload_to='products/', blank=True, null=True, verbose_name="Gambar")
     stock = models.PositiveIntegerField(default=0, verbose_name="Stok")
     available = models.BooleanField(default=True, verbose_name="Tersedia")
+
+    # === FIELD PENGIRIMAN ===
+    weight_gram = models.PositiveIntegerField(
+        default=1000,
+        verbose_name="Berat (gram)",
+        help_text="Berat per unit (gram). Minimal 1000 gram untuk ongkir."
+    )
+    length_cm = models.PositiveIntegerField(
+        default=0,
+        blank=True,
+        verbose_name="Panjang (cm)",
+        help_text="Panjang (cm) – opsional"
+    )
+    width_cm = models.PositiveIntegerField(
+        default=0,
+        blank=True,
+        verbose_name="Lebar (cm)",
+        help_text="Lebar (cm) – opsional"
+    )
+    height_cm = models.PositiveIntegerField(
+        default=0,
+        blank=True,
+        verbose_name="Tinggi (cm)",
+        help_text="Tinggi (cm) – opsional"
+    )
+    is_fragile = models.BooleanField(
+        default=False,
+        verbose_name="Mudah Pecah",
+        help_text="Mudah pecah (opsional)"
+    )
+    is_perishable = models.BooleanField(
+        default=False,
+        verbose_name="Mudah Rusak",
+        help_text="Mudah rusak (opsional)"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

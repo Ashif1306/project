@@ -12,8 +12,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['name', 'category', 'price', 'discount_price', 'stock', 'available', 'created_at']
-    list_filter = ['available', 'category', 'created_at']
+    list_display = ['name', 'category', 'price', 'discount_price', 'stock', 'weight_gram', 'is_fragile', 'is_perishable', 'available', 'created_at']
+    list_filter = ['available', 'is_fragile', 'is_perishable', 'category', 'created_at']
     list_editable = ['price', 'discount_price', 'stock', 'available']
     prepopulated_fields = {'slug': ('name',)}
     search_fields = ['name', 'description']
@@ -25,7 +25,11 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ('category', 'name', 'slug', 'description')
         }),
         ('Harga & Stok', {
-            'fields': ('price', 'discount_price', 'stock', 'available')
+            'fields': (
+                'price', 'discount_price', 'stock', 'available',
+                'weight_gram', 'length_cm', 'width_cm', 'height_cm',
+                'is_fragile', 'is_perishable',
+            )
         }),
         ('Media', {
             'fields': ('image',)

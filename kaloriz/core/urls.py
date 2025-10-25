@@ -29,6 +29,7 @@ urlpatterns = [
     # Profile URLs
     path('profile/', views.profile_view, name='profile'),
     path('profile/settings/', views.profile_settings, name='profile_settings'),
+    path('profile/address/edit/', views.profile_address_edit, name='profile_address_edit'),
 
     # Watchlist URLs
     path('watchlist/', views.watchlist_view, name='watchlist'),
