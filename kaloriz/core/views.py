@@ -12,6 +12,9 @@ from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist, Em
 from catalog.models import Product
 from .forms import CustomUserRegistrationForm
 from .utils import send_verification_email, send_welcome_email
+from shipping.models import District, Address, Shipment
+from shipping.views import calculate_shipping_cost, validate_shipping_data
+from shipping.forms import AddressForm
 
 
 # Cart Views
@@ -100,7 +103,7 @@ def clear_cart(request):
 # Checkout Views
 @login_required
 def checkout(request):
-    """Checkout page"""
+    """Checkout page with shipping integration"""
     cart = get_object_or_404(Cart, user=request.user)
 
     if not cart.items.exists():
@@ -113,16 +116,32 @@ def checkout(request):
     except UserProfile.DoesNotExist:
         profile = None
 
+    # Get user's saved addresses
+    user_addresses = Address.objects.filter(user=request.user).select_related('district')
+
+    # Get default address if exists
+    default_address = user_addresses.filter(is_default=True).first()
+
+    # Get all active districts for shipping
+    districts = District.objects.filter(is_active=True).order_by('name')
+
+    # Address form for adding new address
+    address_form = AddressForm()
+
     context = {
         'cart': cart,
         'profile': profile,
+        'user_addresses': user_addresses,
+        'default_address': default_address,
+        'districts': districts,
+        'address_form': address_form,
     }
     return render(request, 'core/checkout.html', context)
 
 
 @login_required
 def place_order(request):
-    """Process order placement"""
+    """Process order placement with shipping integration"""
     if request.method != 'POST':
         return redirect('core:checkout')
 
@@ -138,9 +157,28 @@ def place_order(request):
             messages.error(request, f'Stok {item.product.name} tidak mencukupi.')
             return redirect('core:cart')
 
+    # Validate shipping data (JANGAN PERCAYA DATA DARI CLIENT!)
+    district_id = request.POST.get('district_id')
+    service = request.POST.get('shipping_service')  # 'REG' or 'EXP'
+
+    try:
+        is_valid, error_message = validate_shipping_data(district_id, service)
+        if not is_valid:
+            messages.error(request, f'Data pengiriman tidak valid: {error_message}')
+            return redirect('core:checkout')
+
+        # Re-lookup shipping cost from database (SERVER-SIDE VALIDATION)
+        subtotal = cart.get_total()
+        shipping_cost, eta, district_name = calculate_shipping_cost(
+            district_id, service, subtotal
+        )
+
+    except Exception as e:
+        messages.error(request, f'Terjadi kesalahan dalam perhitungan ongkir: {str(e)}')
+        return redirect('core:checkout')
+
     # Create order
     order_number = f'ORD-{uuid.uuid4().hex[:8].upper()}'
-    shipping_cost = Decimal('10000.00')  # Fixed shipping cost
 
     order = Order.objects.create(
         user=request.user,
@@ -148,13 +186,26 @@ def place_order(request):
         full_name=request.POST.get('full_name'),
         email=request.POST.get('email'),
         phone=request.POST.get('phone'),
-        address=request.POST.get('address'),
-        city=request.POST.get('city'),
+        address=request.POST.get('street'),  # Use 'street' from shipping form
+        city='Makassar',  # Fixed city
         postal_code=request.POST.get('postal_code'),
         notes=request.POST.get('notes', ''),
-        subtotal=cart.get_total(),
+        subtotal=subtotal,
         shipping_cost=shipping_cost,
-        total=cart.get_total() + shipping_cost,
+        total=subtotal + shipping_cost,
+    )
+
+    # Create shipment record (snapshot of shipping data)
+    Shipment.objects.create(
+        order=order,
+        full_name=request.POST.get('full_name'),
+        phone=request.POST.get('phone'),
+        street=request.POST.get('street'),
+        district_name=district_name,
+        postal_code=request.POST.get('postal_code'),
+        service=service,
+        cost=shipping_cost,
+        eta=eta,
     )
 
     # Create order items and update stock
