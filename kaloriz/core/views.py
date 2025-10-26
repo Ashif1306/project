@@ -195,14 +195,6 @@ def checkout(request):
     except UserProfile.DoesNotExist:
         profile = None
 
-    user_addresses = list(
-        Address.objects.filter(user=request.user)
-        .select_related('district')
-        .order_by('-is_default', '-created_at')
-    )
-
-    default_address = next((addr for addr in user_addresses if addr.is_default), None)
-
     # Get user's saved addresses
     user_addresses_qs = Address.objects.filter(
         user=request.user,
@@ -221,24 +213,18 @@ def checkout(request):
     active_address = None
 
     if selected_address_id:
-        active_address = next(
-            (addr for addr in user_addresses if addr.id == selected_address_id),
-            None,
-        )
+        active_address = next((addr for addr in user_addresses if addr.id == selected_address_id), None)
         if not active_address and user_addresses:
-            # Selected address no longer available; clear stale session state
             for key in ['address_id', 'shipping_method', 'shipping_cost', 'eta']:
                 checkout_data.pop(key, None)
             request.session['checkout'] = checkout_data
             request.session.modified = True
-            messages.warning(
-                request,
-                'Alamat aktif Anda sudah tidak tersedia. Silakan pilih alamat lain.',
-            )
+            messages.warning(request, 'Alamat aktif Anda sudah tidak tersedia. Silakan pilih alamat lain.')
 
     if not active_address:
         active_address = default_address or (user_addresses[0] if user_addresses else None)
 
+    # Get all active districts for shipping
     districts = District.objects.filter(is_active=True).order_by('name')
 
     context = {
@@ -881,10 +867,6 @@ def set_shipping_method(request):
     })
     request.session['checkout'] = checkout_data
     request.session.modified = True
-
-    def format_rupiah(value: Decimal) -> str:
-        value = Decimal(value or 0)
-        return f"Rp {number_format(value, decimal_pos=0, force_grouping=True)}"
 
     return JsonResponse({
         'success': True,
