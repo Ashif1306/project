@@ -34,6 +34,10 @@ class Cart(models.Model):
         """Get count of selected items"""
         return self.items.filter(is_selected=True).count()
 
+    def get_selected_items_quantity(self):
+        """Get total quantity for selected cart items"""
+        return sum(item.quantity for item in self.items.filter(is_selected=True))
+
 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items', verbose_name="Keranjang")
