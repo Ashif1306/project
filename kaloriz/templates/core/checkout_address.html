@@ -501,6 +501,9 @@ function selectAddress(addressId) {
 
   document.querySelectorAll('.address-card').forEach(card => {
     const isSelected = Number(card.dataset.addressId || 0) === numericId;
+
+  document.querySelectorAll('.address-card').forEach(card => {
+    const isSelected = Number(card.dataset.addressId || 0) === numericId;
   selectedAddressId = addressId;
 
   document.querySelectorAll('.address-card').forEach(card => {
@@ -559,6 +562,83 @@ function selectCourier(service, options = { triggerUpdate: true }) {
 
   if (selectedCourier === 'EXP') {
     expRadio.checked = true;
+  } else {
+    selectedCourier = 'REG';
+    regRadio.checked = true;
+  }
+
+  summaryShippingEl.textContent = 'Menghitung...';
+  continueBtn.disabled = true;
+  continueBtn.textContent = 'Menghitung ongkir...';
+
+  if (options.triggerUpdate && selectedAddressId) {
+    updateShippingQuote();
+  }
+}
+
+async function updateShippingQuote() {
+  if (!selectedAddressId || !selectedCourier) {
+    return;
+  }
+
+  hideShippingAlert();
+
+  try {
+    const response = await fetch(shippingUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken(),
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        method: selectedCourier,
+        address_id: selectedAddressId,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      const message = data && data.message ? data.message : 'Gagal menghitung ongkir.';
+      throw new Error(message);
+    }
+
+    applyShippingSummary(data);
+  } catch (error) {
+    handleShippingError(error.message || 'Terjadi kesalahan.');
+  }
+}
+
+function applyShippingSummary(data) {
+  summarySubtotalEl.textContent = data.subtotal_display || formatRupiah(data.subtotal || 0);
+  summaryShippingEl.textContent = data.shipping_cost_display || formatRupiah(data.shipping_cost || 0);
+  summaryTotalEl.textContent = data.total_display || formatRupiah(data.total || 0);
+
+  summaryShippingEl.classList.add('text-danger');
+  continueBtn.disabled = false;
+  continueBtn.textContent = 'Lanjutkan ke Pembayaran';
+
+  if (data.eta) {
+    etaTextEl.textContent = data.eta;
+    etaContainer.style.display = 'block';
+  } else {
+    etaContainer.style.display = 'none';
+  }
+
+  document.getElementById('form_address_id').value = selectedAddressId;
+  document.getElementById('form_courier_service').value = selectedCourier;
+}
+
+function handleShippingError(message) {
+  shippingAlert.textContent = message;
+  shippingAlert.classList.remove('d-none');
+  summaryShippingEl.textContent = message;
+  continueBtn.disabled = true;
+  continueBtn.textContent = 'Coba lagi';
+  etaContainer.style.display = 'none';
+}
+
   } else {
     selectedCourier = 'REG';
     regRadio.checked = true;
