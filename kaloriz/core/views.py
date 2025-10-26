@@ -5,6 +5,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db.models import F
 from django.utils import timezone
+from django.utils.formats import number_format
 from decimal import Decimal
 import uuid
 
@@ -18,7 +19,6 @@ from shipping.forms import AddressForm
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from shipping.models import District, Address
 
 # Cart Views
 @login_required
@@ -777,23 +777,26 @@ def remove_from_watchlist(request, watchlist_id):
     messages.success(request, f'{product_name} berhasil dihapus dari watchlist.')
     return redirect('core:watchlist')
 
+@login_required
 @require_POST
 def set_shipping_method(request):
-    """
-    Hitung biaya kirim berdasarkan alamat & metode pengiriman,
-    lalu simpan hasilnya ke session checkout.
-    """
+    """Hitung ongkir berdasarkan alamat & simpan pilihan pengguna."""
     import json
+
+    def format_rupiah(value: Decimal) -> str:
+        value = Decimal(value or 0)
+        return f"Rp {number_format(value, decimal_pos=0, force_grouping=True)}"
+
     try:
         data = json.loads(request.body.decode('utf-8'))
     except Exception:
-        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+        return JsonResponse({'success': False, 'message': 'Data tidak valid.'}, status=400)
 
-    method = data.get('method')  # 'REG' atau 'EXP'
+    method = str(data.get('method', '')).upper()
     address_id = data.get('address_id')
 
-    if not method or not address_id:
-        return JsonResponse({'success': False, 'message': 'Data tidak lengkap.'}, status=400)
+    if method not in {'REG', 'EXP'} or not address_id:
+        return JsonResponse({'success': False, 'message': 'Metode atau alamat tidak valid.'}, status=400)
 
     try:
         address = Address.objects.select_related('district').get(id=address_id, user=request.user)
@@ -804,40 +807,36 @@ def set_shipping_method(request):
     if not district or not district.is_active:
         return JsonResponse({'success': False, 'message': 'Kecamatan tidak aktif.'}, status=400)
 
-    # Ambil tarif & ETA
     if method == 'EXP':
-        shipping_cost = district.price_express
-        eta = district.eta_express
+        shipping_cost = Decimal(district.exp_cost or 0)
+        eta = district.eta_exp
     else:
         method = 'REG'
-        shipping_cost = district.price_regular
-        eta = district.eta_regular
+        shipping_cost = Decimal(district.reg_cost or 0)
+        eta = district.eta_reg
 
-    # Ambil subtotal item terpilih
-    try:
-        cart = Cart.objects.get(user=request.user)
-        subtotal = cart.get_selected_total()
-    except Cart.DoesNotExist:
-        subtotal = 0
-
+    cart = Cart.objects.filter(user=request.user).first()
+    subtotal = Decimal(cart.get_selected_total() if cart else 0)
     total = subtotal + shipping_cost
 
-    # Simpan ke session
-    request.session['checkout'] = {
+    checkout_data = request.session.get('checkout', {})
+    checkout_data.update({
         'address_id': address.id,
         'shipping_method': method,
-        'shipping_cost': float(shipping_cost),
+        'shipping_cost': str(shipping_cost),
         'eta': eta,
-        'subtotal': float(subtotal),
-        'total': float(total),
-    }
+    })
+    request.session['checkout'] = checkout_data
     request.session.modified = True
 
     return JsonResponse({
         'success': True,
+        'method': method,
         'shipping_cost': float(shipping_cost),
-        'shipping_cost_display': f"Rp {shipping_cost:,.0f}".replace(",", "."),
         'subtotal': float(subtotal),
         'total': float(total),
         'eta': eta,
+        'shipping_cost_display': format_rupiah(shipping_cost),
+        'subtotal_display': format_rupiah(subtotal),
+        'total_display': format_rupiah(total),
     })
