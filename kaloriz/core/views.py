@@ -16,6 +16,9 @@ from shipping.models import District, Address, Shipment
 from shipping.views import calculate_shipping_cost, validate_shipping_data
 from shipping.forms import AddressForm
 
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from shipping.models import District, Address
 
 # Cart Views
 @login_required
@@ -773,3 +776,68 @@ def remove_from_watchlist(request, watchlist_id):
     watchlist_item.delete()
     messages.success(request, f'{product_name} berhasil dihapus dari watchlist.')
     return redirect('core:watchlist')
+
+@require_POST
+def set_shipping_method(request):
+    """
+    Hitung biaya kirim berdasarkan alamat & metode pengiriman,
+    lalu simpan hasilnya ke session checkout.
+    """
+    import json
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+
+    method = data.get('method')  # 'REG' atau 'EXP'
+    address_id = data.get('address_id')
+
+    if not method or not address_id:
+        return JsonResponse({'success': False, 'message': 'Data tidak lengkap.'}, status=400)
+
+    try:
+        address = Address.objects.select_related('district').get(id=address_id, user=request.user)
+    except Address.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Alamat tidak ditemukan.'}, status=404)
+
+    district = address.district
+    if not district or not district.is_active:
+        return JsonResponse({'success': False, 'message': 'Kecamatan tidak aktif.'}, status=400)
+
+    # Ambil tarif & ETA
+    if method == 'EXP':
+        shipping_cost = district.price_express
+        eta = district.eta_express
+    else:
+        method = 'REG'
+        shipping_cost = district.price_regular
+        eta = district.eta_regular
+
+    # Ambil subtotal item terpilih
+    try:
+        cart = Cart.objects.get(user=request.user)
+        subtotal = cart.get_selected_total()
+    except Cart.DoesNotExist:
+        subtotal = 0
+
+    total = subtotal + shipping_cost
+
+    # Simpan ke session
+    request.session['checkout'] = {
+        'address_id': address.id,
+        'shipping_method': method,
+        'shipping_cost': float(shipping_cost),
+        'eta': eta,
+        'subtotal': float(subtotal),
+        'total': float(total),
+    }
+    request.session.modified = True
+
+    return JsonResponse({
+        'success': True,
+        'shipping_cost': float(shipping_cost),
+        'shipping_cost_display': f"Rp {shipping_cost:,.0f}".replace(",", "."),
+        'subtotal': float(subtotal),
+        'total': float(total),
+        'eta': eta,
+    })

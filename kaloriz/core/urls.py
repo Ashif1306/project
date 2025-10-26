@@ -17,7 +17,7 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),
     path('order/place/', views.place_order, name='place_order'),
     path('order/place-from-address/', views.place_order_from_address, name='place_order_from_address'),
-
+    path('checkout/shipping-quote/', views.set_shipping_method, name='set_shipping_method'),
     # Order URLs
     path('orders/', views.order_list, name='order_list'),
     path('order/<str:order_number>/', views.order_detail, name='order_detail'),
@@ -39,4 +39,5 @@ urlpatterns = [
     path('watchlist/', views.watchlist_view, name='watchlist'),
     path('watchlist/add/<int:product_id>/', views.add_to_watchlist, name='add_to_watchlist'),
     path('watchlist/remove/<int:watchlist_id>/', views.remove_from_watchlist, name='remove_from_watchlist'),
+    
 ]
