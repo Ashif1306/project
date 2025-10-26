@@ -1,8 +1,11 @@
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from decimal import Decimal
 from .models import District, Address
+from .forms import AddressForm
 
 
 @require_GET
@@ -173,3 +176,86 @@ def validate_shipping_data(district_id, service):
         return False, 'Kecamatan tidak ditemukan'
 
     return True, None
+
+
+# Address Management Views
+@login_required
+def add_address(request):
+    """Add new shipping address"""
+    if request.method == 'POST':
+        form = AddressForm(request.POST)
+        if form.is_valid():
+            address = form.save(commit=False)
+            address.user = request.user
+
+            # If this is set as default, unset other defaults
+            if address.is_default:
+                Address.objects.filter(user=request.user, is_default=True).update(is_default=False)
+
+            address.save()
+            messages.success(request, 'Alamat berhasil ditambahkan.')
+            return redirect(request.META.get('HTTP_REFERER', 'core:checkout'))
+        else:
+            messages.error(request, 'Gagal menambahkan alamat. Periksa kembali data Anda.')
+
+    return redirect(request.META.get('HTTP_REFERER', 'core:checkout'))
+
+
+@login_required
+def edit_address(request, address_id):
+    """Edit shipping address"""
+    address = get_object_or_404(Address, id=address_id, user=request.user)
+
+    if request.method == 'POST':
+        form = AddressForm(request.POST, instance=address)
+        if form.is_valid():
+            updated_address = form.save(commit=False)
+
+            # If this is set as default, unset other defaults
+            if updated_address.is_default:
+                Address.objects.filter(user=request.user, is_default=True).exclude(id=address_id).update(is_default=False)
+
+            updated_address.save()
+            messages.success(request, 'Alamat berhasil diperbarui.')
+            return redirect(request.META.get('HTTP_REFERER', 'core:profile'))
+        else:
+            messages.error(request, 'Gagal memperbarui alamat. Periksa kembali data Anda.')
+    else:
+        form = AddressForm(instance=address)
+
+    districts = District.objects.filter(is_active=True).order_by('name')
+    context = {
+        'form': form,
+        'address': address,
+        'districts': districts,
+    }
+    return render(request, 'shipping/edit_address.html', context)
+
+
+@login_required
+def delete_address(request, address_id):
+    """Delete shipping address"""
+    if request.method == 'POST':
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+        address.delete()
+        messages.success(request, 'Alamat berhasil dihapus.')
+
+    return redirect(request.META.get('HTTP_REFERER', 'core:profile'))
+
+
+@login_required
+def set_default_address(request, address_id):
+    """Set address as default"""
+    if request.method == 'POST':
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+
+        # Unset other defaults
+        Address.objects.filter(user=request.user, is_default=True).update(is_default=False)
+
+        # Set this as default
+        address.is_default = True
+        address.save()
+
+        messages.success(request, 'Alamat utama berhasil diubah.')
+
+    return redirect(request.META.get('HTTP_REFERER', 'core:profile'))

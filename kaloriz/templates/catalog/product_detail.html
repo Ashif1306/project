@@ -64,12 +64,6 @@
         </p>
       </div>
 
-      <!-- Description -->
-      <div class="mb-4">
-        <h5>Deskripsi Produk</h5>
-        <p>{{ product.description|linebreaks }}</p>
-      </div>
-
       <!-- Modern Purchase Section -->
       {% if user.is_authenticated %}
         {% if product.stock > 0 %}
@@ -98,9 +92,9 @@
             </div>
 
             <!-- Row 2: Buy It Now Button -->
-            <a href="{% url 'catalog:product_detail' product.slug %}" class="btn-buy-now">
+            <button type="button" class="btn-buy-now" onclick="buyNow({{ product.id }})">
               <i class="fas fa-bolt"></i> Buy It Now
-            </a>
+            </button>
           </div>
         {% else %}
           <div class="out-of-stock">
@@ -112,6 +106,12 @@
           <i class="fas fa-sign-in-alt"></i> Login untuk Membeli
         </a>
       {% endif %}
+
+      <!-- Description - Moved below buttons -->
+      <div class="mt-5 mb-4">
+        <h5>Deskripsi Produk</h5>
+        <p>{{ product.description|linebreaks }}</p>
+      </div>
     </div>
   </div>
 
@@ -509,6 +509,45 @@ function decreaseQty() {
     qtyInput.value = currentQty;
     if (cartQtyInput) cartQtyInput.value = currentQty;
   }
+}
+
+// Buy It Now - Direct Checkout
+function buyNow(productId) {
+  const quantity = document.getElementById('quantity').value;
+
+  // Add to cart first
+  fetch(`/cart/add/${productId}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': getCookie('csrftoken')
+    },
+    body: `quantity=${quantity}&buy_now=true`
+  })
+  .then(response => {
+    // Redirect to checkout
+    window.location.href = '/checkout/';
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Terjadi kesalahan. Silakan coba lagi.');
+  });
+}
+
+// Get CSRF token
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
 }
 
 // Testimonial Carousel

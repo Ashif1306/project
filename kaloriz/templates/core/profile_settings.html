@@ -13,8 +13,36 @@
           <h5 class="mb-0">Edit Informasi Profil</h5>
         </div>
         <div class="card-body">
-          <form method="post">
+          <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
+
+            <h5 class="mb-3">Foto Profil</h5>
+
+            <div class="form-group text-center">
+              <div class="mb-3">
+                {% if profile.photo %}
+                  <img src="{{ profile.photo.url }}" id="photo-preview" alt="Profile Photo"
+                       class="rounded-circle" style="width: 150px; height: 150px; object-fit: cover; border: 3px solid #007bff;">
+                {% else %}
+                  <i class="fas fa-user-circle" id="photo-preview" style="font-size: 150px; color: #007bff;"></i>
+                {% endif %}
+              </div>
+              <div>
+                <label for="photo" class="btn btn-primary">
+                  <i class="fas fa-camera"></i> Pilih Foto
+                </label>
+                <input type="file" id="photo" name="photo" accept="image/*" style="display: none;" onchange="previewPhoto(this)">
+                {% if profile.photo %}
+                  <button type="button" class="btn btn-danger" onclick="removePhoto()">
+                    <i class="fas fa-trash"></i> Hapus Foto
+                  </button>
+                  <input type="hidden" name="remove_photo" id="remove_photo" value="0">
+                {% endif %}
+              </div>
+              <small class="text-muted d-block mt-2">Format: JPG, PNG. Maksimal 5MB</small>
+            </div>
+
+            <hr>
 
             <h5 class="mb-3">Informasi Akun</h5>
 
@@ -116,5 +144,83 @@
       </div>
     </div>
   </div>
+
+  <!-- Change Password Section -->
+  <div class="row mt-4">
+    <div class="col-md-9">
+      <div class="card shadow">
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0"><i class="fas fa-lock"></i> Ubah Password</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'core:change_password' %}">
+            {% csrf_token %}
+
+            <div class="form-group">
+              <label for="old_password">Password Lama</label>
+              <input type="password" class="form-control" id="old_password" name="old_password" required>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="new_password1">Password Baru</label>
+                <input type="password" class="form-control" id="new_password1" name="new_password1" required>
+                <small class="text-muted">Minimal 8 karakter</small>
+              </div>
+              <div class="form-group col-md-6">
+                <label for="new_password2">Konfirmasi Password Baru</label>
+                <input type="password" class="form-control" id="new_password2" name="new_password2" required>
+              </div>
+            </div>
+
+            <div class="form-group mb-0">
+              <button type="submit" class="btn btn-danger">
+                <i class="fas fa-key"></i> Ubah Password
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+function previewPhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      const preview = document.getElementById('photo-preview');
+      if (preview.tagName === 'IMG') {
+        preview.src = e.target.result;
+      } else {
+        // Replace icon with image
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.id = 'photo-preview';
+        img.className = 'rounded-circle';
+        img.style.cssText = 'width: 150px; height: 150px; object-fit: cover; border: 3px solid #007bff;';
+        preview.parentNode.replaceChild(img, preview);
+      }
+    }
+
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function removePhoto() {
+  if (confirm('Hapus foto profil?')) {
+    document.getElementById('remove_photo').value = '1';
+    const preview = document.getElementById('photo-preview');
+    if (preview.tagName === 'IMG') {
+      const icon = document.createElement('i');
+      icon.id = 'photo-preview';
+      icon.className = 'fas fa-user-circle';
+      icon.style.cssText = 'font-size: 150px; color: #007bff;';
+      preview.parentNode.replaceChild(icon, preview);
+    }
+  }
+}
+</script>
 {% endblock %}

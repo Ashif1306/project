@@ -31,31 +31,52 @@ def cart_view(request):
 @login_required
 def add_to_cart(request, product_id):
     """Add product to cart"""
+    from django.http import JsonResponse
+
     product = get_object_or_404(Product, id=product_id, available=True)
     cart, created = Cart.objects.get_or_create(user=request.user)
 
     # Check stock
     quantity = int(request.POST.get('quantity', 1))
     if product.stock < quantity:
+        if request.POST.get('buy_now'):
+            return JsonResponse({'success': False, 'message': 'Stok tidak mencukupi'})
         messages.error(request, f'Stok {product.name} tidak mencukupi.')
         return redirect('catalog:product_detail', slug=product.slug)
+
+    # Check if this is a "Buy Now" request
+    is_buy_now = request.POST.get('buy_now') == 'true'
+
+    if is_buy_now:
+        # Unselect all current items
+        cart.items.all().update(is_selected=False)
 
     # Add or update cart item
     cart_item, created = CartItem.objects.get_or_create(
         cart=cart,
         product=product,
-        defaults={'quantity': quantity}
+        defaults={'quantity': quantity, 'is_selected': True}
     )
 
     if not created:
         # Update quantity if item already exists
-        new_quantity = cart_item.quantity + quantity
-        if product.stock >= new_quantity:
-            cart_item.quantity = new_quantity
-            cart_item.save()
+        if is_buy_now:
+            # For buy now, replace quantity instead of adding
+            cart_item.quantity = quantity
         else:
-            messages.error(request, f'Stok {product.name} tidak mencukupi.')
-            return redirect('catalog:product_detail', slug=product.slug)
+            new_quantity = cart_item.quantity + quantity
+            if product.stock < new_quantity:
+                if request.POST.get('buy_now'):
+                    return JsonResponse({'success': False, 'message': 'Stok tidak mencukupi'})
+                messages.error(request, f'Stok {product.name} tidak mencukupi.')
+                return redirect('catalog:product_detail', slug=product.slug)
+            cart_item.quantity = new_quantity
+
+        cart_item.is_selected = True
+        cart_item.save()
+
+    if is_buy_now:
+        return JsonResponse({'success': True})
 
     messages.success(request, f'{product.name} berhasil ditambahkan ke keranjang.')
     return redirect('core:cart')
@@ -100,14 +121,69 @@ def clear_cart(request):
     return redirect('core:cart')
 
 
+@login_required
+def toggle_cart_item_selection(request, item_id):
+    """Toggle cart item selection for checkout"""
+    from django.http import JsonResponse
+    import json
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid method'})
+
+    cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
+
+    try:
+        data = json.loads(request.body)
+        is_selected = data.get('is_selected', True)
+        cart_item.is_selected = is_selected
+        cart_item.save()
+
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+
+@login_required
+def delete_selected_cart_items(request):
+    """Delete selected cart items"""
+    from django.http import JsonResponse
+    import json
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid method'})
+
+    try:
+        data = json.loads(request.body)
+        item_ids = data.get('item_ids', [])
+
+        if not item_ids:
+            return JsonResponse({'success': False, 'message': 'No items selected'})
+
+        # Delete items that belong to current user
+        deleted_count = CartItem.objects.filter(
+            id__in=item_ids,
+            cart__user=request.user
+        ).delete()[0]
+
+        return JsonResponse({
+            'success': True,
+            'message': f'{deleted_count} item berhasil dihapus'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+
 # Checkout Views
 @login_required
 def checkout(request):
-    """Checkout page with shipping integration"""
+    """Modern multi-step checkout - Step 1: Select Address"""
     cart = get_object_or_404(Cart, user=request.user)
 
-    if not cart.items.exists():
-        messages.error(request, 'Keranjang Anda kosong.')
+    # Check if there are any selected items
+    selected_items = cart.items.filter(is_selected=True)
+
+    if not selected_items.exists():
+        messages.error(request, 'Pilih minimal 1 item untuk checkout.')
         return redirect('core:cart')
 
     # Get user profile for pre-filling form
@@ -125,34 +201,34 @@ def checkout(request):
     # Get all active districts for shipping
     districts = District.objects.filter(is_active=True).order_by('name')
 
-    # Address form for adding new address
-    address_form = AddressForm()
-
     context = {
         'cart': cart,
+        'selected_items': selected_items,
         'profile': profile,
         'user_addresses': user_addresses,
         'default_address': default_address,
         'districts': districts,
-        'address_form': address_form,
     }
-    return render(request, 'core/checkout.html', context)
+    return render(request, 'core/checkout_address.html', context)
 
 
 @login_required
 def place_order(request):
-    """Process order placement with shipping integration"""
+    """Process order placement with shipping integration - only selected items"""
     if request.method != 'POST':
         return redirect('core:checkout')
 
     cart = get_object_or_404(Cart, user=request.user)
 
-    if not cart.items.exists():
-        messages.error(request, 'Keranjang Anda kosong.')
+    # Get only selected items
+    selected_items = cart.items.filter(is_selected=True)
+
+    if not selected_items.exists():
+        messages.error(request, 'Pilih minimal 1 item untuk checkout.')
         return redirect('core:cart')
 
-    # Validate stock availability
-    for item in cart.items.all():
+    # Validate stock availability for selected items only
+    for item in selected_items:
         if item.product.stock < item.quantity:
             messages.error(request, f'Stok {item.product.name} tidak mencukupi.')
             return redirect('core:cart')
@@ -168,7 +244,8 @@ def place_order(request):
             return redirect('core:checkout')
 
         # Re-lookup shipping cost from database (SERVER-SIDE VALIDATION)
-        subtotal = cart.get_total()
+        # Use selected items total only
+        subtotal = cart.get_selected_total()
         shipping_cost, eta, district_name = calculate_shipping_cost(
             district_id, service, subtotal
         )
@@ -208,8 +285,8 @@ def place_order(request):
         eta=eta,
     )
 
-    # Create order items and update stock
-    for item in cart.items.all():
+    # Create order items and update stock - only for selected items
+    for item in selected_items:
         OrderItem.objects.create(
             order=order,
             product=item.product,
@@ -223,8 +300,110 @@ def place_order(request):
         item.product.stock = F('stock') - item.quantity
         item.product.save()
 
-    # Clear cart
-    cart.items.all().delete()
+    # Clear only selected items from cart
+    selected_items.delete()
+
+    messages.success(request, f'Pesanan berhasil dibuat! Nomor pesanan: {order_number}')
+    return redirect('core:order_detail', order_number=order_number)
+
+
+@login_required
+def place_order_from_address(request):
+    """Place order from new multi-step checkout"""
+    if request.method != 'POST':
+        # Get data from POST or sessionStorage
+        # For now, redirect to checkout
+        return redirect('core:checkout')
+
+    cart = get_object_or_404(Cart, user=request.user)
+
+    # Get only selected items
+    selected_items = cart.items.filter(is_selected=True)
+
+    if not selected_items.exists():
+        messages.error(request, 'Pilih minimal 1 item untuk checkout.')
+        return redirect('core:cart')
+
+    # Validate stock availability for selected items only
+    for item in selected_items:
+        if item.product.stock < item.quantity:
+            messages.error(request, f'Stok {item.product.name} tidak mencukupi.')
+            return redirect('core:cart')
+
+    # Get shipping data from POST
+    address_id = request.POST.get('address_id')
+    service = request.POST.get('courier_service')
+
+    try:
+        # Get address
+        address = get_object_or_404(Address, id=address_id, user=request.user)
+
+        # Validate shipping data
+        is_valid, error_message = validate_shipping_data(address.district.id, service)
+        if not is_valid:
+            messages.error(request, f'Data pengiriman tidak valid: {error_message}')
+            return redirect('core:checkout')
+
+        # Calculate shipping cost from database
+        subtotal = cart.get_selected_total()
+        shipping_cost, eta, district_name = calculate_shipping_cost(
+            address.district.id, service, subtotal
+        )
+
+    except Exception as e:
+        messages.error(request, f'Terjadi kesalahan: {str(e)}')
+        return redirect('core:checkout')
+
+    # Create order
+    order_number = f'ORD-{uuid.uuid4().hex[:8].upper()}'
+
+    order = Order.objects.create(
+        user=request.user,
+        order_number=order_number,
+        full_name=address.full_name,
+        email=request.user.email,
+        phone=address.phone,
+        address=address.get_full_address(),
+        city=address.city,
+        postal_code=address.postal_code,
+        shipping_address=address,
+        selected_courier=service,
+        notes=request.POST.get('notes', ''),
+        subtotal=subtotal,
+        shipping_cost=shipping_cost,
+        total=subtotal + shipping_cost,
+    )
+
+    # Create shipment record
+    Shipment.objects.create(
+        order=order,
+        full_name=address.full_name,
+        phone=address.phone,
+        street=address.get_full_address(),
+        district_name=district_name,
+        postal_code=address.postal_code,
+        service=service,
+        cost=shipping_cost,
+        eta=eta,
+    )
+
+    # Create order items and update stock - only for selected items
+    for item in selected_items:
+        OrderItem.objects.create(
+            order=order,
+            product=item.product,
+            product_name=item.product.name,
+            product_price=item.product.get_display_price(),
+            quantity=item.quantity,
+            subtotal=item.get_subtotal(),
+        )
+
+        # Update product stock
+        item.product.stock = F('stock') - item.quantity
+        item.product.save()
+
+    # Clear only selected items from cart
+    selected_items.delete()
 
     messages.success(request, f'Pesanan berhasil dibuat! Nomor pesanan: {order_number}')
     return redirect('core:order_detail', order_number=order_number)
@@ -447,6 +626,19 @@ def profile_settings(request):
         request.user.email = request.POST.get('email', '')
         request.user.save()
 
+        # Handle photo upload
+        if request.FILES.get('photo'):
+            # Delete old photo if exists
+            if profile.photo:
+                profile.photo.delete()
+            profile.photo = request.FILES['photo']
+
+        # Handle photo removal
+        if request.POST.get('remove_photo') == '1':
+            if profile.photo:
+                profile.photo.delete()
+                profile.photo = None
+
         # Update profile info
         profile.phone = request.POST.get('phone', '')
         profile.address = request.POST.get('address', '')
@@ -467,6 +659,44 @@ def profile_settings(request):
         'user': request.user,
     }
     return render(request, 'core/profile_settings.html', context)
+
+
+@login_required
+def change_password(request):
+    """Change user password"""
+    from django.contrib.auth import update_session_auth_hash
+
+    if request.method == 'POST':
+        old_password = request.POST.get('old_password')
+        new_password1 = request.POST.get('new_password1')
+        new_password2 = request.POST.get('new_password2')
+
+        # Check old password
+        if not request.user.check_password(old_password):
+            messages.error(request, 'Password lama salah.')
+            return redirect('core:profile_settings')
+
+        # Check if new passwords match
+        if new_password1 != new_password2:
+            messages.error(request, 'Password baru tidak cocok.')
+            return redirect('core:profile_settings')
+
+        # Check password length
+        if len(new_password1) < 8:
+            messages.error(request, 'Password baru minimal 8 karakter.')
+            return redirect('core:profile_settings')
+
+        # Update password
+        request.user.set_password(new_password1)
+        request.user.save()
+
+        # Update session to prevent logout
+        update_session_auth_hash(request, request.user)
+
+        messages.success(request, 'Password berhasil diubah.')
+        return redirect('core:profile_settings')
+
+    return redirect('core:profile_settings')
 
 
 @login_required

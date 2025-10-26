@@ -14,6 +14,9 @@
           <table class="table">
             <thead>
               <tr>
+                <th width="5%">
+                  <input type="checkbox" id="select-all" checked>
+                </th>
                 <th>Produk</th>
                 <th>Harga</th>
                 <th>Jumlah</th>
@@ -23,7 +26,11 @@
             </thead>
             <tbody>
               {% for item in cart.items.all %}
-              <tr>
+              <tr class="cart-item-row {% if item.is_selected %}selected{% endif %}" data-item-id="{{ item.id }}">
+                <td>
+                  <input type="checkbox" class="item-checkbox" data-item-id="{{ item.id }}"
+                         {% if item.is_selected %}checked{% endif %}>
+                </td>
                 <td>
                   <div class="d-flex align-items-center">
                     {% if item.product.image %}
@@ -66,41 +73,48 @@
             </tbody>
           </table>
 
-          <div class="text-right">
-            <form method="post" action="{% url 'core:clear_cart' %}" class="d-inline">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Kosongkan keranjang?')">
-                <i class="fas fa-trash-alt"></i> Kosongkan Keranjang
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <button type="button" class="btn btn-outline-danger" id="delete-selected-btn" onclick="deleteSelected()">
+                <i class="fas fa-trash-alt"></i> Hapus Dipilih
               </button>
-            </form>
+            </div>
+            <div>
+              <form method="post" action="{% url 'core:clear_cart' %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-secondary" onclick="return confirm('Kosongkan keranjang?')">
+                  <i class="fas fa-trash-alt"></i> Kosongkan Keranjang
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <div class="col-md-4">
-      <div class="card shadow">
+      <div class="card shadow sticky-top" style="top: 20px;">
         <div class="card-header bg-primary text-white">
           <h5 class="mb-0">Ringkasan Belanja</h5>
         </div>
         <div class="card-body">
           <div class="d-flex justify-content-between mb-2">
-            <span>Subtotal ({{ cart.get_total_items }} item)</span>
-            <span>Rp {{ cart.get_total|floatformat:0 }}</span>
+            <span>Subtotal (<span id="selected-count">{{ cart.get_selected_items_count }}</span> item dipilih)</span>
+            <span id="selected-subtotal">Rp {{ cart.get_selected_total|floatformat:0 }}</span>
           </div>
           <div class="d-flex justify-content-between mb-2">
             <span>Ongkir</span>
-            <span>Rp 10.000</span>
+            <span class="text-muted"><small>Dihitung di checkout</small></span>
           </div>
           <hr>
           <div class="d-flex justify-content-between mb-3">
-            <strong>Total</strong>
-            <strong class="text-primary">Rp {{ cart.get_total|add:"10000"|floatformat:0 }}</strong>
+            <strong>Total Sementara</strong>
+            <strong class="text-primary" id="selected-total">Rp {{ cart.get_selected_total|floatformat:0 }}</strong>
           </div>
 
-          <a href="{% url 'core:checkout' %}" class="btn btn-primary btn-block btn-lg">
-            <i class="fas fa-credit-card"></i> Checkout
-          </a>
+          <button type="button" class="btn btn-primary btn-block btn-lg" id="checkout-btn" onclick="proceedToCheckout()">
+            <i class="fas fa-credit-card"></i> Checkout (<span id="checkout-count">{{ cart.get_selected_items_count }}</span>)
+          </button>
 
           <a href="{% url 'catalog:product_list' %}" class="btn btn-outline-secondary btn-block mt-2">
             <i class="fas fa-arrow-left"></i> Lanjut Belanja
@@ -120,4 +134,202 @@
   </div>
   {% endif %}
 </div>
+
+<style>
+.cart-item-row.selected {
+  background-color: #f8f9fa;
+}
+
+.cart-item-row {
+  transition: background-color 0.2s ease;
+}
+
+.item-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+#select-all {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+</style>
+
+<script>
+// Cart item data
+const cartItems = {
+  {% for item in cart.items.all %}
+  {{ item.id }}: {
+    price: {{ item.product.get_display_price }},
+    quantity: {{ item.quantity }},
+    subtotal: {{ item.get_subtotal }},
+    selected: {{ item.is_selected|lower }}
+  },
+  {% endfor %}
+};
+
+// Format currency
+function formatRupiah(amount) {
+  return 'Rp ' + Math.round(amount).toLocaleString('id-ID');
+}
+
+// Update summary
+function updateSummary() {
+  let selectedCount = 0;
+  let selectedTotal = 0;
+
+  Object.keys(cartItems).forEach(itemId => {
+    if (cartItems[itemId].selected) {
+      selectedCount++;
+      selectedTotal += cartItems[itemId].subtotal;
+    }
+  });
+
+  document.getElementById('selected-count').textContent = selectedCount;
+  document.getElementById('checkout-count').textContent = selectedCount;
+  document.getElementById('selected-subtotal').textContent = formatRupiah(selectedTotal);
+  document.getElementById('selected-total').textContent = formatRupiah(selectedTotal);
+
+  // Disable checkout if no items selected
+  document.getElementById('checkout-btn').disabled = selectedCount === 0;
+}
+
+// Select all checkbox
+document.getElementById('select-all').addEventListener('change', function() {
+  const isChecked = this.checked;
+  const checkboxes = document.querySelectorAll('.item-checkbox');
+
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = isChecked;
+    const itemId = checkbox.dataset.itemId;
+    cartItems[itemId].selected = isChecked;
+
+    // Update row styling
+    const row = checkbox.closest('tr');
+    if (isChecked) {
+      row.classList.add('selected');
+    } else {
+      row.classList.remove('selected');
+    }
+
+    // Update server
+    updateItemSelection(itemId, isChecked);
+  });
+
+  updateSummary();
+});
+
+// Individual checkbox
+document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+  checkbox.addEventListener('change', function() {
+    const itemId = this.dataset.itemId;
+    const isChecked = this.checked;
+
+    cartItems[itemId].selected = isChecked;
+
+    // Update row styling
+    const row = this.closest('tr');
+    if (isChecked) {
+      row.classList.add('selected');
+    } else {
+      row.classList.remove('selected');
+    }
+
+    // Update select-all checkbox
+    const allCheckboxes = document.querySelectorAll('.item-checkbox');
+    const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+    document.getElementById('select-all').checked = allChecked;
+
+    // Update server
+    updateItemSelection(itemId, isChecked);
+    updateSummary();
+  });
+});
+
+// Update item selection on server
+function updateItemSelection(itemId, isSelected) {
+  fetch(`/cart/toggle-select/${itemId}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken')
+    },
+    body: JSON.stringify({ is_selected: isSelected })
+  })
+  .catch(error => console.error('Error:', error));
+}
+
+// Delete selected items
+function deleteSelected() {
+  const selectedIds = [];
+  Object.keys(cartItems).forEach(itemId => {
+    if (cartItems[itemId].selected) {
+      selectedIds.push(itemId);
+    }
+  });
+
+  if (selectedIds.length === 0) {
+    alert('Pilih item yang ingin dihapus terlebih dahulu.');
+    return;
+  }
+
+  if (!confirm(`Hapus ${selectedIds.length} item yang dipilih?`)) {
+    return;
+  }
+
+  fetch('/cart/delete-selected/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken')
+    },
+    body: JSON.stringify({ item_ids: selectedIds })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert('Gagal menghapus item: ' + data.message);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Terjadi kesalahan saat menghapus item.');
+  });
+}
+
+// Proceed to checkout
+function proceedToCheckout() {
+  const selectedCount = Object.values(cartItems).filter(item => item.selected).length;
+
+  if (selectedCount === 0) {
+    alert('Pilih minimal 1 item untuk checkout.');
+    return;
+  }
+
+  window.location.href = '{% url "core:checkout" %}';
+}
+
+// Get CSRF token
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+// Initialize
+updateSummary();
+</script>
 {% endblock %}
