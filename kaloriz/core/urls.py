@@ -10,10 +10,13 @@ urlpatterns = [
     path('cart/update/<int:item_id>/', views.update_cart_item, name='update_cart_item'),
     path('cart/remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
     path('cart/clear/', views.clear_cart, name='clear_cart'),
+    path('cart/toggle-select/<int:item_id>/', views.toggle_cart_item_selection, name='toggle_cart_item_selection'),
+    path('cart/delete-selected/', views.delete_selected_cart_items, name='delete_selected_cart_items'),
 
     # Checkout URLs
     path('checkout/', views.checkout, name='checkout'),
     path('order/place/', views.place_order, name='place_order'),
+    path('order/place-from-address/', views.place_order_from_address, name='place_order_from_address'),
 
     # Order URLs
     path('orders/', views.order_list, name='order_list'),
@@ -29,6 +32,7 @@ urlpatterns = [
     # Profile URLs
     path('profile/', views.profile_view, name='profile'),
     path('profile/settings/', views.profile_settings, name='profile_settings'),
+    path('profile/change-password/', views.change_password, name='change_password'),
     path('profile/address/edit/', views.profile_address_edit, name='profile_address_edit'),
 
     # Watchlist URLs
