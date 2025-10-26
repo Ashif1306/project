@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.db.models.deletion import ProtectedError
 from decimal import Decimal
 from .models import District, Address
 
@@ -215,7 +216,11 @@ def add_address(request):
 
             # If this is set as default, unset other defaults
             if is_default:
-                Address.objects.filter(user=request.user, is_default=True).exclude(id=address.id).update(is_default=False)
+                Address.objects.filter(
+                    user=request.user,
+                    is_default=True,
+                    is_deleted=False
+                ).exclude(id=address.id).update(is_default=False)
 
             messages.success(request, 'Alamat berhasil ditambahkan.')
         except District.DoesNotExist:
@@ -234,7 +239,12 @@ def add_address(request):
 @login_required
 def edit_address(request, address_id):
     """Edit shipping address"""
-    address = get_object_or_404(Address, id=address_id, user=request.user)
+    address = get_object_or_404(
+        Address,
+        id=address_id,
+        user=request.user,
+        is_deleted=False,
+    )
 
     if request.method == 'POST':
         # Manual processing instead of using form
@@ -259,7 +269,11 @@ def edit_address(request, address_id):
         # Handle default address
         is_default = request.POST.get('is_default') == 'on'
         if is_default:
-            Address.objects.filter(user=request.user, is_default=True).exclude(id=address_id).update(is_default=False)
+            Address.objects.filter(
+                user=request.user,
+                is_default=True,
+                is_deleted=False
+            ).exclude(id=address_id).update(is_default=False)
             address.is_default = True
         else:
             address.is_default = False
@@ -280,25 +294,72 @@ def edit_address(request, address_id):
 def delete_address(request, address_id):
     """Delete shipping address"""
     if request.method == 'POST':
-        address = get_object_or_404(Address, id=address_id, user=request.user)
-        address.delete()
-        messages.success(request, 'Alamat berhasil dihapus.')
+        address = get_object_or_404(
+            Address,
+            id=address_id,
+            user=request.user,
+            is_deleted=False,
+        )
+        try:
+            address.delete()
+        except ProtectedError:
+            messages.error(
+                request,
+                'Alamat tidak bisa dihapus karena dipakai pada pesanan. Anda dapat mengarsipkannya agar tidak muncul di daftar.',
+            )
+        else:
+            messages.success(request, 'Alamat berhasil dihapus.')
 
-    return redirect(request.META.get('HTTP_REFERER', 'core:profile'))
+    return redirect('core:profile')
+
+
+@login_required
+def archive_address(request, address_id):
+    """Soft delete shipping address by marking it as archived."""
+    if request.method == 'POST':
+        address = get_object_or_404(
+            Address,
+            id=address_id,
+            user=request.user,
+            is_deleted=False,
+        )
+        address.is_default = False
+        address.is_deleted = True
+        address.save(update_fields=['is_default', 'is_deleted', 'updated_at'])
+
+        checkout_data = request.session.get('checkout', {})
+        if checkout_data.get('address_id') == address.id:
+            for key in ['address_id', 'shipping_method', 'shipping_cost', 'eta']:
+                checkout_data.pop(key, None)
+            request.session['checkout'] = checkout_data
+            request.session.modified = True
+
+        messages.success(request, 'Alamat diarsipkan. Alamat ini tidak akan tampil saat checkout.')
+
+    return redirect('core:profile')
 
 
 @login_required
 def set_default_address(request, address_id):
     """Set address as default"""
     if request.method == 'POST':
-        address = get_object_or_404(Address, id=address_id, user=request.user)
+        address = get_object_or_404(
+            Address,
+            id=address_id,
+            user=request.user,
+            is_deleted=False,
+        )
 
         # Unset other defaults
-        Address.objects.filter(user=request.user, is_default=True).update(is_default=False)
+        Address.objects.filter(
+            user=request.user,
+            is_default=True,
+            is_deleted=False
+        ).exclude(id=address_id).update(is_default=False)
 
         # Set this as default
         address.is_default = True
-        address.save()
+        address.save(update_fields=['is_default', 'updated_at'])
 
         messages.success(request, 'Alamat utama berhasil diubah.')
 

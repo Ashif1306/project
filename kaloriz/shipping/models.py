@@ -129,6 +129,8 @@ class Address(models.Model):
     )
 
     is_default = models.BooleanField(default=False, verbose_name="Alamat Utama")
+    # Penanda soft delete agar alamat bisa diarsipkan tanpa menghapus permanen.
+    is_deleted = models.BooleanField(default=False, verbose_name="Diarsipkan")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -165,6 +167,7 @@ class Address(models.Model):
             Address.objects.filter(
                 user=self.user,
                 is_default=True,
+                is_deleted=False
             ).exclude(id=self.id).update(is_default=False)
         super().save(*args, **kwargs)
 

@@ -71,6 +71,9 @@
                         {% if address.is_default %}
                         <span class="badge badge-success ml-1">Utama</span>
                         {% endif %}
+                        {% if address.used_in_orders %}
+                        <span class="badge badge-warning ml-1">Dipakai di pesanan</span>
+                        {% endif %}
                       </div>
                       <p class="mb-1 text-muted">{{ address.phone }}</p>
                     </div>
@@ -82,12 +85,27 @@
                         <a class="dropdown-item" href="{% url 'shipping:edit_address' address.id %}">
                           <i class="fas fa-edit"></i> Edit
                         </a>
+                        {% if address.used_in_orders %}
+                        <form method="post" action="{% url 'shipping:archive_address' address.id %}" class="d-inline">
+                          {% csrf_token %}
+                          <button type="submit" class="dropdown-item text-warning" onclick="event.stopPropagation(); return confirm('Arsipkan alamat ini?')">
+                            <i class="fas fa-archive"></i> Arsipkan
+                          </button>
+                        </form>
+                        {% else %}
                         <form method="post" action="{% url 'shipping:delete_address' address.id %}" class="d-inline">
                           {% csrf_token %}
-                          <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Hapus alamat ini?')">
+                          <button type="submit" class="dropdown-item text-danger" onclick="event.stopPropagation(); return confirm('Hapus alamat ini?')">
                             <i class="fas fa-trash"></i> Hapus
                           </button>
                         </form>
+                        <form method="post" action="{% url 'shipping:archive_address' address.id %}" class="d-inline">
+                          {% csrf_token %}
+                          <button type="submit" class="dropdown-item" onclick="event.stopPropagation(); return confirm('Arsipkan alamat ini?')">
+                            <i class="fas fa-archive"></i> Arsipkan
+                          </button>
+                        </form>
+                        {% endif %}
                       </div>
                     </div>
                   </div>
@@ -449,6 +467,8 @@ if (selectedAddressId !== null) {
   selectedAddressId = Number(selectedAddressId);
 }
 let selectedCourier = initialCourier || null;
+let selectedAddressId = null;
+let selectedCourier = null;
 
 const summarySubtotalEl = document.getElementById('summary-subtotal');
 const summaryShippingEl = document.getElementById('summary-shipping');
@@ -469,6 +489,13 @@ function selectAddress(addressId) {
 
   document.querySelectorAll('.address-card').forEach(card => {
     const isSelected = Number(card.dataset.addressId || 0) === numericId;
+
+  document.querySelectorAll('.address-card').forEach(card => {
+    const isSelected = Number(card.dataset.addressId || 0) === numericId;
+  selectedAddressId = addressId;
+
+  document.querySelectorAll('.address-card').forEach(card => {
+    const isSelected = parseInt(card.dataset.addressId, 10) === addressId;
     card.classList.toggle('selected', isSelected);
   });
 
@@ -492,6 +519,7 @@ function selectAddress(addressId) {
   continueBtn.textContent = 'Menghitung ongkir...';
   etaContainer.style.display = 'none';
 
+  // Default to REG if no courier selected yet
   const nextCourier = selectedCourier || 'REG';
   selectCourier(nextCourier, { triggerUpdate: false });
   updateShippingQuote();
@@ -522,6 +550,169 @@ function selectCourier(service, options = { triggerUpdate: true }) {
 
   if (selectedCourier === 'EXP') {
     expRadio.checked = true;
+  } else {
+    selectedCourier = 'REG';
+    regRadio.checked = true;
+  }
+
+  summaryShippingEl.textContent = 'Menghitung...';
+  continueBtn.disabled = true;
+  continueBtn.textContent = 'Menghitung ongkir...';
+
+  } else {
+    selectedCourier = 'REG';
+    regRadio.checked = true;
+  }
+
+  summaryShippingEl.textContent = 'Menghitung...';
+  continueBtn.disabled = true;
+  continueBtn.textContent = 'Menghitung ongkir...';
+
+  if (options.triggerUpdate && selectedAddressId) {
+    updateShippingQuote();
+  }
+}
+
+async function updateShippingQuote() {
+  if (!selectedAddressId || !selectedCourier) {
+    return;
+  }
+
+  hideShippingAlert();
+
+  try {
+    const response = await fetch(shippingUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken(),
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        method: selectedCourier,
+        address_id: selectedAddressId,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      const message = data && data.message ? data.message : 'Gagal menghitung ongkir.';
+      throw new Error(message);
+    }
+
+    applyShippingSummary(data);
+  } catch (error) {
+    handleShippingError(error.message || 'Terjadi kesalahan.');
+  }
+}
+
+function applyShippingSummary(data) {
+  summarySubtotalEl.textContent = data.subtotal_display || formatRupiah(data.subtotal || 0);
+  summaryShippingEl.textContent = data.shipping_cost_display || formatRupiah(data.shipping_cost || 0);
+  summaryTotalEl.textContent = data.total_display || formatRupiah(data.total || 0);
+
+  summaryShippingEl.classList.add('text-danger');
+  continueBtn.disabled = false;
+  continueBtn.textContent = 'Lanjutkan ke Pembayaran';
+
+  if (data.eta) {
+    etaTextEl.textContent = data.eta;
+    etaContainer.style.display = 'block';
+  } else {
+    etaContainer.style.display = 'none';
+  }
+
+  document.getElementById('form_address_id').value = selectedAddressId;
+  document.getElementById('form_courier_service').value = selectedCourier;
+}
+
+function handleShippingError(message) {
+  shippingAlert.textContent = message;
+  shippingAlert.classList.remove('d-none');
+  summaryShippingEl.textContent = message;
+  continueBtn.disabled = true;
+  continueBtn.textContent = 'Coba lagi';
+  etaContainer.style.display = 'none';
+}
+
+  } else {
+    selectedCourier = 'REG';
+    regRadio.checked = true;
+  }
+
+  summaryShippingEl.textContent = 'Menghitung...';
+  continueBtn.disabled = true;
+  continueBtn.textContent = 'Menghitung ongkir...';
+
+  if (options.triggerUpdate && selectedAddressId) {
+    updateShippingQuote();
+  }
+}
+
+async function updateShippingQuote() {
+  if (!selectedAddressId || !selectedCourier) {
+    return;
+  }
+
+  hideShippingAlert();
+
+  try {
+    const response = await fetch(shippingUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken(),
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        method: selectedCourier,
+        address_id: selectedAddressId,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      const message = data && data.message ? data.message : 'Gagal menghitung ongkir.';
+      throw new Error(message);
+    }
+
+    applyShippingSummary(data);
+  } catch (error) {
+    handleShippingError(error.message || 'Terjadi kesalahan.');
+  }
+}
+
+function applyShippingSummary(data) {
+  summarySubtotalEl.textContent = data.subtotal_display || formatRupiah(data.subtotal || 0);
+  summaryShippingEl.textContent = data.shipping_cost_display || formatRupiah(data.shipping_cost || 0);
+  summaryTotalEl.textContent = data.total_display || formatRupiah(data.total || 0);
+
+  summaryShippingEl.classList.add('text-danger');
+  continueBtn.disabled = false;
+  continueBtn.textContent = 'Lanjutkan ke Pembayaran';
+
+  if (data.eta) {
+    etaTextEl.textContent = data.eta;
+    etaContainer.style.display = 'block';
+  } else {
+    etaContainer.style.display = 'none';
+  }
+
+  document.getElementById('form_address_id').value = selectedAddressId;
+  document.getElementById('form_courier_service').value = selectedCourier;
+}
+
+function handleShippingError(message) {
+  shippingAlert.textContent = message;
+  shippingAlert.classList.remove('d-none');
+  summaryShippingEl.textContent = message;
+  continueBtn.disabled = true;
+  continueBtn.textContent = 'Coba lagi';
+  etaContainer.style.display = 'none';
+}
+
   } else {
     selectedCourier = 'REG';
     regRadio.checked = true;
@@ -639,6 +830,9 @@ window.addEventListener('DOMContentLoaded', function() {
   }
   if (cardToSelect) {
     const addressId = Number(cardToSelect.dataset.addressId || 0);
+  const defaultCard = document.querySelector('.address-card.selected') || document.querySelector('.address-card');
+  if (defaultCard) {
+    const addressId = parseInt(defaultCard.dataset.addressId, 10);
     if (!Number.isNaN(addressId)) {
       selectAddress(addressId);
     }
