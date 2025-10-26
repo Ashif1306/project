@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.utils.formats import number_format
 
 from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist, EmailVerification
-from catalog.models import Product
+from catalog.models import Product, DiscountCode
 from .forms import CustomUserRegistrationForm
 from .utils import send_verification_email, send_welcome_email
 from shipping.models import District, Address, Shipment
@@ -393,9 +393,22 @@ def checkout_review(request):
         return redirect('core:cart')
 
     checkout_data = request.session.get('checkout', {})
+    address_id = checkout_data.get('address_id')
     if not checkout_data.get('payment_method'):
         messages.warning(request, 'Silakan pilih metode pembayaran terlebih dahulu.')
         return redirect('core:checkout_payment')
+
+    shipping_address = None
+    if address_id:
+        shipping_address = (
+            Address.objects.select_related('district')
+            .filter(id=address_id, user=request.user, is_deleted=False)
+            .first()
+        )
+
+    if not shipping_address:
+        messages.warning(request, 'Alamat pengiriman tidak ditemukan. Silakan pilih ulang.')
+        return redirect('core:checkout')
 
     raw_shipping_cost = checkout_data.get('shipping_cost')
     try:
@@ -404,7 +417,38 @@ def checkout_review(request):
         shipping_cost = Decimal('0')
 
     subtotal = Decimal(cart.get_selected_total() or 0)
-    total = subtotal + shipping_cost
+    checkout_data['subtotal'] = str(subtotal)
+    request.session['checkout'] = checkout_data
+    request.session.modified = True
+
+    discount_session = request.session.get('discount') or {}
+    discount_amount = Decimal('0')
+    discount_code = discount_session.get('code')
+
+    if discount_code:
+        discount_obj = DiscountCode.objects.filter(code__iexact=discount_code).first()
+        if discount_obj and discount_obj.is_valid():
+            try:
+                discount_amount = Decimal(discount_session.get('amount', discount_obj.discount_amount))
+            except (InvalidOperation, TypeError, ValueError):
+                discount_amount = Decimal(discount_obj.discount_amount)
+            max_discount = subtotal + shipping_cost
+            if discount_amount > max_discount:
+                discount_amount = max_discount
+                request.session['discount'] = {
+                    'code': discount_code,
+                    'amount': str(discount_amount),
+                }
+                request.session.modified = True
+        else:
+            request.session.pop('discount', None)
+            request.session.modified = True
+            discount_code = None
+            discount_amount = Decimal('0')
+
+    total = subtotal + shipping_cost - discount_amount
+    if total < 0:
+        total = Decimal('0')
 
     selected_items, _ = _prepare_selected_cart_items(selected_items_qs)
 
@@ -417,12 +461,17 @@ def checkout_review(request):
         'subtotal': subtotal,
         'shipping_cost': shipping_cost,
         'total': total,
+        'discount_amount': discount_amount,
+        'discount_display': _format_rupiah(discount_amount),
         'subtotal_display': _format_rupiah(subtotal),
         'shipping_cost_display': _format_rupiah(shipping_cost),
         'total_display': _format_rupiah(total),
         'payment_method': checkout_data.get('payment_method'),
+        'payment_method_display': 'Midtrans Snap' if checkout_data.get('payment_method') == 'midtrans' else checkout_data.get('payment_method'),
         'shipping_method_label': shipping_method_label,
         'eta': checkout_data.get('eta'),
+        'shipping_address': shipping_address,
+        'discount_code': discount_code,
     }
     return render(request, 'core/checkout_review.html', context)
 

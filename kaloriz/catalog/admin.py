@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Category, Product, Testimonial
+
+from .models import Category, Product, Testimonial, DiscountCode
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -54,3 +55,12 @@ class TestimonialAdmin(admin.ModelAdmin):
             'fields': ('created_at', 'updated_at')
         }),
     )
+
+
+@admin.register(DiscountCode)
+class DiscountCodeAdmin(admin.ModelAdmin):
+    list_display = ['code', 'discount_amount', 'is_active', 'expiry_date', 'created_at']
+    list_filter = ['is_active', 'expiry_date', 'created_at']
+    search_fields = ['code']
+    ordering = ['-created_at']
+    readonly_fields = ['created_at', 'updated_at']
