@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.text import slugify
 
 class Category(models.Model):
@@ -136,3 +137,37 @@ class Testimonial(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.product.name}"
+
+
+class DiscountCode(models.Model):
+    code = models.CharField(max_length=50, unique=True, verbose_name="Kode")
+    discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Nominal Diskon",
+        help_text="Nilai potongan dalam rupiah",
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Aktif")
+    expiry_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Berlaku Sampai",
+        help_text="Biarkan kosong jika tanpa batas waktu",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Kode Diskon"
+        verbose_name_plural = "Kode Diskon"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.code.upper()
+
+    def is_valid(self):
+        if not self.is_active:
+            return False
+        if self.expiry_date and self.expiry_date < timezone.now():
+            return False
+        return True

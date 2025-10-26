@@ -3,7 +3,7 @@
 {% block title %}Review Pesanan - Kaloriz{% endblock %}
 
 {% block content %}
-<div class="container my-5">
+<div class="container my-5 checkout-review-container">
   <div class="checkout-steps mb-5">
     <div class="step completed">
       <div class="step-number">1</div>
@@ -21,14 +21,48 @@
     </div>
   </div>
 
-  <h2 class="mb-4">Review Pesanan</h2>
-
-  <div class="alert alert-info">
-    Ringkasan pesanan akan tampil lengkap di tahap selanjutnya.
+  <div class="text-center mb-5">
+    <h2 class="mb-2">Review Pesanan</h2>
+    <p class="text-muted mb-0">Periksa detail produk, alamat pengiriman, dan metode pembayaran sebelum melanjutkan.</p>
   </div>
 
   <div class="row">
     <div class="col-lg-8 mb-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Alamat Pengiriman</h5>
+          <span class="badge badge-light text-uppercase font-weight-semibold">{{ shipping_address.label }}</span>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-start">
+            <div class="shipping-avatar mr-3">
+              <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <div>
+              <div class="font-weight-semibold">{{ shipping_address.full_name }}</div>
+              <div class="text-muted small">{{ shipping_address.phone }}</div>
+              <p class="text-muted small mb-2">{{ shipping_address.get_full_address }}</p>
+            </div>
+          </div>
+          <div class="shipping-meta mt-3">
+            <div class="d-flex flex-wrap mb-2">
+              <span class="meta-label mr-2">Kurir:</span>
+              <span class="meta-value">{{ shipping_method_label }}</span>
+            </div>
+            {% if eta %}
+            <div class="d-flex flex-wrap mb-2">
+              <span class="meta-label mr-2">Estimasi tiba:</span>
+              <span class="meta-value">{{ eta }}</span>
+            </div>
+            {% endif %}
+            <div class="d-flex flex-wrap">
+              <span class="meta-label mr-2">Pembayaran:</span>
+              <span class="meta-value">{{ payment_method_display }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card shadow-sm">
         <div class="card-header bg-white border-bottom">
           <h5 class="mb-0">Produk Dipilih</h5>
@@ -37,10 +71,16 @@
           {% if selected_items %}
             <ul class="list-unstyled mb-0">
               {% for item in selected_items %}
-              <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                <span class="text-truncate mr-3">{{ item.product.name }} x{{ item.quantity }}</span>
-                <span>Rp {{ item.get_subtotal|floatformat:0 }}</span>
+              <li class="checkout-item d-flex justify-content-between align-items-start py-3">
+                <div class="pr-3">
+                  <div class="font-weight-semibold">{{ item.product.name }}</div>
+                  <div class="text-muted small">{{ item.quantity }} x Rp {{ item.product.get_display_price|floatformat:0 }}</div>
+                </div>
+                <div class="text-right font-weight-semibold">Rp {{ item.get_subtotal|floatformat:0 }}</div>
               </li>
+              {% if not forloop.last %}
+              <li class="divider"></li>
+              {% endif %}
               {% endfor %}
             </ul>
           {% else %}
@@ -50,38 +90,56 @@
       </div>
     </div>
     <div class="col-lg-4">
-      <div class="card shadow checkout-summary-card sticky-top">
+      <div class="card shadow checkout-summary-card sticky-top" id="checkout-summary-card">
         <div class="card-header bg-white border-bottom">
           <h5 class="mb-0">Ringkasan Pembayaran</h5>
         </div>
-        <div class="card-body">
-          <div class="d-flex justify-content-between mb-3">
+        <div class="card-body" id="checkout-summary" data-apply-url="{% url 'catalog:apply_discount' %}">
+          <div class="summary-row d-flex justify-content-between mb-3">
             <span>Subtotal</span>
-            <span class="font-weight-semibold">{{ subtotal_display }}</span>
+            <span class="font-weight-semibold" id="subtotal-amount">{{ subtotal_display }}</span>
           </div>
-          <div class="d-flex justify-content-between mb-3">
+          <div class="summary-row d-flex justify-content-between mb-3">
             <span>Ongkir</span>
-            <span class="text-danger font-weight-semibold">{{ shipping_cost_display }}</span>
+            <span class="text-danger font-weight-semibold" id="shipping-cost-amount">{{ shipping_cost_display }}</span>
           </div>
-          <div class="d-flex justify-content-between mb-3">
+          <div class="summary-row d-flex justify-content-between mb-3">
+            <span>Metode Pembayaran</span>
+            <span class="text-primary font-weight-semibold text-uppercase">{{ payment_method_display }}</span>
+          </div>
+          <div class="summary-row d-flex justify-content-between mb-3">
             <span>Metode Pengiriman</span>
             <span class="text-muted">{{ shipping_method_label }}</span>
           </div>
-          {% if eta %}
-          <div class="d-flex justify-content-between mb-3">
-            <span>Estimasi Tiba</span>
-            <span class="text-muted">{{ eta }}</span>
+
+          <div class="discount-wrapper mb-3">
+            <label for="discount-code-input" class="font-weight-semibold">Kode Diskon</label>
+            <div class="input-group">
+              <input type="text" id="discount-code-input" class="form-control" placeholder="Masukkan kode" value="{{ discount_code|default:'' }}">
+              <div class="input-group-append">
+                <button class="btn btn-outline-primary" type="button" id="apply-discount-btn">Apply</button>
+              </div>
+            </div>
+            <small class="form-text text-muted">Masukkan kode voucher untuk mendapatkan potongan harga.</small>
+            <small class="text-success d-none" id="discount-success"></small>
+            <small class="text-danger d-none" id="discount-error"></small>
           </div>
-          {% endif %}
-          <div class="d-flex justify-content-between mb-3">
-            <span>Metode Pembayaran</span>
-            <span class="font-weight-semibold text-primary text-uppercase">{{ payment_method }}</span>
+
+          <div class="summary-row d-flex justify-content-between mb-3" id="discount-row">
+            <span>Diskon</span>
+            <span class="text-success font-weight-semibold" id="discount-amount-display">{% if discount_amount > 0 %}-{{ discount_display }}{% else %}{{ discount_display }}{% endif %}</span>
           </div>
+
           <hr>
           <div class="d-flex justify-content-between align-items-center">
-            <strong>Total</strong>
-            <strong class="text-dark h5 mb-0">{{ total_display }}</strong>
+            <strong>Total Akhir</strong>
+            <strong class="text-dark h4 mb-0" id="total-amount">{{ total_display }}</strong>
           </div>
+
+          <button type="button" class="btn btn-primary btn-lg w-100 mt-4" id="midtrans-checkout-btn">
+            Checkout
+          </button>
+          <p class="text-muted small text-center mt-2 mb-0">Pembayaran akan diproses melalui Midtrans Snap.</p>
         </div>
       </div>
     </div>
@@ -89,6 +147,10 @@
 </div>
 
 <style>
+.checkout-review-container {
+  --checkout-summary-offset: 120px;
+}
+
 .checkout-steps {
   display: flex;
   align-items: center;
@@ -138,10 +200,53 @@
   top: var(--checkout-summary-offset);
 }
 
+.shipping-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(52, 58, 64, 0.1);
+  color: #343a40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.shipping-meta .meta-label {
+  font-weight: 600;
+  color: #495057;
+}
+
+.checkout-item + .divider {
+  border-bottom: 1px dashed #e9ecef;
+}
+
+.discount-wrapper .input-group .form-control {
+  border-right: 0;
+}
+
+.discount-wrapper .input-group .btn {
+  border-radius: 0 0.25rem 0.25rem 0;
+}
+
 @media (max-width: 991px) {
   .checkout-summary-card.sticky-top {
     position: relative;
     top: auto;
+  }
+}
+
+@media (max-width: 576px) {
+  .checkout-review-container {
+    padding: 0 0.75rem;
+  }
+
+  .checkout-steps {
+    flex-wrap: wrap;
+  }
+
+  .checkout-steps .step-line {
+    display: none;
   }
 }
 </style>
@@ -162,6 +267,123 @@
   updateSummaryOffset();
   window.addEventListener('load', updateSummaryOffset);
   window.addEventListener('resize', updateSummaryOffset);
+})();
+
+(function() {
+  const applyBtn = document.getElementById('apply-discount-btn');
+  if (!applyBtn) {
+    return;
+  }
+
+  const summary = document.getElementById('checkout-summary');
+  const codeInput = document.getElementById('discount-code-input');
+  const discountDisplay = document.getElementById('discount-amount-display');
+  const totalDisplay = document.getElementById('total-amount');
+  const subtotalDisplay = document.getElementById('subtotal-amount');
+  const shippingDisplay = document.getElementById('shipping-cost-amount');
+  const successMessage = document.getElementById('discount-success');
+  const errorMessage = document.getElementById('discount-error');
+  const applyUrl = summary ? summary.dataset.applyUrl : null;
+
+  function getCsrfToken() {
+    const name = 'csrftoken=';
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookies = decodedCookie.split(';');
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
+      if (cookie.startsWith(name)) {
+        return cookie.substring(name.length);
+      }
+    }
+    return '';
+  }
+
+  function setFeedback(element, message, isError) {
+    if (!element) {
+      return;
+    }
+    element.textContent = message;
+    element.classList.toggle('d-none', !message);
+    if (isError) {
+      successMessage?.classList.add('d-none');
+    } else {
+      errorMessage?.classList.add('d-none');
+    }
+  }
+
+  function formatDiscountLabel(text) {
+    if (!discountDisplay) {
+      return;
+    }
+    if (text === 'Rp 0') {
+      discountDisplay.textContent = text;
+    } else {
+      discountDisplay.textContent = `-${text}`;
+    }
+  }
+
+  function applyDiscount() {
+    const code = codeInput.value.trim();
+    if (!code) {
+      setFeedback(errorMessage, 'Silakan masukkan kode diskon.', true);
+      return;
+    }
+
+    if (!applyUrl) {
+      setFeedback(errorMessage, 'Tidak dapat memproses kode diskon saat ini.', true);
+      return;
+    }
+
+    applyBtn.disabled = true;
+    setFeedback(successMessage, '', false);
+    setFeedback(errorMessage, '', true);
+
+    fetch(applyUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': getCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: new URLSearchParams({ code }),
+    })
+      .then((response) => response.json().then((data) => ({ status: response.status, data })))
+      .then(({ status, data }) => {
+        if (!data) {
+          throw new Error('Terjadi kesalahan saat memproses respon.');
+        }
+
+        if (status >= 200 && status < 300 && data.success) {
+          formatDiscountLabel(data.discount_display);
+          totalDisplay.textContent = data.total_display;
+          subtotalDisplay.textContent = data.subtotal_display || subtotalDisplay.textContent;
+          shippingDisplay.textContent = data.shipping_cost_display || shippingDisplay.textContent;
+          setFeedback(successMessage, data.message || 'Kode diskon berhasil diterapkan.', false);
+        } else {
+          if (data.discount_display) {
+            formatDiscountLabel(data.discount_display);
+          }
+          if (data.total_display) {
+            totalDisplay.textContent = data.total_display;
+          }
+          setFeedback(errorMessage, data.error || 'Kode diskon tidak dapat digunakan.', true);
+        }
+      })
+      .catch(() => {
+        setFeedback(errorMessage, 'Terjadi kesalahan. Silakan coba lagi.', true);
+      })
+      .finally(() => {
+        applyBtn.disabled = false;
+      });
+  }
+
+  applyBtn.addEventListener('click', applyDiscount);
+  codeInput.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      applyDiscount();
+    }
+  });
 })();
 </script>
 {% endblock %}
