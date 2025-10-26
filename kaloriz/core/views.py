@@ -40,6 +40,24 @@ def _get_active_cart(request):
 
     return cart
 
+
+def _prepare_selected_cart_items(selected_items_qs):
+    """Return selected cart items with fresh quantity data from the database."""
+    items = list(selected_items_qs)
+
+    if not items:
+        return items, {}
+
+    quantities = dict(
+        CartItem.objects.filter(pk__in=[item.pk for item in items])
+        .values_list('pk', 'quantity')
+    )
+
+    for item in items:
+        item.quantity = quantities.get(item.pk, item.quantity)
+
+    return items, quantities
+
 # Cart Views
 @login_required
 def cart_view(request):
@@ -209,7 +227,7 @@ def checkout(request):
         messages.error(request, 'Pilih minimal 1 item untuk checkout.')
         return redirect('core:cart')
 
-    selected_items = list(selected_items_qs)
+    selected_items, _ = _prepare_selected_cart_items(selected_items_qs)
 
     # Get user profile for pre-filling form
     try:
@@ -309,11 +327,12 @@ def place_order(request):
         messages.error(request, 'Pilih minimal 1 item untuk checkout.')
         return redirect('core:cart')
 
-    selected_items = list(selected_items_qs)
+    selected_items, selected_quantities = _prepare_selected_cart_items(selected_items_qs)
 
     # Validate stock availability for selected items only
     for item in selected_items:
-        if item.product.stock < item.quantity:
+        quantity = selected_quantities.get(item.pk, item.quantity)
+        if item.product.stock < quantity:
             messages.error(request, f'Stok {item.product.name} tidak mencukupi.')
             return redirect('core:cart')
 
@@ -371,18 +390,20 @@ def place_order(request):
 
     # Create order items and update stock - only for selected items
     for item in selected_items:
+        quantity = selected_quantities.get(item.pk, item.quantity)
+        unit_price = item.product.get_display_price()
         OrderItem.objects.create(
             order=order,
             product=item.product,
             product_name=item.product.name,
-            product_price=item.product.get_display_price(),
-            quantity=item.quantity,
-            subtotal=item.get_subtotal(),
+            product_price=unit_price,
+            quantity=quantity,
+            subtotal=unit_price * quantity,
         )
 
         # Update product stock
-        item.product.stock = F('stock') - item.quantity
-        item.product.save()
+        item.product.stock = F('stock') - quantity
+        item.product.save(update_fields=['stock'])
 
     # Clear only selected items from cart
     cart.items.filter(is_selected=True).delete()
@@ -408,11 +429,12 @@ def place_order_from_address(request):
         messages.error(request, 'Pilih minimal 1 item untuk checkout.')
         return redirect('core:cart')
 
-    selected_items = list(selected_items_qs)
+    selected_items, selected_quantities = _prepare_selected_cart_items(selected_items_qs)
 
     # Validate stock availability for selected items only
     for item in selected_items:
-        if item.product.stock < item.quantity:
+        quantity = selected_quantities.get(item.pk, item.quantity)
+        if item.product.stock < quantity:
             messages.error(request, f'Stok {item.product.name} tidak mencukupi.')
             return redirect('core:cart')
 
@@ -480,18 +502,20 @@ def place_order_from_address(request):
 
     # Create order items and update stock - only for selected items
     for item in selected_items:
+        quantity = selected_quantities.get(item.pk, item.quantity)
+        unit_price = item.product.get_display_price()
         OrderItem.objects.create(
             order=order,
             product=item.product,
             product_name=item.product.name,
-            product_price=item.product.get_display_price(),
-            quantity=item.quantity,
-            subtotal=item.get_subtotal(),
+            product_price=unit_price,
+            quantity=quantity,
+            subtotal=unit_price * quantity,
         )
 
         # Update product stock
-        item.product.stock = F('stock') - item.quantity
-        item.product.save()
+        item.product.stock = F('stock') - quantity
+        item.product.save(update_fields=['stock'])
 
     # Clear only selected items from cart
     cart.items.filter(is_selected=True).delete()

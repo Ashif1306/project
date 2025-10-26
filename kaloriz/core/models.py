@@ -5,6 +5,8 @@ from decimal import Decimal
 import random
 from datetime import timedelta
 from django.utils import timezone
+from django.db.models import Sum, F, DecimalField, ExpressionWrapper
+from django.db.models.functions import Coalesce
 
 class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carts', verbose_name="Pengguna")
@@ -24,7 +26,13 @@ class Cart(models.Model):
 
     def get_selected_total(self):
         """Calculate total price of selected items only"""
-        return sum(item.get_subtotal() for item in self.items.filter(is_selected=True))
+        price_expression = Coalesce('product__discount_price', 'product__price')
+        line_total = ExpressionWrapper(
+            F('quantity') * price_expression,
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        )
+        total = self.items.filter(is_selected=True).aggregate(total=Sum(line_total))['total']
+        return total or Decimal('0')
 
     def get_total_items(self):
         """Get total number of items in cart"""
@@ -36,7 +44,8 @@ class Cart(models.Model):
 
     def get_selected_items_quantity(self):
         """Get total quantity for selected cart items"""
-        return sum(item.quantity for item in self.items.filter(is_selected=True))
+        total = self.items.filter(is_selected=True).aggregate(total=Sum('quantity'))['total']
+        return total or 0
 
 
 class CartItem(models.Model):
