@@ -180,6 +180,13 @@
   </div>
 </div>
 
+<!-- Hidden form for placing order -->
+<form method="post" action="{% url 'core:place_order_from_address' %}" id="order-form">
+  {% csrf_token %}
+  <input type="hidden" name="address_id" id="form_address_id">
+  <input type="hidden" name="courier_service" id="form_courier_service">
+</form>
+
 <!-- Add Address Modal -->
 <div class="modal fade" id="addAddressModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -503,13 +510,12 @@ function proceedToPayment() {
     return;
   }
 
-  // Store selection in sessionStorage for next step
-  sessionStorage.setItem('checkout_address_id', selectedAddressId);
-  sessionStorage.setItem('checkout_district_id', selectedDistrictId);
-  sessionStorage.setItem('checkout_courier', selectedCourier);
+  // Set hidden form values
+  document.getElementById('form_address_id').value = selectedAddressId;
+  document.getElementById('form_courier_service').value = selectedCourier;
 
-  // Redirect to payment method selection (for now, go to old checkout)
-  window.location.href = '{% url "core:place_order_from_address" %}';
+  // Submit form
+  document.getElementById('order-form').submit();
 }
 
 // Auto-select default address on load

@@ -603,13 +603,17 @@ def profile_view(request):
     """User profile page with address information"""
     profile, created = UserProfile.objects.get_or_create(user=request.user)
 
-    # Get primary shipping address
-    address = Address.objects.filter(user=request.user, is_default=True).first()
+    # Get all shipping addresses
+    user_addresses = Address.objects.filter(user=request.user).select_related('district').order_by('-is_default', '-created_at')
+
+    # Get all districts for the add address modal
+    districts = District.objects.filter(is_active=True).order_by('name')
 
     context = {
         'profile': profile,
         'user': request.user,
-        'address': address,
+        'user_addresses': user_addresses,
+        'districts': districts,
     }
     return render(request, 'core/profile.html', context)
 
