@@ -6,6 +6,22 @@
 <div class="container my-5">
   <h2 class="mb-4"><i class="fas fa-user-circle"></i> Profil Pengguna</h2>
 
+  {% if messages %}
+  <div class="mb-4">
+    {% for message in messages %}
+      {% if 'error' in message.tags %}
+        <div class="alert alert-danger mb-2" role="alert">{{ message }}</div>
+      {% elif 'warning' in message.tags %}
+        <div class="alert alert-warning mb-2" role="alert">{{ message }}</div>
+      {% elif 'success' in message.tags %}
+        <div class="alert alert-success mb-2" role="alert">{{ message }}</div>
+      {% else %}
+        <div class="alert alert-info mb-2" role="alert">{{ message }}</div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <div class="row">
     <div class="col-md-8">
       <div class="card shadow">
@@ -76,11 +92,14 @@
                     {% if addr.is_default %}
                       <span class="badge badge-success ml-1">Utama</span>
                     {% endif %}
+                    {% if addr.used_in_orders %}
+                      <span class="badge badge-warning ml-1">Dipakai di pesanan</span>
+                    {% endif %}
                   </h6>
                   <p class="mb-1 text-muted"><i class="fas fa-phone"></i> {{ addr.phone }}</p>
                 </div>
                 <div class="dropdown">
-                  <button class="btn btn-sm btn-link text-dark" type="button" data-toggle="dropdown">
+                  <button class="btn btn-sm btn-link text-dark" type="button" data-toggle="dropdown" onclick="event.stopPropagation();">
                     <i class="fas fa-ellipsis-v"></i>
                   </button>
                   <div class="dropdown-menu dropdown-menu-right">
@@ -96,12 +115,27 @@
                     </form>
                     {% endif %}
                     <div class="dropdown-divider"></div>
+                    {% if addr.used_in_orders %}
+                    <form method="post" action="{% url 'shipping:archive_address' addr.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="dropdown-item text-warning" onclick="event.stopPropagation(); return confirm('Arsipkan alamat ini?')">
+                        <i class="fas fa-archive"></i> Arsipkan
+                      </button>
+                    </form>
+                    {% else %}
                     <form method="post" action="{% url 'shipping:delete_address' addr.id %}" class="d-inline">
                       {% csrf_token %}
-                      <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Hapus alamat ini?')">
+                      <button type="submit" class="dropdown-item text-danger" onclick="event.stopPropagation(); return confirm('Hapus alamat ini?')">
                         <i class="fas fa-trash"></i> Hapus
                       </button>
                     </form>
+                    <form method="post" action="{% url 'shipping:archive_address' addr.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="dropdown-item" onclick="event.stopPropagation(); return confirm('Arsipkan alamat ini?')">
+                        <i class="fas fa-archive"></i> Arsipkan
+                      </button>
+                    </form>
+                    {% endif %}
                   </div>
                 </div>
               </div>
