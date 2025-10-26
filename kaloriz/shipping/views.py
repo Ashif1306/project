@@ -183,22 +183,52 @@ def validate_shipping_data(district_id, service):
 def add_address(request):
     """Add new shipping address"""
     if request.method == 'POST':
-        form = AddressForm(request.POST)
-        if form.is_valid():
-            address = form.save(commit=False)
-            address.user = request.user
+        # Manual processing
+        full_name = request.POST.get('full_name')
+        phone = request.POST.get('phone')
+        province = request.POST.get('province', 'Sulawesi Selatan')
+        city = request.POST.get('city', 'Makassar')
+        district_id = request.POST.get('district_id')
+        postal_code = request.POST.get('postal_code')
+        street_name = request.POST.get('street_name')
+        detail = request.POST.get('detail', '')
+        label = request.POST.get('label', 'Rumah')
+        is_default = request.POST.get('is_default') == 'on'
+
+        try:
+            district = District.objects.get(id=district_id, is_active=True)
+
+            # Create address
+            address = Address.objects.create(
+                user=request.user,
+                full_name=full_name,
+                phone=phone,
+                province=province,
+                city=city,
+                district=district,
+                postal_code=postal_code,
+                street_name=street_name,
+                detail=detail,
+                label=label,
+                is_default=is_default
+            )
 
             # If this is set as default, unset other defaults
-            if address.is_default:
-                Address.objects.filter(user=request.user, is_default=True).update(is_default=False)
+            if is_default:
+                Address.objects.filter(user=request.user, is_default=True).exclude(id=address.id).update(is_default=False)
 
-            address.save()
             messages.success(request, 'Alamat berhasil ditambahkan.')
-            return redirect(request.META.get('HTTP_REFERER', 'core:checkout'))
-        else:
-            messages.error(request, 'Gagal menambahkan alamat. Periksa kembali data Anda.')
+        except District.DoesNotExist:
+            messages.error(request, 'Kecamatan tidak valid.')
+        except Exception as e:
+            messages.error(request, f'Gagal menambahkan alamat: {str(e)}')
 
-    return redirect(request.META.get('HTTP_REFERER', 'core:checkout'))
+    # Redirect back to where user came from
+    referer = request.META.get('HTTP_REFERER', '')
+    if 'profile' in referer:
+        return redirect('core:profile')
+    else:
+        return redirect('core:checkout')
 
 
 @login_required
@@ -207,25 +237,39 @@ def edit_address(request, address_id):
     address = get_object_or_404(Address, id=address_id, user=request.user)
 
     if request.method == 'POST':
-        form = AddressForm(request.POST, instance=address)
-        if form.is_valid():
-            updated_address = form.save(commit=False)
+        # Manual processing instead of using form
+        address.full_name = request.POST.get('full_name')
+        address.phone = request.POST.get('phone')
+        address.province = request.POST.get('province', 'Sulawesi Selatan')
+        address.city = request.POST.get('city', 'Makassar')
 
-            # If this is set as default, unset other defaults
-            if updated_address.is_default:
-                Address.objects.filter(user=request.user, is_default=True).exclude(id=address_id).update(is_default=False)
+        district_id = request.POST.get('district_id')
+        if district_id:
+            try:
+                address.district = District.objects.get(id=district_id, is_active=True)
+            except District.DoesNotExist:
+                messages.error(request, 'Kecamatan tidak valid.')
+                return redirect(request.META.get('HTTP_REFERER', 'core:profile'))
 
-            updated_address.save()
-            messages.success(request, 'Alamat berhasil diperbarui.')
-            return redirect(request.META.get('HTTP_REFERER', 'core:profile'))
+        address.postal_code = request.POST.get('postal_code')
+        address.street_name = request.POST.get('street_name')
+        address.detail = request.POST.get('detail', '')
+        address.label = request.POST.get('label', 'Rumah')
+
+        # Handle default address
+        is_default = request.POST.get('is_default') == 'on'
+        if is_default:
+            Address.objects.filter(user=request.user, is_default=True).exclude(id=address_id).update(is_default=False)
+            address.is_default = True
         else:
-            messages.error(request, 'Gagal memperbarui alamat. Periksa kembali data Anda.')
-    else:
-        form = AddressForm(instance=address)
+            address.is_default = False
+
+        address.save()
+        messages.success(request, 'Alamat berhasil diperbarui.')
+        return redirect('core:profile')
 
     districts = District.objects.filter(is_active=True).order_by('name')
     context = {
-        'form': form,
         'address': address,
         'districts': districts,
     }

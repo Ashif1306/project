@@ -331,5 +331,12 @@ function getCookie(name) {
 
 // Initialize
 updateSummary();
+
+// Check if all items are selected on load
+const allCheckboxes = document.querySelectorAll('.item-checkbox');
+if (allCheckboxes.length > 0) {
+  const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+  document.getElementById('select-all').checked = allChecked;
+}
 </script>
 {% endblock %}
