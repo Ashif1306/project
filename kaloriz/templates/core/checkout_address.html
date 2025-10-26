@@ -230,7 +230,7 @@
 </div>
 
 <!-- Hidden form for placing order -->
-<form method="post" action="{% url 'core:place_order_from_address' %}" id="order-form">
+<form method="post" action="{% url 'core:checkout_payment' %}" id="order-form">
   {% csrf_token %}
   <input type="hidden" name="address_id" id="form_address_id" value="{{ active_address_id|default:'' }}">
   <input type="hidden" name="courier_service" id="form_courier_service" value="{{ selected_shipping_method|default:'' }}">
@@ -886,7 +886,7 @@ function proceedToPayment() {
   }
 
   updateFormFields();
-  document.getElementById('order-form').submit();
+  window.location.href = "{% url 'core:checkout_payment' %}";
 }
 
 document.querySelectorAll('input[name="selected_address"]').forEach(radio => {
