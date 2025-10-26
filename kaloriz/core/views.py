@@ -5,6 +5,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db.models import F
 from django.utils import timezone
+from django.utils.formats import number_format
 from decimal import Decimal
 import uuid
 
@@ -18,7 +19,6 @@ from shipping.forms import AddressForm
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from shipping.models import District, Address
 
 # Cart Views
 @login_required
@@ -195,13 +195,37 @@ def checkout(request):
     except UserProfile.DoesNotExist:
         profile = None
 
-    # Get user's saved addresses
-    user_addresses = Address.objects.filter(user=request.user).select_related('district')
+    user_addresses = list(
+        Address.objects.filter(user=request.user)
+        .select_related('district')
+        .order_by('-is_default', '-created_at')
+    )
 
-    # Get default address if exists
-    default_address = user_addresses.filter(is_default=True).first()
+    default_address = next((addr for addr in user_addresses if addr.is_default), None)
 
-    # Get all active districts for shipping
+    checkout_data = request.session.get('checkout', {})
+    selected_address_id = checkout_data.get('address_id')
+    active_address = None
+
+    if selected_address_id:
+        active_address = next(
+            (addr for addr in user_addresses if addr.id == selected_address_id),
+            None,
+        )
+        if not active_address and user_addresses:
+            # Selected address no longer available; clear stale session state
+            for key in ['address_id', 'shipping_method', 'shipping_cost', 'eta']:
+                checkout_data.pop(key, None)
+            request.session['checkout'] = checkout_data
+            request.session.modified = True
+            messages.warning(
+                request,
+                'Alamat aktif Anda sudah tidak tersedia. Silakan pilih alamat lain.',
+            )
+
+    if not active_address:
+        active_address = default_address or (user_addresses[0] if user_addresses else None)
+
     districts = District.objects.filter(is_active=True).order_by('name')
 
     context = {
@@ -210,6 +234,8 @@ def checkout(request):
         'profile': profile,
         'user_addresses': user_addresses,
         'default_address': default_address,
+        'active_address_id': active_address.id if active_address else None,
+        'selected_shipping_method': checkout_data.get('shipping_method'),
         'districts': districts,
     }
     return render(request, 'core/checkout_address.html', context)
@@ -777,6 +803,7 @@ def remove_from_watchlist(request, watchlist_id):
     messages.success(request, f'{product_name} berhasil dihapus dari watchlist.')
     return redirect('core:watchlist')
 
+@login_required
 @require_POST
 def set_shipping_method(request):
     """
@@ -789,14 +816,17 @@ def set_shipping_method(request):
     except Exception:
         return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
 
-    method = data.get('method')  # 'REG' atau 'EXP'
+    method = str(data.get('method', '')).upper()
     address_id = data.get('address_id')
 
-    if not method or not address_id:
-        return JsonResponse({'success': False, 'message': 'Data tidak lengkap.'}, status=400)
+    if method not in {'REG', 'EXP'} or not address_id:
+        return JsonResponse({'success': False, 'message': 'Metode atau alamat tidak valid.'}, status=400)
 
     try:
-        address = Address.objects.select_related('district').get(id=address_id, user=request.user)
+        address = Address.objects.select_related('district').get(
+            id=address_id,
+            user=request.user,
+        )
     except Address.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Alamat tidak ditemukan.'}, status=404)
 
@@ -804,40 +834,40 @@ def set_shipping_method(request):
     if not district or not district.is_active:
         return JsonResponse({'success': False, 'message': 'Kecamatan tidak aktif.'}, status=400)
 
-    # Ambil tarif & ETA
     if method == 'EXP':
-        shipping_cost = district.price_express
-        eta = district.eta_express
+        shipping_cost = Decimal(district.exp_cost or 0)
+        eta = district.eta_exp
     else:
         method = 'REG'
-        shipping_cost = district.price_regular
-        eta = district.eta_regular
+        shipping_cost = Decimal(district.reg_cost or 0)
+        eta = district.eta_reg
 
-    # Ambil subtotal item terpilih
-    try:
-        cart = Cart.objects.get(user=request.user)
-        subtotal = cart.get_selected_total()
-    except Cart.DoesNotExist:
-        subtotal = 0
-
+    cart = Cart.objects.filter(user=request.user).first()
+    subtotal = Decimal(cart.get_selected_total() if cart else 0)
     total = subtotal + shipping_cost
 
-    # Simpan ke session
-    request.session['checkout'] = {
+    checkout_data = request.session.get('checkout', {})
+    checkout_data.update({
         'address_id': address.id,
         'shipping_method': method,
         'shipping_cost': float(shipping_cost),
         'eta': eta,
-        'subtotal': float(subtotal),
-        'total': float(total),
-    }
+    })
+    request.session['checkout'] = checkout_data
     request.session.modified = True
+
+    def format_rupiah(value: Decimal) -> str:
+        value = Decimal(value or 0)
+        return f"Rp {number_format(value, decimal_pos=0, force_grouping=True)}"
 
     return JsonResponse({
         'success': True,
+        'method': method,
         'shipping_cost': float(shipping_cost),
-        'shipping_cost_display': f"Rp {shipping_cost:,.0f}".replace(",", "."),
         'subtotal': float(subtotal),
         'total': float(total),
         'eta': eta,
+        'shipping_cost_display': format_rupiah(shipping_cost),
+        'subtotal_display': format_rupiah(subtotal),
+        'total_display': format_rupiah(total),
     })

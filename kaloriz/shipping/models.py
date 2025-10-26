@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
-from django.core.exceptions import ValidationError
 
 
 class District(models.Model):
@@ -163,7 +162,10 @@ class Address(models.Model):
         """
         if self.is_default:
             # Set semua alamat user lain jadi non-default
-            Address.objects.filter(user=self.user, is_default=True).update(is_default=False)
+            Address.objects.filter(
+                user=self.user,
+                is_default=True,
+            ).exclude(id=self.id).update(is_default=False)
         super().save(*args, **kwargs)
 
 
