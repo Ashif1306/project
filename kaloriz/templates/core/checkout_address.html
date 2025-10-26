@@ -131,13 +131,13 @@
       </div>
 
       <!-- Courier Selection -->
-      <div class="card shadow-sm d-none" id="courier-section">
+      <div class="card shadow-sm {% if not active_address_id %}d-none{% endif %}" id="courier-section">
         <div class="card-header bg-white border-bottom">
           <h5 class="mb-0">Pilih Kurir Pengiriman</h5>
         </div>
         <div class="card-body">
           <div class="courier-options">
-            <div class="courier-option" onclick="selectCourier('REG')">
+            <div class="courier-option" data-service="REG">
               <input type="radio" name="courier_service" value="REG" id="courier-reg">
               <label for="courier-reg" class="courier-label">
                 <div class="d-flex justify-content-between align-items-center">
@@ -152,7 +152,7 @@
               </label>
             </div>
 
-            <div class="courier-option" onclick="selectCourier('EXP')">
+            <div class="courier-option" data-service="EXP">
               <input type="radio" name="courier_service" value="EXP" id="courier-exp">
               <label for="courier-exp" class="courier-label">
                 <div class="d-flex justify-content-between align-items-center">
@@ -204,22 +204,28 @@
 
           <div class="d-flex justify-content-between mb-3">
             <span>Biaya Kirim</span>
-            <span class="text-danger" id="summary-shipping">Pilih alamat</span>
+            <span class="text-danger" id="summary-shipping">
+              {% if selected_shipping_cost is not None %}
+                Rp {{ selected_shipping_cost|floatformat:0 }}
+              {% else %}
+                Pilih alamat
+              {% endif %}
+            </span>
           </div>
 
           <hr>
 
           <div class="d-flex justify-content-between mb-4">
             <strong>Total</strong>
-            <strong class="text-dark" id="summary-total">Rp {{ cart.get_selected_total|floatformat:0 }}</strong>
+            <strong class="text-dark" id="summary-total">Rp {{ selected_total|floatformat:0 }}</strong>
           </div>
 
-          <div class="small text-muted mb-3" id="summary-eta" style="display: none;">
-            Estimasi tiba: <span id="summary-eta-text"></span>
+          <div class="small text-muted mb-3" id="summary-eta" {% if not selected_eta %}style="display: none;"{% endif %}>
+            Estimasi tiba: <span id="summary-eta-text">{{ selected_eta }}</span>
           </div>
 
-          <button type="button" class="btn btn-dark btn-block btn-lg rounded-pill" id="continue-btn" disabled onclick="proceedToPayment()">
-            Pilih alamat &amp; kurir
+          <button type="button" class="btn btn-dark btn-block btn-lg rounded-pill" id="continue-btn" {% if not selected_shipping_cost %}disabled{% endif %} onclick="proceedToPayment()">
+            {% if selected_shipping_cost %}Lanjutkan ke Pembayaran{% else %}Pilih alamat &amp; kurir{% endif %}
           </button>
         </div>
       </div>
@@ -230,8 +236,8 @@
 <!-- Hidden form for placing order -->
 <form method="post" action="{% url 'core:place_order_from_address' %}" id="order-form">
   {% csrf_token %}
-  <input type="hidden" name="address_id" id="form_address_id">
-  <input type="hidden" name="courier_service" id="form_courier_service">
+  <input type="hidden" name="address_id" id="form_address_id" value="{{ active_address_id|default:'' }}">
+  <input type="hidden" name="courier_service" id="form_courier_service" value="{{ selected_shipping_method|default:'' }}">
 </form>
 
 <!-- Add Address Modal -->
@@ -465,10 +471,12 @@ const initialCourier = "{{ selected_shipping_method|default_if_none:'' }}".toUpp
 let selectedAddressId = {{ active_address_id|default:'null' }};
 if (selectedAddressId !== null) {
   selectedAddressId = Number(selectedAddressId);
+  if (Number.isNaN(selectedAddressId)) {
+    selectedAddressId = null;
+  }
 }
 let selectedCourier = initialCourier || null;
-let selectedAddressId = null;
-let selectedCourier = null;
+const hasInitialQuote = {{ has_initial_quote|yesno:"true,false" }};
 
 const summarySubtotalEl = document.getElementById('summary-subtotal');
 const summaryShippingEl = document.getElementById('summary-shipping');
@@ -479,96 +487,102 @@ const continueBtn = document.getElementById('continue-btn');
 const shippingAlert = document.getElementById('shipping-alert');
 const courierSection = document.getElementById('courier-section');
 const shippingUrl = "{% url 'core:set_shipping_method' %}";
+const addressField = document.getElementById('form_address_id');
+const courierField = document.getElementById('form_courier_service');
 
-function selectAddress(addressId) {
+function selectAddress(addressId, options = {}) {
   const numericId = Number(addressId);
   if (Number.isNaN(numericId)) {
     return;
   }
+
   selectedAddressId = numericId;
+  updateFormFields();
 
   document.querySelectorAll('.address-card').forEach(card => {
     const isSelected = Number(card.dataset.addressId || 0) === numericId;
-
-  document.querySelectorAll('.address-card').forEach(card => {
-    const isSelected = Number(card.dataset.addressId || 0) === numericId;
-  selectedAddressId = addressId;
-
-  document.querySelectorAll('.address-card').forEach(card => {
-    const isSelected = parseInt(card.dataset.addressId, 10) === addressId;
     card.classList.toggle('selected', isSelected);
+    const radio = card.querySelector('input[name="selected_address"]');
+    if (radio) {
+      radio.checked = isSelected;
+    }
   });
 
-  const addressRadio = document.querySelector(`input[name="selected_address"][value="${addressId}"]`);
-  if (addressRadio) {
-    addressRadio.checked = true;
-  }
-
-  const selectedCard = document.querySelector(`.address-card[data-address-id="${addressId}"]`);
+  const selectedCard = document.querySelector(`.address-card[data-address-id="${numericId}"]`);
   if (!selectedCard) {
     return;
   }
 
+  hideShippingAlert();
   updateCourierOptions(selectedCard);
 
-  courierSection.classList.remove('d-none');
+  if (courierSection) {
+    courierSection.classList.remove('d-none');
+  }
 
-  // Reset button and summary state while fetching quote
-  summaryShippingEl.textContent = 'Menghitung...';
-  continueBtn.disabled = true;
-  continueBtn.textContent = 'Menghitung ongkir...';
-  etaContainer.style.display = 'none';
-
-  // Default to REG if no courier selected yet
-  const nextCourier = selectedCourier || 'REG';
-  selectCourier(nextCourier, { triggerUpdate: false });
-  updateShippingQuote();
+  const shouldFetch = options.fetchQuote !== false;
+  const preferredCourier = options.courier || selectedCourier || initialCourier || 'REG';
+  selectCourier(preferredCourier, { triggerUpdate: shouldFetch });
 }
 
 function updateCourierOptions(card) {
   const regPrice = Number(card.dataset.regCost || 0);
   const expPrice = Number(card.dataset.expCost || 0);
 
-  document.getElementById('courier-reg-price').textContent = formatRupiah(regPrice);
-  document.getElementById('courier-exp-price').textContent = formatRupiah(expPrice);
-  document.getElementById('courier-reg-eta').textContent = card.dataset.regEta || 'Estimasi reguler';
-  document.getElementById('courier-exp-eta').textContent = card.dataset.expEta || 'Estimasi express';
+  const regPriceEl = document.getElementById('courier-reg-price');
+  const expPriceEl = document.getElementById('courier-exp-price');
+  const regEtaEl = document.getElementById('courier-reg-eta');
+  const expEtaEl = document.getElementById('courier-exp-eta');
+
+  if (regPriceEl) {
+    regPriceEl.textContent = formatRupiah(regPrice);
+  }
+  if (expPriceEl) {
+    expPriceEl.textContent = formatRupiah(expPrice);
+  }
+  if (regEtaEl) {
+    regEtaEl.textContent = card.dataset.regEta || 'Estimasi reguler';
+  }
+  if (expEtaEl) {
+    expEtaEl.textContent = card.dataset.expEta || 'Estimasi express';
+  }
 
   const regRadio = document.getElementById('courier-reg');
   const expRadio = document.getElementById('courier-exp');
-  regRadio.dataset.cost = regPrice;
-  expRadio.dataset.cost = expPrice;
-  regRadio.dataset.eta = card.dataset.regEta || '';
-  expRadio.dataset.eta = card.dataset.expEta || '';
+
+  if (regRadio) {
+    regRadio.dataset.cost = regPrice;
+    regRadio.dataset.eta = card.dataset.regEta || '';
+  }
+  if (expRadio) {
+    expRadio.dataset.cost = expPrice;
+    expRadio.dataset.eta = card.dataset.expEta || '';
+  }
 }
 
-function selectCourier(service, options = { triggerUpdate: true }) {
-  selectedCourier = (service || '').toUpperCase();
+function selectCourier(service, options = {}) {
+  const triggerUpdate = options.triggerUpdate !== false;
+  const normalized = (service || '').toUpperCase() === 'EXP' ? 'EXP' : 'REG';
+  selectedCourier = normalized;
+  updateFormFields();
 
   const regRadio = document.getElementById('courier-reg');
   const expRadio = document.getElementById('courier-exp');
 
-  if (selectedCourier === 'EXP') {
-    expRadio.checked = true;
-  } else {
-    selectedCourier = 'REG';
-    regRadio.checked = true;
+  if (regRadio) {
+    regRadio.checked = normalized === 'REG';
+  }
+  if (expRadio) {
+    expRadio.checked = normalized === 'EXP';
   }
 
-  summaryShippingEl.textContent = 'Menghitung...';
-  continueBtn.disabled = true;
-  continueBtn.textContent = 'Menghitung ongkir...';
-
-  } else {
-    selectedCourier = 'REG';
-    regRadio.checked = true;
-  }
-
-  summaryShippingEl.textContent = 'Menghitung...';
-  continueBtn.disabled = true;
-  continueBtn.textContent = 'Menghitung ongkir...';
-
-  if (options.triggerUpdate && selectedAddressId) {
+  if (triggerUpdate) {
+    summaryShippingEl.textContent = 'Menghitung...';
+    continueBtn.disabled = true;
+    continueBtn.textContent = 'Menghitung ongkir...';
+    if (etaContainer) {
+      etaContainer.style.display = 'none';
+    }
     updateShippingQuote();
   }
 }
@@ -608,191 +622,63 @@ async function updateShippingQuote() {
 }
 
 function applyShippingSummary(data) {
-  summarySubtotalEl.textContent = data.subtotal_display || formatRupiah(data.subtotal || 0);
-  summaryShippingEl.textContent = data.shipping_cost_display || formatRupiah(data.shipping_cost || 0);
-  summaryTotalEl.textContent = data.total_display || formatRupiah(data.total || 0);
+  if (summarySubtotalEl) {
+    summarySubtotalEl.textContent = data.subtotal_display || formatRupiah(data.subtotal || 0);
+  }
+  if (summaryShippingEl) {
+    summaryShippingEl.textContent = data.shipping_cost_display || formatRupiah(data.shipping_cost || 0);
+    summaryShippingEl.classList.add('text-danger');
+  }
+  if (summaryTotalEl) {
+    summaryTotalEl.textContent = data.total_display || formatRupiah(data.total || 0);
+  }
 
-  summaryShippingEl.classList.add('text-danger');
   continueBtn.disabled = false;
   continueBtn.textContent = 'Lanjutkan ke Pembayaran';
 
   if (data.eta) {
-    etaTextEl.textContent = data.eta;
-    etaContainer.style.display = 'block';
-  } else {
-    etaContainer.style.display = 'none';
-  }
-
-  document.getElementById('form_address_id').value = selectedAddressId;
-  document.getElementById('form_courier_service').value = selectedCourier;
-}
-
-function handleShippingError(message) {
-  shippingAlert.textContent = message;
-  shippingAlert.classList.remove('d-none');
-  summaryShippingEl.textContent = message;
-  continueBtn.disabled = true;
-  continueBtn.textContent = 'Coba lagi';
-  etaContainer.style.display = 'none';
-}
-
-  } else {
-    selectedCourier = 'REG';
-    regRadio.checked = true;
-  }
-
-  summaryShippingEl.textContent = 'Menghitung...';
-  continueBtn.disabled = true;
-  continueBtn.textContent = 'Menghitung ongkir...';
-
-  if (options.triggerUpdate && selectedAddressId) {
-    updateShippingQuote();
-  }
-}
-
-async function updateShippingQuote() {
-  if (!selectedAddressId || !selectedCourier) {
-    return;
-  }
-
-  hideShippingAlert();
-
-  try {
-    const response = await fetch(shippingUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrfToken(),
-      },
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        method: selectedCourier,
-        address_id: selectedAddressId,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      const message = data && data.message ? data.message : 'Gagal menghitung ongkir.';
-      throw new Error(message);
+    if (etaTextEl) {
+      etaTextEl.textContent = data.eta;
     }
-
-    applyShippingSummary(data);
-  } catch (error) {
-    handleShippingError(error.message || 'Terjadi kesalahan.');
-  }
-}
-
-function applyShippingSummary(data) {
-  summarySubtotalEl.textContent = data.subtotal_display || formatRupiah(data.subtotal || 0);
-  summaryShippingEl.textContent = data.shipping_cost_display || formatRupiah(data.shipping_cost || 0);
-  summaryTotalEl.textContent = data.total_display || formatRupiah(data.total || 0);
-
-  summaryShippingEl.classList.add('text-danger');
-  continueBtn.disabled = false;
-  continueBtn.textContent = 'Lanjutkan ke Pembayaran';
-
-  if (data.eta) {
-    etaTextEl.textContent = data.eta;
-    etaContainer.style.display = 'block';
-  } else {
-    etaContainer.style.display = 'none';
-  }
-
-  document.getElementById('form_address_id').value = selectedAddressId;
-  document.getElementById('form_courier_service').value = selectedCourier;
-}
-
-function handleShippingError(message) {
-  shippingAlert.textContent = message;
-  shippingAlert.classList.remove('d-none');
-  summaryShippingEl.textContent = message;
-  continueBtn.disabled = true;
-  continueBtn.textContent = 'Coba lagi';
-  etaContainer.style.display = 'none';
-}
-
-  } else {
-    selectedCourier = 'REG';
-    regRadio.checked = true;
-  }
-
-  summaryShippingEl.textContent = 'Menghitung...';
-  continueBtn.disabled = true;
-  continueBtn.textContent = 'Menghitung ongkir...';
-
-  if (options.triggerUpdate && selectedAddressId) {
-    updateShippingQuote();
-  }
-}
-
-async function updateShippingQuote() {
-  if (!selectedAddressId || !selectedCourier) {
-    return;
-  }
-
-  hideShippingAlert();
-
-  try {
-    const response = await fetch(shippingUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrfToken(),
-      },
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        method: selectedCourier,
-        address_id: selectedAddressId,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      const message = data && data.message ? data.message : 'Gagal menghitung ongkir.';
-      throw new Error(message);
+    if (etaContainer) {
+      etaContainer.style.display = 'block';
     }
-
-    applyShippingSummary(data);
-  } catch (error) {
-    handleShippingError(error.message || 'Terjadi kesalahan.');
-  }
-}
-
-function applyShippingSummary(data) {
-  summarySubtotalEl.textContent = data.subtotal_display || formatRupiah(data.subtotal || 0);
-  summaryShippingEl.textContent = data.shipping_cost_display || formatRupiah(data.shipping_cost || 0);
-  summaryTotalEl.textContent = data.total_display || formatRupiah(data.total || 0);
-
-  summaryShippingEl.classList.add('text-danger');
-  continueBtn.disabled = false;
-  continueBtn.textContent = 'Lanjutkan ke Pembayaran';
-
-  if (data.eta) {
-    etaTextEl.textContent = data.eta;
-    etaContainer.style.display = 'block';
-  } else {
+  } else if (etaContainer) {
     etaContainer.style.display = 'none';
   }
 
-  document.getElementById('form_address_id').value = selectedAddressId;
-  document.getElementById('form_courier_service').value = selectedCourier;
+  updateFormFields();
 }
 
 function handleShippingError(message) {
-  shippingAlert.textContent = message;
-  shippingAlert.classList.remove('d-none');
-  summaryShippingEl.textContent = message;
+  if (shippingAlert) {
+    shippingAlert.textContent = message;
+    shippingAlert.classList.remove('d-none');
+  }
+  if (summaryShippingEl) {
+    summaryShippingEl.textContent = message;
+  }
   continueBtn.disabled = true;
   continueBtn.textContent = 'Coba lagi';
-  etaContainer.style.display = 'none';
+  if (etaContainer) {
+    etaContainer.style.display = 'none';
+  }
 }
 
 function hideShippingAlert() {
-  shippingAlert.classList.add('d-none');
-  shippingAlert.textContent = '';
+  if (shippingAlert) {
+    shippingAlert.classList.add('d-none');
+    shippingAlert.textContent = '';
+  }
+}
+
+function updateFormFields() {
+  if (addressField) {
+    addressField.value = selectedAddressId || '';
+  }
+  if (courierField) {
+    courierField.value = selectedCourier || '';
+  }
 }
 
 function formatRupiah(amount) {
@@ -815,27 +701,58 @@ function proceedToPayment() {
     return;
   }
 
-  document.getElementById('form_address_id').value = selectedAddressId;
-  document.getElementById('form_courier_service').value = selectedCourier;
+  updateFormFields();
   document.getElementById('order-form').submit();
+}
+
+document.querySelectorAll('input[name="selected_address"]').forEach(radio => {
+  radio.addEventListener('change', event => {
+    selectAddress(event.target.value);
+  });
+});
+
+const regRadioEl = document.getElementById('courier-reg');
+const expRadioEl = document.getElementById('courier-exp');
+
+if (regRadioEl) {
+  regRadioEl.addEventListener('change', () => {
+    if (regRadioEl.checked) {
+      selectCourier('REG');
+    }
+  });
+}
+if (expRadioEl) {
+  expRadioEl.addEventListener('change', () => {
+    if (expRadioEl.checked) {
+      selectCourier('EXP');
+    }
+  });
 }
 
 window.addEventListener('DOMContentLoaded', function() {
   let cardToSelect = null;
+
   if (selectedAddressId !== null) {
     cardToSelect = document.querySelector(`.address-card[data-address-id="${selectedAddressId}"]`);
   }
   if (!cardToSelect) {
     cardToSelect = document.querySelector('.address-card.selected') || document.querySelector('.address-card');
   }
+
   if (cardToSelect) {
     const addressId = Number(cardToSelect.dataset.addressId || 0);
-  const defaultCard = document.querySelector('.address-card.selected') || document.querySelector('.address-card');
-  if (defaultCard) {
-    const addressId = parseInt(defaultCard.dataset.addressId, 10);
     if (!Number.isNaN(addressId)) {
-      selectAddress(addressId);
+      selectAddress(addressId, { fetchQuote: true });
     }
+  } else {
+    continueBtn.disabled = true;
+    continueBtn.textContent = 'Pilih alamat & kurir';
+  }
+
+  updateFormFields();
+
+  if (!hasInitialQuote && selectedAddressId === null && courierSection) {
+    courierSection.classList.add('d-none');
   }
 });
 </script>

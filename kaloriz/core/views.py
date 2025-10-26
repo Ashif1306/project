@@ -1,3 +1,7 @@
+import json
+import uuid
+from decimal import Decimal, InvalidOperation
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
@@ -6,8 +10,6 @@ from django.contrib import messages
 from django.db.models import F, Count
 from django.utils import timezone
 from django.utils.formats import number_format
-from decimal import Decimal
-import uuid
 
 from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist, EmailVerification
 from catalog.models import Product
@@ -241,6 +243,20 @@ def checkout(request):
 
     districts = District.objects.filter(is_active=True).order_by('name')
 
+    subtotal = Decimal(cart.get_selected_total() or 0)
+    raw_shipping_cost = checkout_data.get('shipping_cost')
+    selected_shipping_cost = None
+
+    if raw_shipping_cost not in (None, ''):
+        try:
+            selected_shipping_cost = Decimal(raw_shipping_cost)
+        except (InvalidOperation, TypeError, ValueError):
+            selected_shipping_cost = None
+
+    selected_total = subtotal + (selected_shipping_cost or Decimal('0'))
+    selected_eta = checkout_data.get('eta')
+    has_initial_quote = bool(selected_shipping_cost is not None and checkout_data.get('shipping_method'))
+
     context = {
         'cart': cart,
         'selected_items': selected_items,
@@ -250,6 +266,10 @@ def checkout(request):
         'active_address_id': active_address.id if active_address else None,
         'selected_shipping_method': checkout_data.get('shipping_method'),
         'districts': districts,
+        'selected_shipping_cost': selected_shipping_cost,
+        'selected_total': selected_total,
+        'selected_eta': selected_eta,
+        'has_initial_quote': has_initial_quote,
     }
     return render(request, 'core/checkout_address.html', context)
 
@@ -830,7 +850,6 @@ def remove_from_watchlist(request, watchlist_id):
 @require_POST
 def set_shipping_method(request):
     """Hitung ongkir berdasarkan alamat & simpan pilihan pengguna."""
-    import json
 
     def format_rupiah(value: Decimal) -> str:
         value = Decimal(value or 0)
@@ -838,7 +857,7 @@ def set_shipping_method(request):
 
     try:
         data = json.loads(request.body.decode('utf-8'))
-    except Exception:
+    except (TypeError, ValueError):
         return JsonResponse({'success': False, 'message': 'Data tidak valid.'}, status=400)
 
     method = str(data.get('method', '')).upper()
@@ -869,7 +888,10 @@ def set_shipping_method(request):
         eta = district.eta_reg
 
     cart = Cart.objects.filter(user=request.user).first()
-    subtotal = Decimal(cart.get_selected_total() if cart else 0)
+    if not cart:
+        return JsonResponse({'success': False, 'message': 'Keranjang tidak ditemukan.'}, status=400)
+
+    subtotal = Decimal(cart.get_selected_total() or 0)
     total = subtotal + shipping_cost
 
     checkout_data = request.session.get('checkout', {})
@@ -881,10 +903,6 @@ def set_shipping_method(request):
     })
     request.session['checkout'] = checkout_data
     request.session.modified = True
-
-    def format_rupiah(value: Decimal) -> str:
-        value = Decimal(value or 0)
-        return f"Rp {number_format(value, decimal_pos=0, force_grouping=True)}"
 
     return JsonResponse({
         'success': True,
