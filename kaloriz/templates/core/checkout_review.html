@@ -90,11 +90,18 @@
       </div>
     </div>
     <div class="col-lg-4">
-      <div class="card shadow checkout-summary-card sticky-top" id="checkout-summary-card">
+      <div class="card shadow checkout-summary-card summary" id="checkout-summary-card">
         <div class="card-header bg-white border-bottom">
           <h5 class="mb-0">Ringkasan Pembayaran</h5>
         </div>
-        <div class="card-body" id="checkout-summary" data-apply-url="{% url 'catalog:apply_discount' %}">
+        <div
+          class="card-body"
+          id="checkout-summary"
+          data-apply-url="{% url 'catalog:apply_discount' %}"
+          data-cancel-url="{% url 'catalog:cancel_discount' %}"
+          data-has-discount="{% if discount_amount > 0 %}true{% else %}false{% endif %}"
+          data-active-code="{{ discount_code|default:'' }}"
+        >
           <div class="summary-row d-flex justify-content-between mb-3">
             <span>Subtotal</span>
             <span class="font-weight-semibold" id="subtotal-amount">{{ subtotal_display }}</span>
@@ -117,10 +124,21 @@
             <div class="input-group">
               <input type="text" id="discount-code-input" class="form-control" placeholder="Masukkan kode" value="{{ discount_code|default:'' }}">
               <div class="input-group-append">
-                <button class="btn btn-outline-primary" type="button" id="apply-discount-btn">Apply</button>
+                <button
+                  class="btn btn-outline-primary"
+                  type="button"
+                  id="apply-discount-btn"
+                  data-default-label="Apply"
+                  data-cancel-label="Batalkan"
+                  data-mode="{% if discount_amount > 0 %}cancel{% else %}apply{% endif %}"
+                >{% if discount_amount > 0 %}Batalkan{% else %}Apply{% endif %}</button>
               </div>
             </div>
             <small class="form-text text-muted">Masukkan kode voucher untuk mendapatkan potongan harga.</small>
+            <div class="discount-status align-items-center mt-2 {% if not discount_code %}d-none{% endif %}" id="discount-status">
+              <span class="badge badge-success" id="discount-code-badge">{% if discount_code %}{{ discount_code|upper }}{% endif %}</span>
+              <span class="text-success small" id="discount-status-text">{% if discount_code %}Kode diskon {{ discount_code }} diterapkan.{% endif %}</span>
+            </div>
             <small class="text-success d-none" id="discount-success"></small>
             <small class="text-danger d-none" id="discount-error"></small>
           </div>
@@ -147,10 +165,6 @@
 </div>
 
 <style>
-.checkout-review-container {
-  --checkout-summary-offset: 120px;
-}
-
 .checkout-steps {
   display: flex;
   align-items: center;
@@ -195,9 +209,22 @@
   color: #fff;
 }
 
-.checkout-summary-card.sticky-top {
+.summary {
   position: sticky;
-  top: var(--checkout-summary-offset);
+  top: calc(var(--header-h) + 12px);
+  bottom: 16px;
+  z-index: 10;
+}
+
+.discount-status {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.discount-status .badge {
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
 }
 
 .shipping-avatar {
@@ -229,10 +256,11 @@
   border-radius: 0 0.25rem 0.25rem 0;
 }
 
-@media (max-width: 991px) {
-  .checkout-summary-card.sticky-top {
-    position: relative;
+@media (max-width: 992px) {
+  .summary {
+    position: static;
     top: auto;
+    bottom: auto;
   }
 }
 
@@ -253,23 +281,6 @@
 
 <script>
 (function() {
-  const rootElement = document.documentElement;
-
-  function updateSummaryOffset() {
-    if (!rootElement) {
-      return;
-    }
-    const navbar = document.querySelector('.modern-navbar');
-    const offset = navbar ? navbar.offsetHeight + 20 : 120;
-    rootElement.style.setProperty('--checkout-summary-offset', `${offset}px`);
-  }
-
-  updateSummaryOffset();
-  window.addEventListener('load', updateSummaryOffset);
-  window.addEventListener('resize', updateSummaryOffset);
-})();
-
-(function() {
   const applyBtn = document.getElementById('apply-discount-btn');
   if (!applyBtn) {
     return;
@@ -283,7 +294,15 @@
   const shippingDisplay = document.getElementById('shipping-cost-amount');
   const successMessage = document.getElementById('discount-success');
   const errorMessage = document.getElementById('discount-error');
+  const discountStatus = document.getElementById('discount-status');
+  const discountCodeBadge = document.getElementById('discount-code-badge');
+  const discountStatusText = document.getElementById('discount-status-text');
   const applyUrl = summary ? summary.dataset.applyUrl : null;
+  const cancelUrl = summary ? summary.dataset.cancelUrl : null;
+  const hasInitialDiscount = summary ? summary.dataset.hasDiscount === 'true' : false;
+  const initialCode = summary ? summary.dataset.activeCode : '';
+  const defaultLabel = applyBtn.dataset.defaultLabel || applyBtn.textContent || 'Apply';
+  const cancelLabel = applyBtn.dataset.cancelLabel || 'Batalkan';
 
   function getCsrfToken() {
     const name = 'csrftoken=';
@@ -296,6 +315,43 @@
       }
     }
     return '';
+  }
+
+  function setButtonMode(mode) {
+    const normalizedMode = mode === 'cancel' ? 'cancel' : 'apply';
+    applyBtn.dataset.mode = normalizedMode;
+    if (normalizedMode === 'cancel') {
+      applyBtn.textContent = cancelLabel;
+      applyBtn.classList.remove('btn-outline-primary');
+      applyBtn.classList.add('btn-outline-danger');
+    } else {
+      applyBtn.textContent = defaultLabel;
+      applyBtn.classList.remove('btn-outline-danger');
+      applyBtn.classList.add('btn-outline-primary');
+    }
+  }
+
+  function updateDiscountStatus(code, message) {
+    if (!discountStatus) {
+      return;
+    }
+    const hasCode = Boolean(code);
+    discountStatus.classList.toggle('d-none', !hasCode);
+    if (hasCode) {
+      if (discountCodeBadge) {
+        discountCodeBadge.textContent = code.toUpperCase();
+      }
+      if (discountStatusText) {
+        discountStatusText.textContent = message || `Kode diskon ${code} diterapkan.`;
+      }
+    } else {
+      if (discountCodeBadge) {
+        discountCodeBadge.textContent = '';
+      }
+      if (discountStatusText) {
+        discountStatusText.textContent = '';
+      }
+    }
   }
 
   function setFeedback(element, message, isError) {
@@ -322,6 +378,28 @@
     }
   }
 
+  function setLoading(isLoading) {
+    applyBtn.disabled = isLoading;
+    if (codeInput) {
+      codeInput.disabled = isLoading;
+    }
+  }
+
+  function handleSuccessData(data) {
+    if (data.discount_display) {
+      formatDiscountLabel(data.discount_display);
+    }
+    if (data.total_display) {
+      totalDisplay.textContent = data.total_display;
+    }
+    if (data.subtotal_display) {
+      subtotalDisplay.textContent = data.subtotal_display;
+    }
+    if (data.shipping_cost_display) {
+      shippingDisplay.textContent = data.shipping_cost_display;
+    }
+  }
+
   function applyDiscount() {
     const code = codeInput.value.trim();
     if (!code) {
@@ -334,7 +412,7 @@
       return;
     }
 
-    applyBtn.disabled = true;
+    setLoading(true);
     setFeedback(successMessage, '', false);
     setFeedback(errorMessage, '', true);
 
@@ -354,18 +432,15 @@
         }
 
         if (status >= 200 && status < 300 && data.success) {
-          formatDiscountLabel(data.discount_display);
-          totalDisplay.textContent = data.total_display;
-          subtotalDisplay.textContent = data.subtotal_display || subtotalDisplay.textContent;
-          shippingDisplay.textContent = data.shipping_cost_display || shippingDisplay.textContent;
+          handleSuccessData(data);
+          updateDiscountStatus(data.code || code, data.message);
           setFeedback(successMessage, data.message || 'Kode diskon berhasil diterapkan.', false);
+          setButtonMode('cancel');
+          codeInput.value = data.code || code;
         } else {
-          if (data.discount_display) {
-            formatDiscountLabel(data.discount_display);
-          }
-          if (data.total_display) {
-            totalDisplay.textContent = data.total_display;
-          }
+          handleSuccessData(data);
+          setButtonMode('apply');
+          updateDiscountStatus('', '');
           setFeedback(errorMessage, data.error || 'Kode diskon tidak dapat digunakan.', true);
         }
       })
@@ -373,15 +448,78 @@
         setFeedback(errorMessage, 'Terjadi kesalahan. Silakan coba lagi.', true);
       })
       .finally(() => {
-        applyBtn.disabled = false;
+        setLoading(false);
       });
   }
 
-  applyBtn.addEventListener('click', applyDiscount);
+  function cancelDiscount() {
+    if (!cancelUrl) {
+      setFeedback(errorMessage, 'Tidak dapat membatalkan diskon saat ini.', true);
+      return;
+    }
+
+    setLoading(true);
+    setFeedback(errorMessage, '', true);
+
+    fetch(cancelUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': getCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: new URLSearchParams(),
+    })
+      .then((response) => response.json().then((data) => ({ status: response.status, data })))
+      .then(({ status, data }) => {
+        if (!data) {
+          throw new Error('Terjadi kesalahan saat memproses respon.');
+        }
+
+        if (status >= 200 && status < 300 && data.success) {
+          handleSuccessData(data);
+          updateDiscountStatus('', '');
+          setFeedback(successMessage, '', false);
+          setButtonMode('apply');
+          codeInput.value = '';
+        } else {
+          handleSuccessData(data);
+          setFeedback(errorMessage, data.error || 'Tidak dapat membatalkan diskon.', true);
+        }
+      })
+      .catch(() => {
+        setFeedback(errorMessage, 'Terjadi kesalahan. Silakan coba lagi.', true);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }
+
+  const initialMode = applyBtn.dataset.mode || (hasInitialDiscount ? 'cancel' : 'apply');
+  setButtonMode(initialMode);
+  if (hasInitialDiscount && initialCode) {
+    updateDiscountStatus(initialCode, successMessage && !successMessage.classList.contains('d-none') ? successMessage.textContent : `Kode diskon ${initialCode} diterapkan.`);
+  } else {
+    updateDiscountStatus('', '');
+    setFeedback(successMessage, '', false);
+  }
+
+  applyBtn.addEventListener('click', function() {
+    if (applyBtn.dataset.mode === 'cancel') {
+      cancelDiscount();
+    } else {
+      applyDiscount();
+    }
+  });
+
   codeInput.addEventListener('keydown', function(event) {
     if (event.key === 'Enter') {
       event.preventDefault();
-      applyDiscount();
+      if (applyBtn.dataset.mode === 'cancel') {
+        cancelDiscount();
+      } else {
+        applyDiscount();
+      }
     }
   });
 })();
