@@ -3,10 +3,10 @@ from django.views.decorators.http import require_GET
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
 from django.db.models.deletion import ProtectedError
 from decimal import Decimal
 from .models import District, Address
+from .forms import AddressForm
 
 
 @require_GET
