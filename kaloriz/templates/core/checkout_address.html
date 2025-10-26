@@ -143,7 +143,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
                     <strong class="d-block">Reguler</strong>
-                    <small class="text-muted" id="courier-reg-eta">Estimasi 2-3 jam</small>
+                    <small class="text-muted" id="courier-reg-eta">Estimasi 2-3 hari</small>
                   </div>
                   <div class="text-right">
                     <strong class="text-success" id="courier-reg-price">Ekonomis</strong>
@@ -158,7 +158,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
                     <strong class="d-block">Express</strong>
-                    <small class="text-muted" id="courier-exp-eta">Estimasi 20-45 menit</small>
+                    <small class="text-muted" id="courier-exp-eta">Estimasi 1 hari</small>
                   </div>
                   <div class="text-right">
                     <strong class="text-primary" id="courier-exp-price">Lebih Cepat</strong>
@@ -340,59 +340,47 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  max-width: 600px;
-  margin: 0 auto;
+  margin-bottom: 40px;
 }
 
-.step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.checkout-steps .step {
+  text-align: center;
   position: relative;
+  z-index: 1;
 }
 
-.step-number {
-  width: 50px;
-  height: 50px;
+.checkout-steps .step-number {
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
   border-radius: 50%;
-  background: #e0e0e0;
-  color: #999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 1.2rem;
-  margin-bottom: 10px;
-  transition: all 0.3s;
+  background: #f1f1f1;
+  color: #6c757d;
+  font-weight: 600;
+  margin: 0 auto 8px;
 }
 
-.step.active .step-number {
+.checkout-steps .step.active .step-number {
   background: #28a745;
   color: white;
 }
 
-.step-label {
-  font-size: 0.9rem;
-  color: #999;
-  font-weight: 500;
+.checkout-steps .step-label {
+  font-size: 14px;
+  color: #6c757d;
 }
 
-.step.active .step-label {
-  color: #28a745;
-  font-weight: 600;
-}
-
-.step-line {
-  flex: 1;
-  height: 3px;
+.checkout-steps .step-line {
+  flex-grow: 1;
+  height: 2px;
   background: #e0e0e0;
-  margin: 0 15px 40px 15px;
+  margin: 0 15px;
 }
 
 /* Address Cards */
 .address-list {
   display: grid;
-  gap: 15px;
+  gap: 20px;
 }
 
 .address-card {
@@ -562,6 +550,15 @@ function selectCourier(service, options = { triggerUpdate: true }) {
 
   if (selectedCourier === 'EXP') {
     expRadio.checked = true;
+  } else {
+    selectedCourier = 'REG';
+    regRadio.checked = true;
+  }
+
+  summaryShippingEl.textContent = 'Menghitung...';
+  continueBtn.disabled = true;
+  continueBtn.textContent = 'Menghitung ongkir...';
+
   } else {
     selectedCourier = 'REG';
     regRadio.checked = true;
