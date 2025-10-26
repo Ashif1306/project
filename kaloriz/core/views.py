@@ -215,6 +215,15 @@ def delete_selected_cart_items(request):
 
 
 # Checkout Views
+def _format_rupiah(value):
+    """Format decimal value into Indonesian Rupiah string."""
+    try:
+        value = Decimal(value or 0)
+    except (InvalidOperation, TypeError, ValueError):
+        value = Decimal('0')
+    return f"Rp {number_format(value, decimal_pos=0, force_grouping=True)}"
+
+
 @login_required
 def checkout(request):
     """Modern multi-step checkout - Step 1: Select Address"""
@@ -310,6 +319,112 @@ def checkout(request):
         'has_initial_quote': has_initial_quote,
     }
     return render(request, 'core/checkout_address.html', context)
+
+
+@login_required
+def checkout_payment(request):
+    """Checkout step 2 - choose payment method."""
+    cart = _get_active_cart(request)
+
+    selected_items_qs = cart.items.filter(is_selected=True).select_related('product')
+    if not selected_items_qs.exists():
+        messages.error(request, 'Pilih minimal 1 item untuk checkout.')
+        return redirect('core:cart')
+
+    checkout_data = request.session.get('checkout', {})
+    address_id = checkout_data.get('address_id')
+    shipping_method = checkout_data.get('shipping_method')
+    raw_shipping_cost = checkout_data.get('shipping_cost')
+
+    if not address_id or not shipping_method or raw_shipping_cost in (None, ''):
+        messages.warning(request, 'Lengkapi informasi pengiriman terlebih dahulu.')
+        return redirect('core:checkout')
+
+    try:
+        shipping_cost = Decimal(raw_shipping_cost)
+    except (InvalidOperation, TypeError, ValueError):
+        for key in ['shipping_cost', 'shipping_method', 'eta']:
+            checkout_data.pop(key, None)
+        request.session['checkout'] = checkout_data
+        request.session.modified = True
+        messages.warning(request, 'Informasi ongkir tidak valid. Silakan pilih ulang alamat dan kurir.')
+        return redirect('core:checkout')
+
+    subtotal = Decimal(cart.get_selected_total() or 0)
+    total = subtotal + shipping_cost
+
+    if request.method == 'POST':
+        payment_method = request.POST.get('payment_method', '').lower()
+        if payment_method != 'midtrans':
+            messages.error(request, 'Pilih metode pembayaran yang tersedia.')
+        else:
+            checkout_data['payment_method'] = payment_method
+            request.session['checkout'] = checkout_data
+            request.session.modified = True
+            return redirect('core:checkout_review')
+
+    selected_payment_method = checkout_data.get('payment_method')
+    shipping_method_label = 'Express' if str(shipping_method).upper() == 'EXP' else 'Reguler'
+    eta = checkout_data.get('eta')
+
+    context = {
+        'cart': cart,
+        'subtotal': subtotal,
+        'subtotal_display': _format_rupiah(subtotal),
+        'shipping_cost': shipping_cost,
+        'shipping_cost_display': _format_rupiah(shipping_cost),
+        'total': total,
+        'total_display': _format_rupiah(total),
+        'shipping_method_label': shipping_method_label,
+        'eta': eta,
+        'selected_payment_method': selected_payment_method,
+    }
+    return render(request, 'core/checkout_payment.html', context)
+
+
+@login_required
+def checkout_review(request):
+    """Checkout step 3 - review order summary before placing order."""
+    cart = _get_active_cart(request)
+
+    selected_items_qs = cart.items.filter(is_selected=True).select_related('product')
+    if not selected_items_qs.exists():
+        messages.error(request, 'Pilih minimal 1 item untuk checkout.')
+        return redirect('core:cart')
+
+    checkout_data = request.session.get('checkout', {})
+    if not checkout_data.get('payment_method'):
+        messages.warning(request, 'Silakan pilih metode pembayaran terlebih dahulu.')
+        return redirect('core:checkout_payment')
+
+    raw_shipping_cost = checkout_data.get('shipping_cost')
+    try:
+        shipping_cost = Decimal(raw_shipping_cost or 0)
+    except (InvalidOperation, TypeError, ValueError):
+        shipping_cost = Decimal('0')
+
+    subtotal = Decimal(cart.get_selected_total() or 0)
+    total = subtotal + shipping_cost
+
+    selected_items, _ = _prepare_selected_cart_items(selected_items_qs)
+
+    shipping_method = checkout_data.get('shipping_method')
+    shipping_method_label = 'Express' if str(shipping_method).upper() == 'EXP' else 'Reguler'
+
+    context = {
+        'cart': cart,
+        'selected_items': selected_items,
+        'subtotal': subtotal,
+        'shipping_cost': shipping_cost,
+        'total': total,
+        'subtotal_display': _format_rupiah(subtotal),
+        'shipping_cost_display': _format_rupiah(shipping_cost),
+        'total_display': _format_rupiah(total),
+        'payment_method': checkout_data.get('payment_method'),
+        'shipping_method_label': shipping_method_label,
+        'eta': checkout_data.get('eta'),
+    }
+    return render(request, 'core/checkout_review.html', context)
 
 
 @login_required

@@ -15,6 +15,8 @@ urlpatterns = [
 
     # Checkout URLs
     path('checkout/', views.checkout, name='checkout'),
+    path('checkout/payment/', views.checkout_payment, name='checkout_payment'),
+    path('checkout/review/', views.checkout_review, name='checkout_review'),
     path('order/place/', views.place_order, name='place_order'),
     path('order/place-from-address/', views.place_order_from_address, name='place_order_from_address'),
     path('checkout/shipping-quote/', views.set_shipping_method, name='set_shipping_method'),
