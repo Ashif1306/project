@@ -55,8 +55,8 @@
               <div class="address-card {% if address.id == active_address_id %}selected{% endif %}"
                    data-address-id="{{ address.id }}"
                    data-district-id="{{ address.district.id }}"
-                   data-reg-cost="{{ address.district.reg_cost|default_if_none:0 }}"
-                   data-exp-cost="{{ address.district.exp_cost|default_if_none:0 }}"
+                   data-reg-cost="{{ address.district.reg_cost|default_if_none:0|floatformat:0 }}"
+                   data-exp-cost="{{ address.district.exp_cost|default_if_none:0|floatformat:0 }}"
                    data-reg-eta="{{ address.district.eta_reg }}"
                    data-exp-eta="{{ address.district.eta_exp }}"
                    onclick="selectAddress({{ address.id }})">
@@ -77,35 +77,23 @@
                       </div>
                       <p class="mb-1 text-muted">{{ address.phone }}</p>
                     </div>
-                    <div class="dropdown">
-                      <button class="btn btn-sm btn-link text-dark" type="button" data-toggle="dropdown" onclick="event.stopPropagation();">
+                    <div class="address-actions" onclick="event.stopPropagation();">
+                      <button class="address-menu-toggle" type="button"
+                              data-menu-target="address-menu-{{ address.id }}"
+                              aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-ellipsis-v"></i>
                       </button>
-                      <div class="dropdown-menu dropdown-menu-right" onclick="event.stopPropagation();">
-                        <a class="dropdown-item" href="{% url 'shipping:edit_address' address.id %}">
+                      <div class="address-menu" id="address-menu-{{ address.id }}" role="menu">
+                        <a class="address-menu-item" href="{% url 'shipping:edit_address' address.id %}">
                           <i class="fas fa-edit"></i> Edit
                         </a>
-                        {% if address.used_in_orders %}
-                        <form method="post" action="{% url 'shipping:archive_address' address.id %}" class="d-inline">
-                          {% csrf_token %}
-                          <button type="submit" class="dropdown-item text-warning" onclick="event.stopPropagation(); return confirm('Arsipkan alamat ini?')">
-                            <i class="fas fa-archive"></i> Arsipkan
-                          </button>
-                        </form>
-                        {% else %}
-                        <form method="post" action="{% url 'shipping:delete_address' address.id %}" class="d-inline">
-                          {% csrf_token %}
-                          <button type="submit" class="dropdown-item text-danger" onclick="event.stopPropagation(); return confirm('Hapus alamat ini?')">
-                            <i class="fas fa-trash"></i> Hapus
-                          </button>
-                        </form>
-                        <form method="post" action="{% url 'shipping:archive_address' address.id %}" class="d-inline">
-                          {% csrf_token %}
-                          <button type="submit" class="dropdown-item" onclick="event.stopPropagation(); return confirm('Arsipkan alamat ini?')">
-                            <i class="fas fa-archive"></i> Arsipkan
-                          </button>
-                        </form>
-                        {% endif %}
+                        <button type="button"
+                                class="address-menu-item text-danger address-menu-delete"
+                                data-delete-form="delete-address-{{ address.id }}"
+                                data-archive-form="archive-address-{{ address.id }}"
+                                data-used-in-orders="{{ address.used_in_orders|yesno:'true,false' }}">
+                          <i class="fas fa-trash"></i> Hapus
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -113,6 +101,14 @@
                 <div class="address-details">
                   <p class="mb-0">{{ address.get_full_address }}</p>
                 </div>
+                <form method="post" action="{% url 'shipping:delete_address' address.id %}"
+                      id="delete-address-{{ address.id }}" class="d-none address-action-form">
+                  {% csrf_token %}
+                </form>
+                <form method="post" action="{% url 'shipping:archive_address' address.id %}"
+                      id="archive-address-{{ address.id }}" class="d-none address-action-form">
+                  {% csrf_token %}
+                </form>
               </div>
               {% endfor %}
             </div>
@@ -173,13 +169,13 @@
 
     <!-- Right Side: Order Summary -->
     <div class="col-lg-4">
-      <div class="card shadow sticky-top" style="top: 20px;">
+      <div class="card shadow checkout-summary-card sticky-top">
         <div class="card-header bg-white border-bottom">
           <h5 class="mb-0">Ringkasan Pembayaran</h5>
         </div>
         <div class="card-body">
           <div class="mb-3">
-            <small class="text-muted">Produk ({{ selected_items.count }})</small>
+            <small class="text-muted">Produk ({{ cart.get_selected_items_quantity }})</small>
             {% for item in selected_items %}
             <div class="d-flex justify-content-between small mb-1">
               <span class="text-truncate mr-2">{{ item.product.name }} x{{ item.quantity }}</span>
@@ -398,6 +394,70 @@
   background: white;
 }
 
+.address-actions {
+  position: relative;
+}
+
+.address-menu-toggle {
+  border: none;
+  background: transparent;
+  color: #343a40;
+  padding: 6px;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.address-menu-toggle:hover,
+.address-menu-toggle:focus {
+  background: rgba(52, 58, 64, 0.08);
+  outline: none;
+}
+
+.address-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 140px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  padding: 6px 0;
+  display: none;
+  z-index: 1050;
+}
+
+.address-menu.show {
+  display: block;
+}
+
+.address-menu-item {
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  color: #343a40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.address-menu-item:hover,
+.address-menu-item:focus {
+  background: #f1f3f5;
+  text-decoration: none;
+  color: inherit;
+  outline: none;
+}
+
+.address-menu-item.text-danger {
+  color: #dc3545;
+}
+
 .address-card:hover {
   border-color: #28a745;
   box-shadow: 0 4px 12px rgba(40, 167, 69, 0.1);
@@ -455,13 +515,19 @@
 }
 
 /* Summary Card */
-.sticky-top {
+:root {
+  --checkout-summary-offset: 120px;
+}
+
+.checkout-summary-card.sticky-top {
   position: sticky;
+  top: var(--checkout-summary-offset);
 }
 
 @media (max-width: 991px) {
-  .sticky-top {
+  .checkout-summary-card.sticky-top {
     position: relative;
+    top: auto;
   }
 }
 </style>
@@ -489,6 +555,86 @@ const courierSection = document.getElementById('courier-section');
 const shippingUrl = "{% url 'core:set_shipping_method' %}";
 const addressField = document.getElementById('form_address_id');
 const courierField = document.getElementById('form_courier_service');
+const rootElement = document.documentElement;
+const menuToggles = document.querySelectorAll('.address-menu-toggle');
+const addressMenus = document.querySelectorAll('.address-menu');
+const deleteButtons = document.querySelectorAll('.address-menu-delete');
+
+function closeAllMenus(exceptId) {
+  addressMenus.forEach(menu => {
+    if (!exceptId || menu.id !== exceptId) {
+      menu.classList.remove('show');
+    }
+  });
+  menuToggles.forEach(toggle => {
+    if (!exceptId || toggle.dataset.menuTarget !== exceptId) {
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+menuToggles.forEach(toggle => {
+  toggle.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    const targetId = toggle.dataset.menuTarget;
+    const menu = document.getElementById(targetId);
+    if (!menu) {
+      return;
+    }
+    const isOpen = menu.classList.contains('show');
+    closeAllMenus(isOpen ? null : targetId);
+    if (!isOpen) {
+      menu.classList.add('show');
+      toggle.setAttribute('aria-expanded', 'true');
+    } else {
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+});
+
+deleteButtons.forEach(button => {
+  button.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeAllMenus();
+
+    const usedInOrders = button.dataset.usedInOrders === 'true';
+    const deleteForm = document.getElementById(button.dataset.deleteForm || '');
+    const archiveForm = document.getElementById(button.dataset.archiveForm || '');
+
+    if (usedInOrders) {
+      if (archiveForm && confirm('Alamat ini sudah digunakan pada pesanan. Arsipkan alamat ini?')) {
+        archiveForm.submit();
+      }
+      return;
+    }
+
+    if (deleteForm && confirm('Hapus alamat ini?')) {
+      deleteForm.submit();
+    }
+  });
+});
+
+document.addEventListener('click', () => closeAllMenus());
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    closeAllMenus();
+  }
+});
+
+function updateSummaryOffset() {
+  if (!rootElement) {
+    return;
+  }
+  const navbar = document.querySelector('.modern-navbar');
+  const offset = navbar ? navbar.offsetHeight + 20 : 120;
+  rootElement.style.setProperty('--checkout-summary-offset', `${offset}px`);
+}
+
+updateSummaryOffset();
+window.addEventListener('load', updateSummaryOffset);
+window.addEventListener('resize', updateSummaryOffset);
 
 function selectAddress(addressId, options = {}) {
   const numericId = Number(addressId);
@@ -526,8 +672,8 @@ function selectAddress(addressId, options = {}) {
 }
 
 function updateCourierOptions(card) {
-  const regPrice = Number(card.dataset.regCost || 0);
-  const expPrice = Number(card.dataset.expCost || 0);
+  const regPrice = parseCurrencyValue(card.dataset.regCost);
+  const expPrice = parseCurrencyValue(card.dataset.expCost);
 
   const regPriceEl = document.getElementById('courier-reg-price');
   const expPriceEl = document.getElementById('courier-exp-price');
@@ -681,8 +827,46 @@ function updateFormFields() {
   }
 }
 
+function parseCurrencyValue(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  if (!value) {
+    return 0;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) {
+    return 0;
+  }
+
+  let sanitized = raw.replace(/[^0-9,.-]/g, '');
+
+  if (sanitized.includes(',')) {
+    const lastComma = sanitized.lastIndexOf(',');
+    const decimals = sanitized.length - lastComma - 1;
+    if (decimals <= 2) {
+      sanitized = sanitized.replace(/\./g, '').replace(',', '.');
+    } else {
+      sanitized = sanitized.replace(/,/g, '');
+    }
+  } else if (sanitized.includes('.')) {
+    const lastDot = sanitized.lastIndexOf('.');
+    const decimals = sanitized.length - lastDot - 1;
+    if (decimals <= 2) {
+      sanitized = sanitized.replace(/,/g, '');
+    } else {
+      sanitized = sanitized.replace(/\./g, '');
+    }
+  }
+
+  const parsed = Number(sanitized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function formatRupiah(amount) {
-  const value = Number(amount) || 0;
+  const value = Math.round(Number(amount) || 0);
   return 'Rp ' + value.toLocaleString('id-ID');
 }
 

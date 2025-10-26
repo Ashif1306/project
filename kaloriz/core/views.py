@@ -19,8 +19,26 @@ from shipping.models import District, Address, Shipment
 from shipping.views import calculate_shipping_cost, validate_shipping_data
 from shipping.forms import AddressForm
 
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_POST
+
+
+def _get_active_cart(request):
+    """Return the most recent cart for the current user with items preloaded."""
+    if not request.user.is_authenticated:
+        raise Http404("Cart not found")
+
+    cart = (
+        Cart.objects.filter(user=request.user)
+        .order_by('-updated_at', '-id')
+        .prefetch_related('items__product')
+        .first()
+    )
+
+    if cart is None:
+        raise Http404("Cart not found")
+
+    return cart
 
 # Cart Views
 @login_required
@@ -182,14 +200,16 @@ def delete_selected_cart_items(request):
 @login_required
 def checkout(request):
     """Modern multi-step checkout - Step 1: Select Address"""
-    cart = get_object_or_404(Cart, user=request.user)
+    cart = _get_active_cart(request)
 
     # Check if there are any selected items
-    selected_items = cart.items.filter(is_selected=True)
+    selected_items_qs = cart.items.filter(is_selected=True).select_related('product')
 
-    if not selected_items.exists():
+    if not selected_items_qs.exists():
         messages.error(request, 'Pilih minimal 1 item untuk checkout.')
         return redirect('core:cart')
+
+    selected_items = list(selected_items_qs)
 
     # Get user profile for pre-filling form
     try:
@@ -280,14 +300,16 @@ def place_order(request):
     if request.method != 'POST':
         return redirect('core:checkout')
 
-    cart = get_object_or_404(Cart, user=request.user)
+    cart = _get_active_cart(request)
 
     # Get only selected items
-    selected_items = cart.items.filter(is_selected=True)
+    selected_items_qs = cart.items.filter(is_selected=True).select_related('product')
 
-    if not selected_items.exists():
+    if not selected_items_qs.exists():
         messages.error(request, 'Pilih minimal 1 item untuk checkout.')
         return redirect('core:cart')
+
+    selected_items = list(selected_items_qs)
 
     # Validate stock availability for selected items only
     for item in selected_items:
@@ -363,7 +385,7 @@ def place_order(request):
         item.product.save()
 
     # Clear only selected items from cart
-    selected_items.delete()
+    cart.items.filter(is_selected=True).delete()
 
     messages.success(request, f'Pesanan berhasil dibuat! Nomor pesanan: {order_number}')
     return redirect('core:order_detail', order_number=order_number)
@@ -377,14 +399,16 @@ def place_order_from_address(request):
         # For now, redirect to checkout
         return redirect('core:checkout')
 
-    cart = get_object_or_404(Cart, user=request.user)
+    cart = _get_active_cart(request)
 
     # Get only selected items
-    selected_items = cart.items.filter(is_selected=True)
+    selected_items_qs = cart.items.filter(is_selected=True).select_related('product')
 
-    if not selected_items.exists():
+    if not selected_items_qs.exists():
         messages.error(request, 'Pilih minimal 1 item untuk checkout.')
         return redirect('core:cart')
+
+    selected_items = list(selected_items_qs)
 
     # Validate stock availability for selected items only
     for item in selected_items:
@@ -470,7 +494,7 @@ def place_order_from_address(request):
         item.product.save()
 
     # Clear only selected items from cart
-    selected_items.delete()
+    cart.items.filter(is_selected=True).delete()
 
     messages.success(request, f'Pesanan berhasil dibuat! Nomor pesanan: {order_number}')
     return redirect('core:order_detail', order_number=order_number)

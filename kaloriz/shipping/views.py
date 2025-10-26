@@ -9,6 +9,13 @@ from decimal import Decimal
 from .models import District, Address
 
 
+def format_currency(amount):
+    """Format Decimal to Indonesian Rupiah string."""
+    value = Decimal(amount or 0)
+    normalized = value.quantize(Decimal('1')) if value == value.to_integral() else value
+    return f"Rp {normalized:,.0f}".replace(',', '.')
+
+
 @require_GET
 def get_districts(request):
     """
@@ -84,15 +91,15 @@ def get_shipping_quotes(request):
             {
                 'service': 'REG',
                 'label': 'Reguler',
-                'cost': float(district.reg_cost),
-                'cost_formatted': f'Rp {district.reg_cost:,.0f}',
+                'cost': float(district.reg_cost or 0),
+                'cost_formatted': format_currency(district.reg_cost),
                 'eta': district.eta_reg
             },
             {
                 'service': 'EXP',
                 'label': 'Express',
-                'cost': float(district.exp_cost),
-                'cost_formatted': f'Rp {district.exp_cost:,.0f}',
+                'cost': float(district.exp_cost or 0),
+                'cost_formatted': format_currency(district.exp_cost),
                 'eta': district.eta_exp
             }
         ]
