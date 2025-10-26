@@ -104,6 +104,14 @@
   </nav>
 
   <style>
+  :root {
+    --header-h: 72px;
+  }
+
+  main {
+    padding-top: var(--header-h);
+  }
+
   /* Modern Minimalist Navbar */
   .modern-navbar {
     background: linear-gradient(135deg, #faf9f7 0%, #fff8f0 100%);
@@ -378,6 +386,24 @@
     color: #ffc107 !important;
   }
   </style>
+
+  <script>
+    (function() {
+      function updateHeaderHeight() {
+        const root = document.documentElement;
+        if (!root) {
+          return;
+        }
+        const header = document.querySelector('.modern-navbar');
+        const height = header ? header.offsetHeight : 72;
+        root.style.setProperty('--header-h', `${height}px`);
+      }
+
+      updateHeaderHeight();
+      window.addEventListener('load', updateHeaderHeight);
+      window.addEventListener('resize', updateHeaderHeight);
+    })();
+  </script>
 
   <!-- Scripts -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
