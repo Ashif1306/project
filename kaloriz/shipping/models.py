@@ -130,6 +130,7 @@ class Address(models.Model):
     )
 
     is_default = models.BooleanField(default=False, verbose_name="Alamat Utama")
+    is_deleted = models.BooleanField(default=False, verbose_name="Diarsipkan")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -163,7 +164,11 @@ class Address(models.Model):
         """
         if self.is_default:
             # Set semua alamat user lain jadi non-default
-            Address.objects.filter(user=self.user, is_default=True).update(is_default=False)
+            Address.objects.filter(
+                user=self.user,
+                is_default=True,
+                is_deleted=False
+            ).exclude(id=self.id).update(is_default=False)
         super().save(*args, **kwargs)
 
 
