@@ -287,16 +287,7 @@
   const statusCodeDisplay = document.getElementById('discount-code-display');
 
   function getCsrfToken() {
-    const name = 'csrftoken=';
-    const decodedCookie = decodeURIComponent(document.cookie);
-    const cookies = decodedCookie.split(';');
-    for (let cookie of cookies) {
-      cookie = cookie.trim();
-      if (cookie.startsWith(name)) {
-        return cookie.substring(name.length);
-      }
-    }
-    return '';
+    return getCookie('csrftoken') || '';
   }
 
   function setFeedback(element, message, isError) {
