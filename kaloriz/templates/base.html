@@ -21,91 +21,99 @@
 </head>
 
 <body>
-  <!-- Modern Minimalist Navbar -->
-  <nav class="modern-navbar">
-    <div class="container">
-      <div class="navbar-content">
-        <!-- Left Menu -->
-        <div class="navbar-left">
-          <a href="{% url 'catalog:home' %}" class="nav-link-modern">Home</a>
-          <a href="{% url 'catalog:product_list' %}" class="nav-link-modern">Product</a>
-          <a href="{% url 'catalog:about' %}" class="nav-link-modern">Tentang</a>
-          <a href="{% url 'catalog:contact' %}" class="nav-link-modern">Kontak</a>
-        </div>
-
-        <!-- Center Logo -->
-        <div class="navbar-center">
-          <a href="{% url 'catalog:home' %}" class="navbar-logo">
-            <img src="{% static 'images/logo.png' %}" alt="Kaloriz" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <span style="display: none; font-size: 1.5rem; font-weight: bold; color: #667eea;">Kaloriz</span>
-          </a>
-        </div>
-
-        <!-- Right Icons -->
-        <div class="navbar-right">
-          <!-- Search Bar -->
-          <div class="search-wrapper">
-            <form action="{% url 'catalog:search' %}" method="get" class="search-form">
-              <input type="search" name="q" placeholder="Cari produk..." class="search-input">
-              <button type="submit" class="search-btn">
-                <i class="fas fa-search"></i>
-              </button>
-            </form>
+  <header class="site-header">
+    <!-- Modern Minimalist Navbar -->
+    <nav class="modern-navbar">
+      <div class="container">
+        <div class="navbar-content">
+          <!-- Left Menu -->
+          <div class="navbar-left">
+            <a href="{% url 'catalog:home' %}" class="nav-link-modern">Home</a>
+            <a href="{% url 'catalog:product_list' %}" class="nav-link-modern">Product</a>
+            <a href="{% url 'catalog:about' %}" class="nav-link-modern">Tentang</a>
+            <a href="{% url 'catalog:contact' %}" class="nav-link-modern">Kontak</a>
           </div>
 
-          <!-- Cart Icon with Badge -->
-          {% if user.is_authenticated %}
-          <div class="nav-icon-wrapper">
-            <a href="{% url 'core:cart' %}" class="nav-icon">
-              <i class="fas fa-shopping-cart"></i>
-              {% if cart_count > 0 %}
-              <span class="icon-badge">{{ cart_count }}</span>
-              {% endif %}
+          <!-- Center Logo -->
+          <div class="navbar-center">
+            <a href="{% url 'catalog:home' %}" class="navbar-logo">
+              <img src="{% static 'images/logo.png' %}" alt="Kaloriz" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <span style="display: none; font-size: 1.5rem; font-weight: bold; color: #667eea;">Kaloriz</span>
             </a>
           </div>
-          {% else %}
-          <div class="nav-icon-wrapper">
-            <a href="{% url 'core:login' %}" class="nav-icon">
-              <i class="fas fa-shopping-cart"></i>
-            </a>
-          </div>
-          {% endif %}
 
-          <!-- Profile Icon -->
-          {% if user.is_authenticated %}
-          <div class="nav-icon-wrapper dropdown">
-            <a href="#" class="nav-icon" id="profileDropdown" data-toggle="dropdown">
-              <i class="fas fa-user"></i>
-            </a>
-            <div class="dropdown-menu dropdown-menu-right">
-              <a class="dropdown-item" href="{% url 'core:profile' %}"><i class="fas fa-user-circle"></i> Profil</a>
-              <a class="dropdown-item" href="{% url 'core:watchlist' %}"><i class="fas fa-heart"></i> Watchlist</a>
-              <a class="dropdown-item" href="{% url 'core:order_list' %}"><i class="fas fa-receipt"></i> Pesanan</a>
-              <a class="dropdown-item" href="{% url 'core:profile_settings' %}"><i class="fas fa-cog"></i> Pengaturan</a>
-              <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="{% url 'core:logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          <!-- Right Icons -->
+          <div class="navbar-right">
+            <!-- Search Bar -->
+            <div class="search-wrapper">
+              <form action="{% url 'catalog:search' %}" method="get" class="search-form">
+                <input type="search" name="q" placeholder="Cari produk..." class="search-input">
+                <button type="submit" class="search-btn">
+                  <i class="fas fa-search"></i>
+                </button>
+              </form>
             </div>
-          </div>
-          {% else %}
-          <div class="nav-icon-wrapper">
-            <a href="{% url 'core:login' %}" class="nav-icon" title="Login">
-              <i class="fas fa-user"></i>
-            </a>
-          </div>
-          {% endif %}
-        </div>
 
-        <!-- Mobile Toggle -->
-        <button class="mobile-toggle" onclick="toggleMobileMenu()">
-          <i class="fas fa-bars"></i>
-        </button>
+            <!-- Cart Icon with Badge -->
+            {% if user.is_authenticated %}
+            <div class="nav-icon-wrapper">
+              <a href="{% url 'core:cart' %}" class="nav-icon">
+                <i class="fas fa-shopping-cart"></i>
+                {% if cart_count > 0 %}
+                <span class="icon-badge">{{ cart_count }}</span>
+                {% endif %}
+              </a>
+            </div>
+            {% else %}
+            <div class="nav-icon-wrapper">
+              <a href="{% url 'core:login' %}" class="nav-icon">
+                <i class="fas fa-shopping-cart"></i>
+              </a>
+            </div>
+            {% endif %}
+
+            <!-- Profile Icon -->
+            {% if user.is_authenticated %}
+            <div class="nav-icon-wrapper dropdown">
+              <a href="#" class="nav-icon" id="profileDropdown" data-toggle="dropdown">
+                <i class="fas fa-user"></i>
+              </a>
+              <div class="dropdown-menu dropdown-menu-right">
+                <a class="dropdown-item" href="{% url 'core:profile' %}"><i class="fas fa-user-circle"></i> Profil</a>
+                <a class="dropdown-item" href="{% url 'core:watchlist' %}"><i class="fas fa-heart"></i> Watchlist</a>
+                <a class="dropdown-item" href="{% url 'core:order_list' %}"><i class="fas fa-receipt"></i> Pesanan</a>
+                <a class="dropdown-item" href="{% url 'core:profile_settings' %}"><i class="fas fa-cog"></i> Pengaturan</a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item" href="{% url 'core:logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+              </div>
+            </div>
+            {% else %}
+            <div class="nav-icon-wrapper">
+              <a href="{% url 'core:login' %}" class="nav-icon" title="Login">
+                <i class="fas fa-user"></i>
+              </a>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Mobile Toggle -->
+          <button class="mobile-toggle" onclick="toggleMobileMenu()">
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
       </div>
-    </div>
-  </nav>
+    </nav>
+  </header>
 
   <style>
   :root {
     --header-h: 72px;
+  }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 1100;
   }
 
   main {
@@ -116,9 +124,6 @@
   .modern-navbar {
     background: linear-gradient(135deg, #faf9f7 0%, #fff8f0 100%);
     box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
     padding: 15px 0;
   }
 
@@ -310,21 +315,21 @@
   </style>
 
   <!-- Messages -->
-  {% if messages %}
-  <div class="container mt-3">
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
   <!-- Content -->
   <main>
+    {% if messages %}
+    <div class="container mt-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     {% block content %}{% endblock %}
   </main>
 
@@ -394,7 +399,7 @@
         if (!root) {
           return;
         }
-        const header = document.querySelector('.modern-navbar');
+        const header = document.querySelector('.site-header') || document.querySelector('.modern-navbar');
         const height = header ? header.offsetHeight : 72;
         root.style.setProperty('--header-h', `${height}px`);
       }

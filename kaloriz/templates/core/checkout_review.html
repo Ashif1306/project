@@ -209,11 +209,20 @@
   color: #fff;
 }
 
+.checkout-review-container .row {
+  align-items: flex-start;
+}
+
 .summary {
   position: sticky;
   top: calc(var(--header-h) + 12px);
   bottom: 16px;
   z-index: 10;
+}
+
+.summary .card-body {
+  max-height: calc(100vh - var(--header-h) - 28px);
+  overflow-y: auto;
 }
 
 .discount-status {
@@ -261,6 +270,11 @@
     position: static;
     top: auto;
     bottom: auto;
+  }
+
+  .summary .card-body {
+    max-height: none;
+    overflow: visible;
   }
 }
 
