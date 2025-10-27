@@ -1,9 +1,15 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Pilih Alamat - Kaloriz{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/pages/checkout.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container my-5">
+<div class="page-checkout">
+  <div class="container my-5">
   <!-- Progress Steps -->
   <div class="checkout-steps mb-5">
     <div class="step active">
@@ -334,203 +340,10 @@
       </form>
     </div>
   </div>
+  </div>
 </div>
 
-<style>
-/* Checkout Steps */
-.checkout-steps {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 40px;
-}
 
-.checkout-steps .step {
-  text-align: center;
-  position: relative;
-  z-index: 1;
-}
-
-.checkout-steps .step-number {
-  width: 40px;
-  height: 40px;
-  line-height: 40px;
-  border-radius: 50%;
-  background: #f1f1f1;
-  color: #6c757d;
-  font-weight: 600;
-  margin: 0 auto 8px;
-}
-
-.checkout-steps .step.active .step-number {
-  background: #28a745;
-  color: white;
-}
-
-.checkout-steps .step-label {
-  font-size: 14px;
-  color: #6c757d;
-}
-
-.checkout-steps .step-line {
-  flex-grow: 1;
-  height: 2px;
-  background: #e0e0e0;
-  margin: 0 15px;
-}
-
-/* Address Cards */
-.address-list {
-  display: grid;
-  gap: 20px;
-}
-
-.address-card {
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.3s;
-  background: white;
-}
-
-.address-actions {
-  position: relative;
-}
-
-.address-menu-toggle {
-  border: none;
-  background: transparent;
-  color: #343a40;
-  padding: 6px;
-  border-radius: 50%;
-  transition: background 0.2s ease;
-}
-
-.address-menu-toggle:hover,
-.address-menu-toggle:focus {
-  background: rgba(52, 58, 64, 0.08);
-  outline: none;
-}
-
-.address-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 140px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-  padding: 6px 0;
-  display: none;
-  z-index: 1050;
-}
-
-.address-menu.show {
-  display: block;
-}
-
-.address-menu-item {
-  width: 100%;
-  background: transparent;
-  border: none;
-  text-align: left;
-  padding: 8px 16px;
-  font-size: 0.9rem;
-  color: #343a40;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.address-menu-item:hover,
-.address-menu-item:focus {
-  background: #f1f3f5;
-  text-decoration: none;
-  color: inherit;
-  outline: none;
-}
-
-.address-menu-item.text-danger {
-  color: #dc3545;
-}
-
-.address-card:hover {
-  border-color: #28a745;
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.1);
-}
-
-.address-card.selected {
-  border-color: #28a745;
-  background: #f0f9f4;
-}
-
-.address-card input[type="radio"] {
-  width: 18px;
-  height: 18px;
-}
-
-.address-details {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #eee;
-}
-
-/* Courier Options */
-.courier-options {
-  display: grid;
-  gap: 15px;
-}
-
-.courier-option {
-  position: relative;
-}
-
-.courier-option input[type="radio"] {
-  position: absolute;
-  opacity: 0;
-}
-
-.courier-label {
-  display: block;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin: 0;
-}
-
-.courier-option:hover .courier-label {
-  border-color: #28a745;
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.1);
-}
-
-.courier-option input[type="radio"]:checked + .courier-label {
-  border-color: #28a745;
-  background: #f0f9f4;
-}
-
-/* Summary Card */
-:root {
-  --checkout-summary-offset: 120px;
-}
-
-.checkout-summary-card.sticky-top {
-  position: sticky;
-  top: var(--checkout-summary-offset);
-}
-
-@media (max-width: 991px) {
-  .checkout-summary-card.sticky-top {
-    position: relative;
-    top: auto;
-  }
-}
-</style>
 
 <script>
 const initialCourier = "{{ selected_shipping_method|default_if_none:'' }}".toUpperCase();

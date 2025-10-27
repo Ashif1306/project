@@ -1,9 +1,15 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Review Pesanan - Kaloriz{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/pages/checkout.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container my-5 checkout-review-container">
+<div class="page-checkout">
+  <div class="container my-5 checkout-review-container">
   <div class="checkout-steps mb-5">
     <div class="step completed">
       <div class="step-number">1</div>
@@ -162,122 +168,10 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
 
-<style>
-.checkout-steps {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.checkout-steps .step {
-  text-align: center;
-  position: relative;
-}
-
-.checkout-steps .step-number {
-  width: 44px;
-  height: 44px;
-  line-height: 44px;
-  border-radius: 50%;
-  background: #f1f1f1;
-  color: #6c757d;
-  font-weight: 600;
-  margin: 0 auto 8px;
-}
-
-.checkout-steps .step-label {
-  font-size: 14px;
-  color: #6c757d;
-}
-
-.checkout-steps .step-line {
-  flex-grow: 1;
-  height: 2px;
-  background: #e0e0e0;
-  margin: 0 15px;
-}
-
-.checkout-steps .step.completed .step-number {
-  background: #28a745;
-  color: #fff;
-}
-
-.checkout-steps .step.active .step-number {
-  background: #343a40;
-  color: #fff;
-}
-
-.summary {
-  position: sticky;
-  top: calc(var(--header-h) + 12px);
-  bottom: 16px;
-  z-index: 10;
-}
-
-.discount-status {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.discount-status .badge {
-  font-size: 0.8rem;
-  letter-spacing: 0.5px;
-}
-
-.shipping-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: rgba(52, 58, 64, 0.1);
-  color: #343a40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-}
-
-.shipping-meta .meta-label {
-  font-weight: 600;
-  color: #495057;
-}
-
-.checkout-item + .divider {
-  border-bottom: 1px dashed #e9ecef;
-}
-
-.discount-wrapper .input-group .form-control {
-  border-right: 0;
-}
-
-.discount-wrapper .input-group .btn {
-  border-radius: 0 0.25rem 0.25rem 0;
-}
-
-@media (max-width: 992px) {
-  .summary {
-    position: static;
-    top: auto;
-    bottom: auto;
-  }
-}
-
-@media (max-width: 576px) {
-  .checkout-review-container {
-    padding: 0 0.75rem;
-  }
-
-  .checkout-steps {
-    flex-wrap: wrap;
-  }
-
-  .checkout-steps .step-line {
-    display: none;
-  }
-}
-</style>
 
 <script>
 (function() {

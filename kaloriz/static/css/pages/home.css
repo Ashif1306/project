@@ -1,0 +1,140 @@
+/* Kaloriz Home Page Styles */
+
+.page-home {
+  --home-gradient-start: #667eea;
+  --home-gradient-end: #764ba2;
+  --home-highlight: #ff416c;
+  --home-highlight-alt: #ff4b2b;
+  --home-rating: #ffc107;
+}
+
+.page-home .hero-banner {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  margin-bottom: 50px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+}
+
+.page-home .hero-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.page-home .hero-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.7) 0%, rgba(118, 75, 162, 0.7) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-align: center;
+  padding: 2rem;
+}
+
+.page-home .hero-banner h1 {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.page-home .hero-banner .lead {
+  font-size: 1.5rem;
+  margin-bottom: 30px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.page-home .hero-banner .btn {
+  padding: 0.9rem 2.5rem;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.page-home .stats-section {
+  background: var(--gray-light);
+  padding: 40px 0;
+  border-radius: var(--radius);
+}
+
+.page-home .stat-item {
+  text-align: center;
+  padding: 20px;
+}
+
+.page-home .stat-item i {
+  font-size: 3rem;
+  color: var(--home-gradient-start);
+  margin-bottom: 15px;
+}
+
+.page-home .stat-item h3 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.page-home .stat-item p {
+  color: rgba(45, 55, 72, 0.7);
+  font-size: 1.1rem;
+}
+
+.page-home .category-icon {
+  font-size: 3.5rem;
+  color: var(--home-gradient-start);
+  margin-bottom: 20px;
+}
+
+.page-home .category-card {
+  border-top: 4px solid var(--home-gradient-start);
+}
+
+.page-home .modern-product-card {
+  --product-highlight: var(--home-highlight);
+  --product-highlight-alt: var(--home-highlight-alt);
+  --product-rating: var(--home-rating);
+  --product-gradient-start: var(--home-gradient-start);
+  --product-gradient-end: var(--home-gradient-end);
+}
+
+@media (max-width: 992px) {
+  .page-home .hero-banner h1 {
+    font-size: 2.5rem;
+  }
+
+  .page-home .hero-banner .lead {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-home .hero-banner {
+    aspect-ratio: auto;
+    min-height: 320px;
+  }
+
+  .page-home .hero-banner h1 {
+    font-size: 2rem;
+  }
+
+  .page-home .hero-banner .lead {
+    font-size: 1.1rem;
+  }
+
+  .page-home .product-image-wrapper {
+    height: 180px;
+  }
+
+  .page-home .product-name {
+    font-size: 0.95rem;
+  }
+
+  .page-home .price-sale {
+    font-size: 1.1rem;
+  }
+}

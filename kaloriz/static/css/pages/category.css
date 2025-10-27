@@ -1,0 +1,44 @@
+/* Kaloriz Category Page Styles */
+
+.page-category {
+  padding-top: 2rem;
+}
+
+.page-category .category-header {
+  margin-bottom: 2rem;
+}
+
+.page-category .category-header h2 {
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.page-category .category-header p {
+  color: rgba(45, 55, 72, 0.7);
+}
+
+.page-category .modern-product-card {
+  --product-highlight: #ff416c;
+  --product-highlight-alt: #ff4b2b;
+  --product-gradient-start: var(--primary);
+  --product-gradient-end: var(--accent);
+  --product-rating: #ffc107;
+}
+
+.page-category .product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .page-category {
+    padding-top: 1rem;
+  }
+
+  .page-category .category-header h2 {
+    font-size: 1.6rem;
+  }
+}
