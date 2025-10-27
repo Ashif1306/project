@@ -82,7 +82,7 @@
               </div>
 
               <!-- Add to Cart Button -->
-              <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="flex: 1;">
+              <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="flex: 1;" class="js-add-to-cart-form">
                 {% csrf_token %}
                 <input type="hidden" name="quantity" id="cart-quantity" value="1">
                 <button type="submit" class="btn-add-cart">

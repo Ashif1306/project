@@ -23,29 +23,41 @@
     object-position: center;
   }
 
+  .hero-slider .carousel-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(4, 9, 30, 0.55), rgba(4, 9, 30, 0.35));
+    z-index: 1;
+  }
+
   .hero-slider .carousel-caption {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.8);
-    color: #1a202c;
     padding: 30px;
-    border-radius: 18px;
     max-width: 560px;
     width: calc(100% - 40px);
+    z-index: 2;
+    color: #fff;
+    text-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   }
 
   .hero-slider .carousel-caption h1 {
     font-size: 3rem;
     font-weight: 700;
     margin-bottom: 20px;
-    color: #2d3748;
+    color: #fff;
+    text-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
   }
 
   .hero-slider .carousel-caption p {
     font-size: 1.2rem;
-    color: #4a5568;
+    color: rgba(255, 255, 255, 0.9);
   }
 
   .hero-slider .carousel-caption .btn {
@@ -280,8 +292,8 @@
           <div class="wishlist-icon" onclick="event.stopPropagation();">
             <form method="post" action="{% url 'core:add_to_watchlist' product.id %}" style="display: inline;">
               {% csrf_token %}
-              <button type="submit" class="wishlist-btn">
-                <i class="fas fa-heart"></i>
+              <button type="submit" class="wishlist-btn {% if product.id in watchlisted_product_ids %}is-active{% endif %}">
+                <i class="{% if product.id in watchlisted_product_ids %}fa-solid{% else %}fa-regular{% endif %} fa-heart"></i>
               </button>
             </form>
           </div>
@@ -318,7 +330,7 @@
           <!-- Add to Cart Button - Bottom Right -->
           {% if user.is_authenticated %}
           <div class="cart-button-wrapper" onclick="event.stopPropagation();">
-            <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="display: inline;">
+            <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="display: inline;" class="js-add-to-cart-form">
               {% csrf_token %}
               <input type="hidden" name="quantity" value="1">
               <button type="submit" class="cart-btn-round" {% if product.stock == 0 %}disabled{% endif %}>
@@ -454,18 +466,26 @@
 }
 
 .wishlist-btn:hover {
-  background: #ff416c;
-  color: white;
+  background: rgba(220, 34, 32, 0.12);
   transform: scale(1.1);
 }
 
-.wishlist-btn i {
+.wishlist-btn .fa-heart {
   font-size: 1.1rem;
-  color: #ff416c;
+  color: #cbd5f5;
+  transition: color 0.3s ease;
 }
 
-.wishlist-btn:hover i {
-  color: white;
+.wishlist-btn.is-active {
+  background: rgba(220, 34, 32, 0.12);
+}
+
+.wishlist-btn.is-active .fa-heart {
+  color: #dc2220;
+}
+
+.wishlist-btn:hover .fa-heart {
+  color: #dc2220;
 }
 
 /* Product Image */
