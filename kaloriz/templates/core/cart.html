@@ -225,8 +225,7 @@
   const btnDel   = document.getElementById('btn-delete-selected');
 
   function csrf(){
-    const m = document.cookie.match(/(?:^|;)\s*csrftoken=([^;]+)/);
-    return m ? decodeURIComponent(m[1]) : '';
+    return getCookie('csrftoken') || '';
   }
 
   // Hitung subtotal per baris dari DB price x qty

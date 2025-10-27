@@ -875,8 +875,7 @@ function getCsrfToken() {
   if (formToken) {
     return formToken.value;
   }
-  const cookieMatch = document.cookie.match(/csrftoken=([^;]+)/);
-  return cookieMatch ? cookieMatch[1] : '';
+  return getCookie('csrftoken') || '';
 }
 
 function proceedToPayment() {
