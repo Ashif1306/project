@@ -76,13 +76,17 @@ def add_to_cart(request, product_id):
 
     product = get_object_or_404(Product, id=product_id, available=True)
     cart, created = Cart.objects.get_or_create(user=request.user)
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
     # Check stock
     quantity = int(request.POST.get('quantity', 1))
     if product.stock < quantity:
         if request.POST.get('buy_now'):
             return JsonResponse({'success': False, 'message': 'Stok tidak mencukupi'})
-        messages.error(request, f'Stok {product.name} tidak mencukupi.')
+        error_message = f'Stok {product.name} tidak mencukupi.'
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': error_message}, status=400)
+        messages.error(request, error_message)
         return redirect('catalog:product_detail', slug=product.slug)
 
     # Check if this is a "Buy Now" request
@@ -109,6 +113,8 @@ def add_to_cart(request, product_id):
             if product.stock < new_quantity:
                 if request.POST.get('buy_now'):
                     return JsonResponse({'success': False, 'message': 'Stok tidak mencukupi'})
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': f'Stok {product.name} tidak mencukupi.'}, status=400)
                 messages.error(request, f'Stok {product.name} tidak mencukupi.')
                 return redirect('catalog:product_detail', slug=product.slug)
             cart_item.quantity = new_quantity
@@ -119,7 +125,15 @@ def add_to_cart(request, product_id):
     if is_buy_now:
         return JsonResponse({'success': True})
 
-    messages.success(request, f'{product.name} berhasil ditambahkan ke keranjang.')
+    success_message = f'{product.name} berhasil ditambahkan ke keranjang.'
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'message': 'Produk berhasil ditambahkan ke keranjang.',
+            'cart_count': cart.items.count(),
+        })
+
+    messages.success(request, success_message)
     return redirect('core:cart')
 
 

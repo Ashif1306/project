@@ -14,6 +14,14 @@ from core.models import Cart
 from .models import Product, Category, Testimonial, DiscountCode
 
 
+def _get_watchlisted_product_ids(request):
+    if request.user.is_authenticated:
+        return list(
+            request.user.watchlists.values_list('product_id', flat=True)
+        )
+    return []
+
+
 def home(request):
     """Homepage with featured products"""
     featured_products = Product.objects.filter(available=True)[:8]
@@ -22,6 +30,7 @@ def home(request):
     context = {
         'featured_products': featured_products,
         'categories': categories,
+        'watchlisted_product_ids': _get_watchlisted_product_ids(request),
     }
     return render(request, 'catalog/home.html', context)
 
@@ -63,6 +72,7 @@ def product_list(request):
         'categories': categories,
         'current_category': category_slug,
         'search_query': search_query,
+        'watchlisted_product_ids': _get_watchlisted_product_ids(request),
     }
     return render(request, 'catalog/product_list.html', context)
 
@@ -97,6 +107,7 @@ def category_detail(request, slug):
     context = {
         'category': category,
         'products': products,
+        'watchlisted_product_ids': _get_watchlisted_product_ids(request),
     }
     return render(request, 'catalog/category_detail.html', context)
 
@@ -116,6 +127,7 @@ def search(request):
     context = {
         'products': products,
         'query': query,
+        'watchlisted_product_ids': _get_watchlisted_product_ids(request),
     }
     return render(request, 'catalog/search_results.html', context)
 
