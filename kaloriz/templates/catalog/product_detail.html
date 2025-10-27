@@ -1,10 +1,16 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load price_filters %}
 
 {% block title %}{{ product.name }} - Kaloriz{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/pages/product.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container my-5">
+<div class="page-product">
+  <div class="container my-5">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{% url 'catalog:home' %}">Home</a></li>
@@ -82,7 +88,7 @@
               </div>
 
               <!-- Add to Cart Button -->
-              <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="flex: 1;">
+              <form method="post" action="{% url 'core:add_to_cart' product.id %}" class="add-to-cart-form">
                 {% csrf_token %}
                 <input type="hidden" name="quantity" id="cart-quantity" value="1">
                 <button type="submit" class="btn-add-cart">
@@ -102,7 +108,7 @@
           </div>
         {% endif %}
       {% else %}
-        <a href="{% url 'core:login' %}?next={{ request.path }}" class="btn-buy-now" style="display: inline-block;">
+        <a href="{% url 'core:login' %}?next={{ request.path }}" class="btn-buy-now">
           <i class="fas fa-sign-in-alt"></i> Login untuk Membeli
         </a>
       {% endif %}
@@ -175,9 +181,9 @@
       <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
         <div class="card h-100 shadow-sm hover-shadow">
           {% if related.image %}
-            <img src="{{ related.image.url }}" class="card-img-top" alt="{{ related.name }}" style="height: 200px; object-fit: cover;">
+            <img src="{{ related.image.url }}" class="card-img-top related-thumb" alt="{{ related.name }}">
           {% else %}
-            <img src="https://via.placeholder.com/300x200?text={{ related.name }}" class="card-img-top" alt="{{ related.name }}">
+            <img src="https://via.placeholder.com/300x200?text={{ related.name }}" class="card-img-top related-thumb" alt="{{ related.name }}">
           {% endif %}
 
           <div class="card-body">
@@ -196,292 +202,10 @@
     </div>
   </div>
   {% endif %}
+  </div>
 </div>
 
-<style>
-.hover-shadow:hover {
-  transform: translateY(-5px);
-  transition: all 0.3s ease;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
-}
 
-/* Modern Purchase Section */
-.modern-purchase-section {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-top: 20px;
-}
-
-/* Row 1: Quantity + Add to Cart */
-.purchase-row-1 {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
-
-/* Quantity Selector - Oval */
-.quantity-selector {
-  display: flex;
-  align-items: center;
-  background: white;
-  border: 2px solid #e0e0e0;
-  border-radius: 50px;
-  padding: 8px 15px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  transition: all 0.3s ease;
-}
-
-.quantity-selector:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  border-color: #667eea;
-}
-
-.qty-btn {
-  background: none;
-  border: none;
-  color: #2d3748;
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 5px 10px;
-  transition: all 0.3s ease;
-}
-
-.qty-btn:hover {
-  color: #667eea;
-  transform: scale(1.2);
-}
-
-.quantity-selector input {
-  border: none;
-  text-align: center;
-  width: 50px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #2d3748;
-  background: transparent;
-  outline: none;
-}
-
-/* Add to Cart Button - White with Red Border */
-.btn-add-cart {
-  background: white;
-  border: 3px solid #dc3545;
-  color: #2d3748;
-  font-weight: 600;
-  padding: 12px 30px;
-  border-radius: 50px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
-  text-decoration: none;
-  display: block;
-  width: 100%;
-  text-align: center;
-}
-
-.btn-add-cart:hover {
-  background: #dc3545;
-  color: white;
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
-}
-
-.btn-add-cart i {
-  margin-right: 8px;
-}
-
-/* Buy It Now Button - Dark Green - Full Width */
-.btn-buy-now {
-  background: linear-gradient(135deg, #28a745, #1e7e34);
-  border: none;
-  color: white;
-  font-weight: 700;
-  padding: 12px 35px;
-  border-radius: 50px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-  text-decoration: none;
-  display: block;
-  width: 100%;
-  text-align: center;
-}
-
-.btn-buy-now:hover {
-  background: linear-gradient(135deg, #1e7e34, #28a745);
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(40, 167, 69, 0.5);
-  color: white;
-  text-decoration: none;
-}
-
-.btn-buy-now i {
-  margin-right: 8px;
-}
-
-/* Out of Stock */
-.out-of-stock {
-  background: #e0e0e0;
-  color: #666;
-  padding: 15px 30px;
-  border-radius: 50px;
-  font-weight: 600;
-  text-align: center;
-  margin-top: 20px;
-}
-
-@media (max-width: 576px) {
-  .purchase-row-1 {
-    flex-direction: column;
-  }
-
-  .quantity-selector {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* Testimonial Carousel Styles */
-.testimonial-carousel-container {
-  position: relative;
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 20px 60px;
-}
-
-.testimonial-carousel {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  min-height: 300px;
-}
-
-.testimonial-card {
-  background: #2d3748;
-  border-radius: 15px;
-  padding: 30px;
-  color: white;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-  transition: all 0.5s ease;
-  opacity: 1;
-}
-
-.testimonial-card.slide-out-left {
-  animation: slideOutLeft 0.5s ease forwards;
-}
-
-.testimonial-card.slide-out-right {
-  animation: slideOutRight 0.5s ease forwards;
-}
-
-.testimonial-card.slide-in-left {
-  animation: slideInLeft 0.5s ease forwards;
-}
-
-.testimonial-card.slide-in-right {
-  animation: slideInRight 0.5s ease forwards;
-}
-
-@keyframes slideOutLeft {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(-100%); opacity: 0; }
-}
-
-@keyframes slideOutRight {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(100%); opacity: 0; }
-}
-
-@keyframes slideInLeft {
-  from { transform: translateX(-100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-.testimonial-text {
-  font-size: 1.1rem;
-  line-height: 1.6;
-  font-style: italic;
-  margin: 20px 0;
-}
-
-.author-photo {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 3px solid #ffc107;
-}
-
-.author-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.photo-placeholder {
-  width: 100%;
-  height: 100%;
-  background: #ffc107;
-  color: #2d3748;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.carousel-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #ffc107;
-  color: #2d3748;
-  border: none;
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 18px;
-  transition: all 0.3s ease;
-  z-index: 10;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-}
-
-.carousel-arrow:hover {
-  background: #ffdd57;
-  transform: translateY(-50%) scale(1.1);
-}
-
-.carousel-arrow-left {
-  left: 0;
-}
-
-.carousel-arrow-right {
-  right: 0;
-}
-
-.rating i {
-  font-size: 1.2rem;
-}
-
-@media (max-width: 768px) {
-  .testimonial-carousel {
-    grid-template-columns: 1fr;
-  }
-
-  .testimonial-carousel-container {
-    padding: 20px 40px;
-  }
-}
-</style>
 {% endblock %}
 
 {% block extra_js %}

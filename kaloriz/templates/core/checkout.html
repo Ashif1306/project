@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Checkout - Kaloriz{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/pages/checkout.css' %}">
+{% endblock %}
 
 {% block content %}
 <div class="container my-5">
@@ -65,7 +70,7 @@
             </div>
 
             <!-- Shipping Service Selection -->
-            <div class="form-group" id="shipping-service-group" style="display: none;">
+            <div class="form-group" id="shipping-service-group">
               <label>Layanan Pengiriman *</label>
               <div id="shipping-options">
                 <!-- Will be populated by AJAX -->
@@ -115,7 +120,7 @@
           </div>
 
           <!-- Free Shipping Promo (if applicable) -->
-          <div id="free-shipping-promo" class="alert alert-success p-2 small" style="display: none;">
+          <div id="free-shipping-promo" class="alert alert-success p-2 small">
             <i class="fas fa-gift"></i> Gratis ongkir untuk belanja ≥ Rp 100.000!
           </div>
 
