@@ -6,51 +6,72 @@
 
 {% block extra_head %}
 <style>
-  .hero-banner {
+  .hero-slider {
     position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
     margin-bottom: 50px;
   }
 
-  .hero-banner img {
+  .hero-slider .carousel-item {
+    height: clamp(320px, 70vh, 600px);
+    position: relative;
+  }
+
+  .hero-slider .carousel-item img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center;
   }
 
-  .hero-banner-overlay {
+  .hero-slider .carousel-caption {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.7) 0%, rgba(118, 75, 162, 0.7) 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.8);
+    color: #1a202c;
+    padding: 30px;
+    border-radius: 18px;
+    max-width: 560px;
+    width: calc(100% - 40px);
   }
 
-  .hero-banner h1 {
-    font-size: 3.5rem;
+  .hero-slider .carousel-caption h1 {
+    font-size: 3rem;
     font-weight: 700;
     margin-bottom: 20px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    color: #2d3748;
   }
 
-  .hero-banner .lead {
-    font-size: 1.5rem;
-    margin-bottom: 30px;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-  }
-
-  .hero-banner .btn {
-    padding: 15px 40px;
+  .hero-slider .carousel-caption p {
     font-size: 1.2rem;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    color: #4a5568;
+  }
+
+  .hero-slider .carousel-caption .btn {
+    padding: 12px 36px;
+    font-size: 1.05rem;
+  }
+
+  .hero-slider .carousel-indicators li {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: rgba(102, 126, 234, 0.4);
+  }
+
+  .hero-slider .carousel-indicators .active {
+    background-color: #667eea;
+  }
+
+  .hero-slider .carousel-control-prev,
+  .hero-slider .carousel-control-next {
+    width: 8%;
+  }
+
+  .hero-slider .carousel-control-prev-icon,
+  .hero-slider .carousel-control-next-icon {
+    filter: invert(54%) sepia(39%) saturate(449%) hue-rotate(203deg) brightness(92%) contrast(88%);
   }
 
   .stats-section {
@@ -86,43 +107,91 @@
     margin-bottom: 20px;
   }
 
-  @media (max-width: 768px) {
-    .hero-banner h1 {
-      font-size: 2rem;
+  @media (max-width: 992px) {
+    .hero-slider .carousel-caption {
+      padding: 24px;
     }
-    .hero-banner .lead {
-      font-size: 1.2rem;
+    .hero-slider .carousel-caption h1 {
+      font-size: 2.4rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero-slider .carousel-item {
+      height: 420px;
+    }
+    .hero-slider .carousel-caption h1 {
+      font-size: 1.9rem;
+    }
+    .hero-slider .carousel-caption p {
+      font-size: 1.05rem;
+    }
+    .hero-slider .carousel-caption {
+      padding: 20px;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .hero-slider .carousel-item {
+      height: 360px;
+    }
+    .hero-slider .carousel-caption {
+      width: calc(100% - 24px);
     }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Hero Banner Section 16:9 -->
-<section class="hero-banner">
-  <img src="{% static 'images/banner.jpg' %}" alt="Banner Kaloriz"
-       onerror="this.src='https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1920&h=1080&fit=crop'">
-
-  <div class="hero-banner-overlay">
-    <div class="container">
-      <div class="row justify-content-center text-center">
-        <div class="col-lg-10">
+<!-- Hero Slider Section -->
+<section class="hero-slider">
+  <div id="heroCarousel" class="carousel slide" data-ride="carousel" data-interval="5000">
+    <ol class="carousel-indicators">
+      <li data-target="#heroCarousel" data-slide-to="0" class="active"></li>
+      <li data-target="#heroCarousel" data-slide-to="1"></li>
+    </ol>
+    <div class="carousel-inner">
+      <div class="carousel-item active">
+        <img src="{% static 'images/banner.jpg' %}" alt="Promo Belanja Kaloriz"
+             onerror="this.src='https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1920&h=1080&fit=crop'">
+        <div class="carousel-caption text-center">
           <h1 class="animate__animated animate__fadeInDown">Selamat Datang di Kaloriz</h1>
-          <p class="lead animate__animated animate__fadeInUp">
-            Belanja Mudah, Harga Terbaik, Produk Berkualitas
-          </p>
-          <p class="mb-4">Temukan ribuan produk pilihan dengan harga spesial hanya untuk Anda</p>
-          <div class="mt-4">
-            <a href="{% url 'catalog:product_list' %}" class="btn btn-light btn-lg mr-3 mb-2">
+          <p class="lead animate__animated animate__fadeInUp mb-4">Belanja mudah dengan produk berkualitas pilihan terbaik.</p>
+          <div>
+            <a href="{% url 'catalog:product_list' %}" class="btn btn-primary mr-3 mb-2">
               <i class="fas fa-shopping-bag"></i> Belanja Sekarang
             </a>
-            <a href="{% url 'catalog:about' %}" class="btn btn-outline-light btn-lg mb-2">
+            <a href="{% url 'catalog:about' %}" class="btn btn-outline-primary mb-2">
               <i class="fas fa-info-circle"></i> Tentang Kami
             </a>
           </div>
         </div>
       </div>
+      <div class="carousel-item">
+        <img src="https://images.unsplash.com/photo-1555529901-4ab7283885b4?w=1920&h=1080&fit=crop" alt="Diskon Spesial Kaloriz">
+        <div class="carousel-caption text-center">
+          <h1 class="animate__animated animate__fadeInDown">Diskon Spesial Minggu Ini</h1>
+          <p class="lead animate__animated animate__fadeInUp mb-4">Nikmati potongan harga hingga 50% untuk produk pilihan.</p>
+          <div>
+            <a href="{% url 'catalog:product_list' %}?promo=true" class="btn btn-primary mr-3 mb-2">
+              <i class="fas fa-tags"></i> Lihat Promo
+            </a>
+            <a href="{% url 'catalog:contact' %}" class="btn btn-outline-primary mb-2">
+              <i class="fas fa-headset"></i> Hubungi Kami
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <a class="carousel-control-prev" href="#heroCarousel" role="button" data-slide="prev">
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+      <span class="sr-only">Sebelumnya</span>
+    </a>
+    <a class="carousel-control-next" href="#heroCarousel" role="button" data-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="sr-only">Selanjutnya</span>
+    </a>
   </div>
 </section>
 
