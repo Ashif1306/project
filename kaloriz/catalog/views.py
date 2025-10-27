@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse
-from django.utils import timezone
 from django.utils.formats import number_format
 from django.views.decorators.http import require_POST
 
@@ -220,51 +219,69 @@ def apply_discount(request):
             'discount_active': False,
         }, status=404)
 
-    if not discount.is_active:
+    shipping_method = checkout_data.get('shipping_method')
+    grand_total = subtotal + shipping_cost
+
+    if not discount.is_valid():
         request.session.pop('discount', None)
         request.session.modified = True
-        total = max(Decimal('0'), subtotal + shipping_cost)
+        total = max(Decimal('0'), grand_total)
         return JsonResponse({
             'success': False,
-            'error': 'Kode diskon tidak aktif.',
+            'error': 'Kupon tidak aktif.',
             'discount_display': _format_rupiah(0),
             'total_display': _format_rupiah(total),
             'discount_active': False,
         }, status=400)
 
-    if discount.expiry_date and discount.expiry_date < timezone.now():
+    if not discount.is_shipping_allowed(shipping_method):
         request.session.pop('discount', None)
         request.session.modified = True
-        total = max(Decimal('0'), subtotal + shipping_cost)
+        total = max(Decimal('0'), grand_total)
         return JsonResponse({
             'success': False,
-            'error': 'Kode diskon sudah kedaluwarsa.',
+            'error': 'Kupon tidak berlaku untuk kurir ini.',
             'discount_display': _format_rupiah(0),
             'total_display': _format_rupiah(total),
             'discount_active': False,
         }, status=400)
 
-    discount_amount = Decimal(discount.discount_amount)
-    max_discount = subtotal + shipping_cost
-    if discount_amount > max_discount:
-        discount_amount = max_discount
+    min_spend = discount.get_min_spend()
+    if grand_total < min_spend:
+        request.session.pop('discount', None)
+        request.session.modified = True
+        total = max(Decimal('0'), grand_total)
+        return JsonResponse({
+            'success': False,
+            'error': f'Minimal belanja { _format_rupiah(min_spend) }',
+            'discount_display': _format_rupiah(0),
+            'total_display': _format_rupiah(total),
+            'discount_active': False,
+        }, status=400)
+
+    discount_amount = discount.calculate_discount(grand_total)
+    if discount_amount > grand_total:
+        discount_amount = grand_total
 
     request.session['discount'] = {
         'code': discount.code,
         'amount': str(discount_amount),
+        'type': discount.discount_type,
+        'type_label': discount.get_type_label(),
     }
     request.session.modified = True
 
-    total = max(Decimal('0'), subtotal + shipping_cost - discount_amount)
+    total = max(Decimal('0'), grand_total - discount_amount)
 
     return JsonResponse({
         'success': True,
         'code': discount.code,
         'discount_display': _format_rupiah(discount_amount),
+        'discount_type_label': discount.get_type_label(),
         'total_display': _format_rupiah(total),
         'subtotal_display': _format_rupiah(subtotal),
         'shipping_cost_display': _format_rupiah(shipping_cost),
-        'message': 'Kode diskon berhasil diterapkan.',
+        'message': 'Kupon berhasil diterapkan.',
         'discount_active': True,
     })
 
@@ -316,4 +333,5 @@ def cancel_discount(request):
         'subtotal_display': _format_rupiah(subtotal),
         'shipping_cost_display': _format_rupiah(shipping_cost),
         'discount_active': False,
+        'discount_type_label': '',
     })

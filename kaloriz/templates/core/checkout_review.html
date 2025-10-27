@@ -126,18 +126,17 @@
                 <button class="btn btn-outline-secondary ml-1{% if discount_amount == 0 %} d-none{% endif %}" type="button" id="cancel-discount-btn">Batalkan</button>
               </div>
             </div>
-            <div class="discount-status mt-2{% if not discount_code %} d-none{% endif %}" id="discount-status">
-              <span class="badge badge-success">
-                Kode diterapkan: <span id="discount-code-display">{{ discount_code }}</span>
-              </span>
-            </div>
             <small class="form-text text-muted">Masukkan kode voucher untuk mendapatkan potongan harga.</small>
-            <small class="text-success d-none" id="discount-success"></small>
-            <small class="text-danger d-none" id="discount-error"></small>
           </div>
 
-          <div class="summary-row d-flex justify-content-between mb-3" id="discount-row">
-            <span>Diskon</span>
+          <div class="summary-row d-flex justify-content-between align-items-start mb-3" id="discount-row">
+            <div>
+              <span>Diskon</span>
+              <div class="discount-summary-meta text-muted small mt-1{% if not discount_code %} d-none{% endif %}" id="discount-summary">
+                <span class="badge badge-success text-uppercase mr-2" id="discount-code-display">{{ discount_code }}</span>
+                <span id="discount-type-display">{{ discount_type_label }}</span>
+              </div>
+            </div>
             <span class="text-success font-weight-semibold" id="discount-amount-display">{% if discount_amount > 0 %}-{{ discount_display }}{% else %}{{ discount_display }}{% endif %}</span>
           </div>
 
@@ -209,7 +208,14 @@
   bottom: 16px;
 }
 
-.checkout-summary-card.summary .discount-status .badge {
+.discount-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.discount-summary-meta .badge {
   font-weight: 600;
 }
 
@@ -278,28 +284,23 @@
   const totalDisplay = document.getElementById('total-amount');
   const subtotalDisplay = document.getElementById('subtotal-amount');
   const shippingDisplay = document.getElementById('shipping-cost-amount');
-  const successMessage = document.getElementById('discount-success');
-  const errorMessage = document.getElementById('discount-error');
+  const summaryMeta = document.getElementById('discount-summary');
+  const codeDisplay = document.getElementById('discount-code-display');
+  const typeDisplay = document.getElementById('discount-type-display');
   const applyUrl = summary ? summary.dataset.applyUrl : null;
   const cancelBtn = document.getElementById('cancel-discount-btn');
   const cancelUrl = summary ? summary.dataset.cancelUrl : null;
-  const statusBadge = document.getElementById('discount-status');
-  const statusCodeDisplay = document.getElementById('discount-code-display');
 
   function getCsrfToken() {
     return getCookie('csrftoken') || '';
   }
 
-  function setFeedback(element, message, isError) {
-    if (!element) {
+  function showToastMessage(message, type = 'success') {
+    if (!message) {
       return;
     }
-    element.textContent = message;
-    element.classList.toggle('d-none', !message);
-    if (isError) {
-      successMessage?.classList.add('d-none');
-    } else {
-      errorMessage?.classList.add('d-none');
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, type);
     }
   }
 
@@ -307,44 +308,49 @@
     if (!discountDisplay) {
       return;
     }
-    if (text === 'Rp 0') {
-      discountDisplay.textContent = text;
+    if (!text || text === 'Rp 0') {
+      discountDisplay.textContent = 'Rp 0';
     } else {
-      discountDisplay.textContent = `-${text}`;
+      discountDisplay.textContent = text.startsWith('-') ? text : `-${text}`;
     }
   }
 
-  function toggleDiscountState(hasDiscount, code = '') {
+  function toggleDiscountButtons(hasDiscount) {
     if (applyBtn) {
       applyBtn.classList.toggle('d-none', hasDiscount);
+      applyBtn.disabled = false;
     }
     if (cancelBtn) {
       cancelBtn.classList.toggle('d-none', !hasDiscount);
       cancelBtn.disabled = false;
     }
-    if (statusBadge) {
-      statusBadge.classList.toggle('d-none', !hasDiscount);
+  }
+
+  function updateSummaryMeta(hasDiscount, code = '', typeLabel = '') {
+    if (summaryMeta) {
+      summaryMeta.classList.toggle('d-none', !hasDiscount);
     }
-    if (statusCodeDisplay) {
-      statusCodeDisplay.textContent = hasDiscount ? code : '';
+    if (codeDisplay) {
+      codeDisplay.textContent = hasDiscount ? code : '';
+    }
+    if (typeDisplay) {
+      typeDisplay.textContent = hasDiscount ? typeLabel : '';
     }
   }
 
   function applyDiscount() {
     const code = codeInput.value.trim();
     if (!code) {
-      setFeedback(errorMessage, 'Silakan masukkan kode diskon.', true);
+      showToastMessage('Silakan masukkan kode diskon.', 'error');
       return;
     }
 
     if (!applyUrl) {
-      setFeedback(errorMessage, 'Tidak dapat memproses kode diskon saat ini.', true);
+      showToastMessage('Tidak dapat memproses kode diskon saat ini.', 'error');
       return;
     }
 
     applyBtn.disabled = true;
-    setFeedback(successMessage, '', false);
-    setFeedback(errorMessage, '', true);
 
     fetch(applyUrl, {
       method: 'POST',
@@ -363,12 +369,19 @@
 
         if (status >= 200 && status < 300 && data.success) {
           formatDiscountLabel(data.discount_display);
-          totalDisplay.textContent = data.total_display;
-          subtotalDisplay.textContent = data.subtotal_display || subtotalDisplay.textContent;
-          shippingDisplay.textContent = data.shipping_cost_display || shippingDisplay.textContent;
+          if (totalDisplay && data.total_display) {
+            totalDisplay.textContent = data.total_display;
+          }
+          if (subtotalDisplay && data.subtotal_display) {
+            subtotalDisplay.textContent = data.subtotal_display;
+          }
+          if (shippingDisplay && data.shipping_cost_display) {
+            shippingDisplay.textContent = data.shipping_cost_display;
+          }
           codeInput.value = data.code || code;
-          setFeedback(successMessage, data.message || 'Kode diskon berhasil diterapkan.', false);
-          toggleDiscountState(true, data.code || code);
+          toggleDiscountButtons(true);
+          updateSummaryMeta(true, data.code || code, data.discount_type_label || '');
+          showToastMessage(data.message || 'Kupon berhasil diterapkan.', 'success');
         } else {
           if (data.discount_display) {
             formatDiscountLabel(data.discount_display);
@@ -376,14 +389,14 @@
           if (data.total_display) {
             totalDisplay.textContent = data.total_display;
           }
-          setFeedback(errorMessage, data.error || 'Kode diskon tidak dapat digunakan.', true);
-          if (typeof data.discount_active !== 'undefined') {
-            toggleDiscountState(Boolean(data.discount_active), data.code || code);
-          }
+          const isActive = typeof data.discount_active !== 'undefined' ? Boolean(data.discount_active) : false;
+          toggleDiscountButtons(isActive);
+          updateSummaryMeta(isActive, data.code || code, data.discount_type_label || '');
+          showToastMessage(data.error || 'Kupon tidak dapat digunakan.', 'error');
         }
       })
       .catch(() => {
-        setFeedback(errorMessage, 'Terjadi kesalahan. Silakan coba lagi.', true);
+        showToastMessage('Terjadi kesalahan. Silakan coba lagi.', 'error');
       })
       .finally(() => {
         applyBtn.disabled = false;
@@ -403,13 +416,11 @@
       return;
     }
     if (!cancelUrl) {
-      setFeedback(errorMessage, 'Tidak dapat membatalkan diskon saat ini.', true);
+      showToastMessage('Tidak dapat membatalkan diskon saat ini.', 'error');
       return;
     }
 
     cancelBtn.disabled = true;
-    setFeedback(successMessage, '', false);
-    setFeedback(errorMessage, '', true);
 
     fetch(cancelUrl, {
       method: 'POST',
@@ -428,12 +439,19 @@
 
         if (status >= 200 && status < 300 && data.success) {
           formatDiscountLabel(data.discount_display || 'Rp 0');
-          totalDisplay.textContent = data.total_display || totalDisplay.textContent;
-          subtotalDisplay.textContent = data.subtotal_display || subtotalDisplay.textContent;
-          shippingDisplay.textContent = data.shipping_cost_display || shippingDisplay.textContent;
+          if (totalDisplay && data.total_display) {
+            totalDisplay.textContent = data.total_display;
+          }
+          if (subtotalDisplay && data.subtotal_display) {
+            subtotalDisplay.textContent = data.subtotal_display;
+          }
+          if (shippingDisplay && data.shipping_cost_display) {
+            shippingDisplay.textContent = data.shipping_cost_display;
+          }
           codeInput.value = '';
-          toggleDiscountState(false);
-          setFeedback(successMessage, '', false);
+          toggleDiscountButtons(false);
+          updateSummaryMeta(false);
+          showToastMessage('Kupon dibatalkan.', 'success');
         } else {
           if (data.discount_display) {
             formatDiscountLabel(data.discount_display);
@@ -441,14 +459,14 @@
           if (data.total_display) {
             totalDisplay.textContent = data.total_display;
           }
-          setFeedback(errorMessage, data.error || 'Tidak dapat membatalkan diskon.', true);
-          if (typeof data.discount_active !== 'undefined') {
-            toggleDiscountState(Boolean(data.discount_active), data.code || '');
-          }
+          const isActive = typeof data.discount_active !== 'undefined' ? Boolean(data.discount_active) : false;
+          toggleDiscountButtons(isActive);
+          updateSummaryMeta(isActive, data.code || '', data.discount_type_label || '');
+          showToastMessage(data.error || 'Tidak dapat membatalkan kupon.', 'error');
         }
       })
       .catch(() => {
-        setFeedback(errorMessage, 'Terjadi kesalahan saat membatalkan diskon.', true);
+        showToastMessage('Terjadi kesalahan saat membatalkan kupon.', 'error');
       })
       .finally(() => {
         cancelBtn.disabled = false;

@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
+from django.utils.formats import number_format
+from decimal import Decimal, InvalidOperation
 
 class Category(models.Model):
     name = models.CharField(max_length=200, unique=True, verbose_name="Nama Kategori")
@@ -140,19 +142,75 @@ class Testimonial(models.Model):
 
 
 class DiscountCode(models.Model):
+    TYPE_FLAT = 'flat'
+    TYPE_PERCENT = 'percent'
+    DISCOUNT_TYPE_CHOICES = [
+        (TYPE_FLAT, 'Flat'),
+        (TYPE_PERCENT, 'Percent'),
+    ]
+
+    SHIPPING_REGULER = 'reguler'
+    SHIPPING_EXPRESS = 'express'
+    SHIPPING_BOTH = 'both'
+    ALLOWED_SHIPPING_CHOICES = [
+        (SHIPPING_REGULER, 'Reguler'),
+        (SHIPPING_EXPRESS, 'Express'),
+        (SHIPPING_BOTH, 'Reguler & Express'),
+    ]
+
     code = models.CharField(max_length=50, unique=True, verbose_name="Kode")
-    discount_amount = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name="Nominal Diskon",
-        help_text="Nilai potongan dalam rupiah",
+    discount_type = models.CharField(
+        max_length=10,
+        choices=DISCOUNT_TYPE_CHOICES,
+        default=TYPE_PERCENT,
+        verbose_name="Tipe Diskon",
     )
-    is_active = models.BooleanField(default=True, verbose_name="Aktif")
-    expiry_date = models.DateTimeField(
+    percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="Persentase",
+        help_text="Persentase potongan (0-100). Gunakan untuk tipe persen.",
+    )
+    flat_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Nominal Flat",
+        help_text="Nilai potongan untuk tipe flat.",
+    )
+    max_discount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Batas Maksimum Diskon",
+        help_text="Batas maksimum potongan untuk tipe persen. Isi 0 untuk tanpa batas.",
+    )
+    min_spend = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name="Minimal Belanja",
+        help_text="Minimal total belanja (subtotal + ongkir) agar kupon berlaku.",
+    )
+    allowed_shipping = models.CharField(
+        max_length=10,
+        choices=ALLOWED_SHIPPING_CHOICES,
+        default=SHIPPING_BOTH,
+        verbose_name="Kurir yang Diizinkan",
+    )
+    active = models.BooleanField(default=True, verbose_name="Aktif")
+    valid_from = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Berlaku Mulai",
+        help_text="Biarkan kosong jika langsung aktif.",
+    )
+    valid_to = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Berlaku Sampai",
-        help_text="Biarkan kosong jika tanpa batas waktu",
+        help_text="Biarkan kosong jika tanpa batas waktu.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -165,9 +223,72 @@ class DiscountCode(models.Model):
     def __str__(self):
         return self.code.upper()
 
-    def is_valid(self):
-        if not self.is_active:
+    def is_valid(self, now=None):
+        if not self.active:
             return False
-        if self.expiry_date and self.expiry_date < timezone.now():
+        now = now or timezone.now()
+        if self.valid_from and now < self.valid_from:
+            return False
+        if self.valid_to and now > self.valid_to:
             return False
         return True
+
+    def _calculate_percent_discount(self, grand_total: Decimal) -> Decimal:
+        percent_value = Decimal(self.percent or 0)
+        if percent_value <= 0:
+            return Decimal('0')
+        discount = (grand_total * percent_value) / Decimal('100')
+        max_cap = Decimal(self.max_discount or 0)
+        if max_cap > 0 and discount > max_cap:
+            discount = max_cap
+        return discount
+
+    def _calculate_flat_discount(self, grand_total: Decimal) -> Decimal:
+        amount = Decimal(self.flat_amount or 0)
+        if amount <= 0:
+            return Decimal('0')
+        return min(amount, grand_total)
+
+    def calculate_discount(self, grand_total: Decimal) -> Decimal:
+        if grand_total <= 0:
+            return Decimal('0')
+        if self.discount_type == self.TYPE_FLAT:
+            return self._calculate_flat_discount(grand_total)
+        return self._calculate_percent_discount(grand_total)
+
+    def is_shipping_allowed(self, selected_method: str) -> bool:
+        if not selected_method:
+            return False
+        selected_method = str(selected_method or '').upper()
+        if self.allowed_shipping == self.SHIPPING_BOTH:
+            return True
+        if self.allowed_shipping == self.SHIPPING_EXPRESS:
+            return selected_method == 'EXP'
+        if self.allowed_shipping == self.SHIPPING_REGULER:
+            return selected_method == 'REG'
+        return False
+
+    def get_min_spend(self) -> Decimal:
+        return Decimal(self.min_spend or 0)
+
+    def get_type_label(self) -> str:
+        if self.discount_type == self.TYPE_FLAT:
+            return f"Flat { _format_currency(self.flat_amount) }"
+        percent_value = Decimal(self.percent or 0)
+        percent_display = _format_percentage(percent_value)
+        cap_display = _format_currency(self.max_discount) if self.max_discount else "tanpa batas"
+        return f"{percent_display} cap {cap_display}"
+
+
+def _format_currency(value) -> str:
+    try:
+        amount = Decimal(value or 0)
+    except (InvalidOperation, TypeError, ValueError):
+        amount = Decimal('0')
+    return f"Rp {number_format(amount, decimal_pos=0, force_grouping=True)}"
+
+
+def _format_percentage(value: Decimal) -> str:
+    if value == value.to_integral():
+        return f"{int(value)}%"
+    return f"{value.normalize():f}%"
