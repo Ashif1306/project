@@ -1,54 +1,53 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}Verifikasi Email - Kaloriz{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/pages/auth.css' %}">
-{% endblock %}
-
 {% block content %}
-  <div class="page-auth">
-    <div class="container my-5">
-      <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-          <div class="card shadow auth-card">
-            <div class="card-header bg-success text-white text-center">
-              <h4 class="mb-0"><i class="fas fa-envelope-circle-check"></i> Verifikasi Email Anda</h4>
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow">
+        <div class="card-header bg-success text-white text-center">
+          <h4 class="mb-0"><i class="fas fa-envelope-circle-check"></i> Verifikasi Email Anda</h4>
+        </div>
+        <div class="card-body p-4 text-center">
+          <div class="mb-4">
+            <i class="fas fa-envelope-open-text fa-4x text-success mb-3"></i>
+            <p class="lead">Kode verifikasi telah dikirim ke:</p>
+            <p class="font-weight-bold text-success">{{ masked_email }}</p>
+            <p class="text-muted small">Silakan periksa inbox atau folder spam Anda.</p>
+          </div>
+
+          <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+              <label for="code">Masukkan Kode Verifikasi (6 digit)</label>
+              <input type="text" class="form-control form-control-lg text-center"
+                     id="code" name="code" maxlength="6" pattern="[0-9]{6}"
+                     placeholder="000000" required autofocus style="letter-spacing: 8px; font-size: 24px;">
+              <small class="form-text text-muted">Kode berlaku selama 10 menit</small>
             </div>
-            <div class="card-body p-4 text-center">
-              <div class="mb-4">
-                <i class="fas fa-envelope-open-text fa-4x text-success mb-3"></i>
-                <p class="lead">Kode verifikasi telah dikirim ke:</p>
-                <p class="font-weight-bold text-success">{{ masked_email }}</p>
-                <p class="text-muted small">Silakan periksa inbox atau folder spam Anda.</p>
-              </div>
 
-              <form method="post">
-                {% csrf_token %}
-                <div class="form-group">
-                  <label for="code">Masukkan Kode Verifikasi (6 digit)</label>
-                  <input type="text" class="form-control form-control-lg text-center verification-code-input"
-                         id="code" name="code" maxlength="6" pattern="[0-9]{6}"
-                         placeholder="000000" required autofocus>
-                  <small class="form-text text-muted">Kode berlaku selama 10 menit</small>
-                </div>
+            <button type="submit" class="btn btn-success btn-block btn-lg">
+              <i class="fas fa-check-circle"></i> Verifikasi & Lanjutkan
+            </button>
+          </form>
 
-                <button type="submit" class="btn btn-success btn-block btn-lg">
-                  <i class="fas fa-check-circle"></i> Verifikasi & Lanjutkan
-                </button>
-              </form>
+          <hr>
 
-              <hr>
-
-              <div class="text-center">
-                <p class="mb-0">Tidak menerima kode?</p>
-                <a href="{% url 'core:resend_verification' %}" class="btn btn-link">Kirim Ulang Kode</a>
-              </div>
-            </div>
+          <div class="text-center">
+            <p class="mb-0">Tidak menerima kode?</p>
+            <a href="{% url 'core:resend_verification' %}" class="btn btn-link">Kirim Ulang Kode</a>
           </div>
         </div>
       </div>
     </div>
   </div>
+</div>
+
+<style>
+input[type="text"]#code {
+  font-family: 'Courier New', monospace;
+}
+</style>
 {% endblock %}

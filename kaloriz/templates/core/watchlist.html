@@ -1,29 +1,25 @@
 {% extends 'base.html' %}
-{% load static price_filters %}
+{% load price_filters %}
 
 {% block title %}Watchlist - Kaloriz{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/pages/auth.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="page-auth">
-  <div class="container my-5">
-    <h2 class="mb-4"><i class="fas fa-heart text-danger"></i> Watchlist Saya</h2>
+<div class="container my-5">
+  <h2 class="mb-4"><i class="fas fa-heart text-danger"></i> Watchlist Saya</h2>
 
-    {% if watchlist_items %}
-    <div class="watchlist-grid">
-      {% for item in watchlist_items %}
-      <div class="card watchlist-card">
+  {% if watchlist_items %}
+  <div class="row">
+    {% for item in watchlist_items %}
+    <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+      <div class="card h-100 shadow-sm hover-shadow">
         <div class="position-relative">
           {% if item.product.image %}
-            <img src="{{ item.product.image.url }}" class="card-img-top watchlist-thumb" alt="{{ item.product.name }}">
+            <img src="{{ item.product.image.url }}" class="card-img-top" alt="{{ item.product.name }}" style="height: 200px; object-fit: cover;">
           {% else %}
-            <img src="https://via.placeholder.com/300x200?text={{ item.product.name }}" class="card-img-top watchlist-thumb" alt="{{ item.product.name }}">
+            <img src="https://via.placeholder.com/300x200?text={{ item.product.name }}" class="card-img-top" alt="{{ item.product.name }}" style="height: 200px; object-fit: cover;">
           {% endif %}
 
-          <form method="post" action="{% url 'core:remove_from_watchlist' item.id %}" class="watchlist-remove">
+          <form method="post" action="{% url 'core:remove_from_watchlist' item.id %}" class="position-absolute" style="top: 10px; right: 10px;">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-danger" title="Hapus dari Watchlist">
               <i class="fas fa-times"></i>
@@ -43,14 +39,21 @@
           </a>
         </div>
       </div>
-      {% endfor %}
     </div>
-    {% else %}
-    <div class="alert alert-info text-center">
-      <i class="fas fa-heart"></i> Watchlist Anda masih kosong. <a href="{% url 'catalog:product_list' %}">Jelajahi produk</a>
-    </div>
-    {% endif %}
+    {% endfor %}
   </div>
+  {% else %}
+  <div class="alert alert-info text-center">
+    <i class="fas fa-heart"></i> Watchlist Anda masih kosong. <a href="{% url 'catalog:product_list' %}">Jelajahi produk</a>
+  </div>
+  {% endif %}
 </div>
 
+<style>
+.hover-shadow:hover {
+  transform: translateY(-5px);
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+}
+</style>
 {% endblock %}
