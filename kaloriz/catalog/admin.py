@@ -59,8 +59,39 @@ class TestimonialAdmin(admin.ModelAdmin):
 
 @admin.register(DiscountCode)
 class DiscountCodeAdmin(admin.ModelAdmin):
-    list_display = ['code', 'discount_amount', 'is_active', 'expiry_date', 'created_at']
-    list_filter = ['is_active', 'expiry_date', 'created_at']
+    list_display = [
+        'code',
+        'discount_overview',
+        'min_spend',
+        'allowed_shipping',
+        'active',
+        'valid_from',
+        'valid_to',
+        'created_at',
+    ]
+    list_filter = ['discount_type', 'allowed_shipping', 'active', 'valid_from', 'valid_to', 'created_at']
     search_fields = ['code']
     ordering = ['-created_at']
     readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        (None, {
+            'fields': ('code', 'active', 'valid_from', 'valid_to')
+        }),
+        ('Pengaturan Diskon', {
+            'fields': (
+                'discount_type',
+                'percent',
+                'flat_amount',
+                'max_discount',
+                'min_spend',
+                'allowed_shipping',
+            )
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+        }),
+    )
+
+    @admin.display(description='Detail Diskon')
+    def discount_overview(self, obj):
+        return obj.get_type_label()

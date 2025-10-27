@@ -438,27 +438,43 @@ def checkout_review(request):
     discount_session = request.session.get('discount') or {}
     discount_amount = Decimal('0')
     discount_code = discount_session.get('code')
+    discount_type_label = discount_session.get('type_label', '')
+
+    shipping_method = checkout_data.get('shipping_method')
+    grand_total = subtotal + shipping_cost
 
     if discount_code:
         discount_obj = DiscountCode.objects.filter(code__iexact=discount_code).first()
         if discount_obj and discount_obj.is_valid():
-            try:
-                discount_amount = Decimal(discount_session.get('amount', discount_obj.discount_amount))
-            except (InvalidOperation, TypeError, ValueError):
-                discount_amount = Decimal(discount_obj.discount_amount)
-            max_discount = subtotal + shipping_cost
-            if discount_amount > max_discount:
-                discount_amount = max_discount
-                request.session['discount'] = {
-                    'code': discount_code,
-                    'amount': str(discount_amount),
-                }
+            if discount_obj.is_shipping_allowed(shipping_method):
+                if grand_total >= discount_obj.get_min_spend():
+                    discount_amount = discount_obj.calculate_discount(grand_total)
+                    if discount_amount > grand_total:
+                        discount_amount = grand_total
+                    discount_type_label = discount_obj.get_type_label()
+                    request.session['discount'] = {
+                        'code': discount_code,
+                        'amount': str(discount_amount),
+                        'type': discount_obj.discount_type,
+                        'type_label': discount_type_label,
+                    }
+                    request.session.modified = True
+                else:
+                    request.session.pop('discount', None)
+                    request.session.modified = True
+                    discount_code = None
+                    discount_type_label = ''
+            else:
+                request.session.pop('discount', None)
                 request.session.modified = True
+                discount_code = None
+                discount_type_label = ''
         else:
             request.session.pop('discount', None)
             request.session.modified = True
             discount_code = None
             discount_amount = Decimal('0')
+            discount_type_label = ''
 
     total = subtotal + shipping_cost - discount_amount
     if total < 0:
@@ -477,6 +493,7 @@ def checkout_review(request):
         'total': total,
         'discount_amount': discount_amount,
         'discount_display': _format_rupiah(discount_amount),
+        'discount_type_label': discount_type_label,
         'subtotal_display': _format_rupiah(subtotal),
         'shipping_cost_display': _format_rupiah(shipping_cost),
         'total_display': _format_rupiah(total),
