@@ -13,14 +13,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from .env file if exists
-from pathlib import Path
+# Load .env dari ROOT PROJECT (selevel manage.py)
 env_file = BASE_DIR / '.env'
 if env_file.exists():
-    with open(env_file) as f:
+    with open(env_file, encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith('#') and '=' in line:
@@ -140,16 +139,24 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Email Configuration
 # For development: emails will be printed to console
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# For production, use SMTP (uncomment and configure these):
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'your-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'your-app-password'
-DEFAULT_FROM_EMAIL = 'noreply@kaloriz.com'
+
+# =========================
+# EMAIL (SMTP) CONFIG
+# =========================
+# =========================
+# EMAIL (SMTP) CONFIG
+# =========================
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False') == 'True'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')          # wajib terisi
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # wajib terisi (App Password TANPA spasi)
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
 
 # Jazzmin settings
 JAZZMIN_SETTINGS = {
