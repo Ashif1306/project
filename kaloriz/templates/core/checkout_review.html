@@ -90,11 +90,16 @@
       </div>
     </div>
     <div class="col-lg-4">
-      <div class="card shadow checkout-summary-card sticky-top" id="checkout-summary-card">
+      <div class="card shadow checkout-summary-card summary" id="checkout-summary-card">
         <div class="card-header bg-white border-bottom">
           <h5 class="mb-0">Ringkasan Pembayaran</h5>
         </div>
-        <div class="card-body" id="checkout-summary" data-apply-url="{% url 'catalog:apply_discount' %}">
+        <div
+          class="card-body"
+          id="checkout-summary"
+          data-apply-url="{% url 'catalog:apply_discount' %}"
+          data-cancel-url="{% url 'catalog:cancel_discount' %}"
+        >
           <div class="summary-row d-flex justify-content-between mb-3">
             <span>Subtotal</span>
             <span class="font-weight-semibold" id="subtotal-amount">{{ subtotal_display }}</span>
@@ -114,11 +119,17 @@
 
           <div class="discount-wrapper mb-3">
             <label for="discount-code-input" class="font-weight-semibold">Kode Diskon</label>
-            <div class="input-group">
+            <div class="input-group align-items-center">
               <input type="text" id="discount-code-input" class="form-control" placeholder="Masukkan kode" value="{{ discount_code|default:'' }}">
               <div class="input-group-append">
-                <button class="btn btn-outline-primary" type="button" id="apply-discount-btn">Apply</button>
+                <button class="btn btn-outline-primary{% if discount_amount > 0 %} d-none{% endif %}" type="button" id="apply-discount-btn">Apply</button>
+                <button class="btn btn-outline-secondary ml-1{% if discount_amount == 0 %} d-none{% endif %}" type="button" id="cancel-discount-btn">Batalkan</button>
               </div>
+            </div>
+            <div class="discount-status mt-2{% if not discount_code %} d-none{% endif %}" id="discount-status">
+              <span class="badge badge-success">
+                Kode diterapkan: <span id="discount-code-display">{{ discount_code }}</span>
+              </span>
             </div>
             <small class="form-text text-muted">Masukkan kode voucher untuk mendapatkan potongan harga.</small>
             <small class="text-success d-none" id="discount-success"></small>
@@ -147,10 +158,6 @@
 </div>
 
 <style>
-.checkout-review-container {
-  --checkout-summary-offset: 120px;
-}
-
 .checkout-steps {
   display: flex;
   align-items: center;
@@ -195,9 +202,15 @@
   color: #fff;
 }
 
-.checkout-summary-card.sticky-top {
+.checkout-summary-card.summary {
   position: sticky;
-  top: var(--checkout-summary-offset);
+  top: calc(var(--header-h) + 12px);
+  z-index: 10;
+  bottom: 16px;
+}
+
+.checkout-summary-card.summary .discount-status .badge {
+  font-weight: 600;
 }
 
 .shipping-avatar {
@@ -229,10 +242,11 @@
   border-radius: 0 0.25rem 0.25rem 0;
 }
 
-@media (max-width: 991px) {
-  .checkout-summary-card.sticky-top {
-    position: relative;
+@media (max-width: 992px) {
+  .checkout-summary-card.summary {
+    position: static;
     top: auto;
+    bottom: auto;
   }
 }
 
@@ -253,23 +267,6 @@
 
 <script>
 (function() {
-  const rootElement = document.documentElement;
-
-  function updateSummaryOffset() {
-    if (!rootElement) {
-      return;
-    }
-    const navbar = document.querySelector('.modern-navbar');
-    const offset = navbar ? navbar.offsetHeight + 20 : 120;
-    rootElement.style.setProperty('--checkout-summary-offset', `${offset}px`);
-  }
-
-  updateSummaryOffset();
-  window.addEventListener('load', updateSummaryOffset);
-  window.addEventListener('resize', updateSummaryOffset);
-})();
-
-(function() {
   const applyBtn = document.getElementById('apply-discount-btn');
   if (!applyBtn) {
     return;
@@ -284,6 +281,10 @@
   const successMessage = document.getElementById('discount-success');
   const errorMessage = document.getElementById('discount-error');
   const applyUrl = summary ? summary.dataset.applyUrl : null;
+  const cancelBtn = document.getElementById('cancel-discount-btn');
+  const cancelUrl = summary ? summary.dataset.cancelUrl : null;
+  const statusBadge = document.getElementById('discount-status');
+  const statusCodeDisplay = document.getElementById('discount-code-display');
 
   function getCsrfToken() {
     const name = 'csrftoken=';
@@ -319,6 +320,22 @@
       discountDisplay.textContent = text;
     } else {
       discountDisplay.textContent = `-${text}`;
+    }
+  }
+
+  function toggleDiscountState(hasDiscount, code = '') {
+    if (applyBtn) {
+      applyBtn.classList.toggle('d-none', hasDiscount);
+    }
+    if (cancelBtn) {
+      cancelBtn.classList.toggle('d-none', !hasDiscount);
+      cancelBtn.disabled = false;
+    }
+    if (statusBadge) {
+      statusBadge.classList.toggle('d-none', !hasDiscount);
+    }
+    if (statusCodeDisplay) {
+      statusCodeDisplay.textContent = hasDiscount ? code : '';
     }
   }
 
@@ -358,7 +375,9 @@
           totalDisplay.textContent = data.total_display;
           subtotalDisplay.textContent = data.subtotal_display || subtotalDisplay.textContent;
           shippingDisplay.textContent = data.shipping_cost_display || shippingDisplay.textContent;
+          codeInput.value = data.code || code;
           setFeedback(successMessage, data.message || 'Kode diskon berhasil diterapkan.', false);
+          toggleDiscountState(true, data.code || code);
         } else {
           if (data.discount_display) {
             formatDiscountLabel(data.discount_display);
@@ -367,6 +386,9 @@
             totalDisplay.textContent = data.total_display;
           }
           setFeedback(errorMessage, data.error || 'Kode diskon tidak dapat digunakan.', true);
+          if (typeof data.discount_active !== 'undefined') {
+            toggleDiscountState(Boolean(data.discount_active), data.code || code);
+          }
         }
       })
       .catch(() => {
@@ -384,6 +406,67 @@
       applyDiscount();
     }
   });
+
+  function cancelDiscount() {
+    if (!cancelBtn) {
+      return;
+    }
+    if (!cancelUrl) {
+      setFeedback(errorMessage, 'Tidak dapat membatalkan diskon saat ini.', true);
+      return;
+    }
+
+    cancelBtn.disabled = true;
+    setFeedback(successMessage, '', false);
+    setFeedback(errorMessage, '', true);
+
+    fetch(cancelUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': getCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: new URLSearchParams(),
+    })
+      .then((response) => response.json().then((data) => ({ status: response.status, data })))
+      .then(({ status, data }) => {
+        if (!data) {
+          throw new Error('Respon tidak valid.');
+        }
+
+        if (status >= 200 && status < 300 && data.success) {
+          formatDiscountLabel(data.discount_display || 'Rp 0');
+          totalDisplay.textContent = data.total_display || totalDisplay.textContent;
+          subtotalDisplay.textContent = data.subtotal_display || subtotalDisplay.textContent;
+          shippingDisplay.textContent = data.shipping_cost_display || shippingDisplay.textContent;
+          codeInput.value = '';
+          toggleDiscountState(false);
+          setFeedback(successMessage, '', false);
+        } else {
+          if (data.discount_display) {
+            formatDiscountLabel(data.discount_display);
+          }
+          if (data.total_display) {
+            totalDisplay.textContent = data.total_display;
+          }
+          setFeedback(errorMessage, data.error || 'Tidak dapat membatalkan diskon.', true);
+          if (typeof data.discount_active !== 'undefined') {
+            toggleDiscountState(Boolean(data.discount_active), data.code || '');
+          }
+        }
+      })
+      .catch(() => {
+        setFeedback(errorMessage, 'Terjadi kesalahan saat membatalkan diskon.', true);
+      })
+      .finally(() => {
+        cancelBtn.disabled = false;
+      });
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', cancelDiscount);
+  }
 })();
 </script>
 {% endblock %}

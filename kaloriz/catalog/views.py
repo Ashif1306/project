@@ -205,6 +205,7 @@ def apply_discount(request):
             'error': 'Kode diskon tidak ditemukan.',
             'discount_display': _format_rupiah(0),
             'total_display': _format_rupiah(total),
+            'discount_active': False,
         }, status=404)
 
     if not discount.is_active:
@@ -216,6 +217,7 @@ def apply_discount(request):
             'error': 'Kode diskon tidak aktif.',
             'discount_display': _format_rupiah(0),
             'total_display': _format_rupiah(total),
+            'discount_active': False,
         }, status=400)
 
     if discount.expiry_date and discount.expiry_date < timezone.now():
@@ -227,6 +229,7 @@ def apply_discount(request):
             'error': 'Kode diskon sudah kedaluwarsa.',
             'discount_display': _format_rupiah(0),
             'total_display': _format_rupiah(total),
+            'discount_active': False,
         }, status=400)
 
     discount_amount = Decimal(discount.discount_amount)
@@ -250,4 +253,55 @@ def apply_discount(request):
         'subtotal_display': _format_rupiah(subtotal),
         'shipping_cost_display': _format_rupiah(shipping_cost),
         'message': 'Kode diskon berhasil diterapkan.',
+        'discount_active': True,
+    })
+
+
+@require_POST
+@login_required
+def cancel_discount(request):
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Permintaan tidak valid.'}, status=400)
+
+    checkout_data = request.session.get('checkout', {})
+    raw_subtotal = checkout_data.get('subtotal')
+    raw_shipping = checkout_data.get('shipping_cost')
+
+    try:
+        subtotal = Decimal(raw_subtotal or 0)
+    except (InvalidOperation, TypeError, ValueError):
+        subtotal = Decimal('0')
+
+    try:
+        shipping_cost = Decimal(raw_shipping or 0)
+    except (InvalidOperation, TypeError, ValueError):
+        shipping_cost = Decimal('0')
+
+    if subtotal == 0:
+        cart = (
+            Cart.objects.filter(user=request.user)
+            .order_by('-updated_at', '-id')
+            .prefetch_related('items__product')
+            .first()
+        )
+        if cart:
+            subtotal = Decimal(cart.get_selected_total() or 0)
+            checkout_data['subtotal'] = str(subtotal)
+            request.session['checkout'] = checkout_data
+            request.session.modified = True
+
+    request.session.pop('discount', None)
+    request.session.modified = True
+
+    total = max(Decimal('0'), subtotal + shipping_cost)
+
+    return JsonResponse({
+        'success': True,
+        'discount': 0,
+        'discount_display': _format_rupiah(0),
+        'total_after': str(total),
+        'total_display': _format_rupiah(total),
+        'subtotal_display': _format_rupiah(subtotal),
+        'shipping_cost_display': _format_rupiah(shipping_cost),
+        'discount_active': False,
     })
