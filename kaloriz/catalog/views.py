@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Q, Avg, Count
+from django.db.models import Q
 from django.http import JsonResponse
 from django.utils.formats import number_format
 from django.views.decorators.http import require_POST
@@ -21,19 +21,9 @@ def _get_watchlisted_product_ids(request):
     return []
 
 
-def _with_rating(queryset):
-    """Annotate queryset with average rating and review count."""
-    return queryset.annotate(
-        average_rating=Avg('testimonials__rating', filter=Q(testimonials__is_approved=True)),
-        review_count=Count('testimonials', filter=Q(testimonials__is_approved=True)),
-    )
-
-
 def home(request):
     """Homepage with featured products"""
-    featured_products = _with_rating(
-        Product.objects.filter(available=True)
-    )[:8]
+    featured_products = Product.objects.filter(available=True)[:8]
     categories = Category.objects.all()[:6]
 
     context = {
@@ -46,7 +36,7 @@ def home(request):
 
 def product_list(request):
     """List all available products with filtering and search"""
-    products = _with_rating(Product.objects.filter(available=True))
+    products = Product.objects.filter(available=True)
     categories = Category.objects.all()
 
     # Filter by category
@@ -88,16 +78,11 @@ def product_list(request):
 
 def product_detail(request, slug):
     """Product detail page"""
-    product = get_object_or_404(
-        _with_rating(Product.objects.filter(available=True)),
-        slug=slug,
-    )
-    related_products = _with_rating(
-        Product.objects.filter(
-            category=product.category,
-            available=True
-        ).exclude(id=product.id)
-    )[:4]
+    product = get_object_or_404(Product, slug=slug, available=True)
+    related_products = Product.objects.filter(
+        category=product.category,
+        available=True
+    ).exclude(id=product.id)[:4]
 
     # Get approved testimonials for this product
     testimonials = Testimonial.objects.filter(
@@ -116,9 +101,7 @@ def product_detail(request, slug):
 def category_detail(request, slug):
     """Category page showing all products in category"""
     category = get_object_or_404(Category, slug=slug)
-    products = _with_rating(
-        Product.objects.filter(category=category, available=True)
-    )
+    products = Product.objects.filter(category=category, available=True)
 
     context = {
         'category': category,
@@ -131,7 +114,7 @@ def category_detail(request, slug):
 def search(request):
     """Search products"""
     query = request.GET.get('q', '')
-    products = _with_rating(Product.objects.filter(available=True))
+    products = Product.objects.filter(available=True)
 
     if query:
         products = products.filter(

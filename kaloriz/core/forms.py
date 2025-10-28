@@ -151,29 +151,25 @@ class TestimonialForm(forms.ModelForm):
 
     class Meta:
         model = Testimonial
-        fields = ['rating', 'review', 'photo']
+        fields = ['rating', 'review']
         widgets = {
-            'rating': forms.RadioSelect(
+            'rating': forms.Select(
                 attrs={
-                    'class': 'd-none',
+                    'class': 'custom-select custom-select-sm',
+                    'required': True,
                 }
             ),
             'review': forms.Textarea(
                 attrs={
-                    'class': 'form-control',
-                    'rows': 4,
-                    'placeholder': 'Ceritakan pengalaman Anda menggunakan produk ini (opsional)',
-                }
-            ),
-            'photo': forms.ClearableFileInput(
-                attrs={
-                    'class': 'form-control-file',
+                    'class': 'form-control form-control-sm',
+                    'rows': 3,
+                    'placeholder': 'Ceritakan pengalaman Anda menggunakan produk ini',
+                    'required': True,
                 }
             ),
         }
         labels = {
             'rating': 'Rating',
-            'review': 'Komentar',
-            'photo': 'Upload Foto (opsional)',
+            'review': 'Ulasan',
         }
 
