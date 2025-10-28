@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Avg, Count
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
@@ -113,6 +114,24 @@ class Product(models.Model):
             return int(((self.price - self.discount_price) / self.price) * 100)
         return 0
 
+    def get_average_rating(self):
+        """Return average rating from approved testimonials (cached if annotated)."""
+        avg_rating = getattr(self, 'average_rating', None)
+        if avg_rating is None:
+            avg_rating = self.testimonials.filter(is_approved=True).aggregate(
+                avg=Avg('rating')
+            )['avg']
+        return float(avg_rating or 0)
+
+    def get_review_count(self):
+        """Return number of approved testimonials (cached if annotated)."""
+        review_count = getattr(self, 'review_count', None)
+        if review_count is None:
+            review_count = self.testimonials.filter(is_approved=True).aggregate(
+                total=Count('id')
+            )['total'] or 0
+        return review_count
+
 
 class Testimonial(models.Model):
     RATING_CHOICES = [
@@ -125,8 +144,16 @@ class Testimonial(models.Model):
 
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='testimonials', verbose_name="Produk")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='testimonials', verbose_name="Pengguna")
+    order_item = models.OneToOneField(
+        'core.OrderItem',
+        on_delete=models.CASCADE,
+        related_name='testimonial',
+        null=True,
+        blank=True,
+        verbose_name="Item Pesanan",
+    )
     rating = models.IntegerField(choices=RATING_CHOICES, verbose_name="Rating")
-    review = models.TextField(verbose_name="Ulasan")
+    review = models.TextField(verbose_name="Ulasan", blank=True)
     photo = models.ImageField(upload_to='testimonials/', blank=True, null=True, verbose_name="Foto")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
