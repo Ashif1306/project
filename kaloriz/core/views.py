@@ -1,6 +1,5 @@
 import json
 import uuid
-import json
 from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -11,8 +10,6 @@ from django.contrib import messages
 from django.db.models import F, Count
 from django.utils import timezone
 from django.utils.formats import number_format
-from django.http import JsonResponse, Http404, HttpResponse, HttpResponseForbidden
-from django.template.loader import render_to_string
 
 from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist, EmailVerification
 from catalog.models import Product, DiscountCode, Testimonial
@@ -21,6 +18,8 @@ from .utils import send_verification_email, send_welcome_email
 from shipping.models import District, Address, Shipment
 from shipping.views import calculate_shipping_cost, validate_shipping_data
 from shipping.forms import AddressForm
+
+from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_POST
 
 
@@ -735,64 +734,30 @@ def order_list(request):
 def order_detail(request, order_number):
     """Order detail page"""
     order = get_object_or_404(
-        Order.objects.prefetch_related('items__product', 'items__testimonial'),
+        Order.objects.prefetch_related('items__product'),
         order_number=order_number,
         user=request.user,
     )
 
     order_items = list(order.items.all())
+    product_ids = [item.product_id for item in order_items if item.product_id]
+
+    testimonials = Testimonial.objects.filter(
+        user=request.user,
+        product_id__in=product_ids,
+    )
+    testimonials_map = {testimonial.product_id: testimonial for testimonial in testimonials}
 
     for item in order_items:
-        try:
-            item.existing_testimonial = item.testimonial
-        except Testimonial.DoesNotExist:
-            item.existing_testimonial = None
+        item.existing_testimonial = testimonials_map.get(item.product_id)
 
     context = {
         'order': order,
         'order_items': order_items,
         'order_can_review': order.status == 'delivered',
+        'testimonial_form': TestimonialForm(),
     }
     return render(request, 'core/order_detail.html', context)
-
-
-@login_required
-def order_item_testimonial_form(request, order_number, item_id):
-    """Return testimonial form modal for an order item (HTMX)."""
-
-    order = get_object_or_404(
-        Order.objects.prefetch_related('items__product', 'items__testimonial'),
-        order_number=order_number,
-        user=request.user,
-    )
-
-    order_item = get_object_or_404(order.items.select_related('product'), pk=item_id)
-
-    if order.status != 'delivered':
-        return HttpResponseForbidden('Penilaian hanya dapat diberikan untuk pesanan yang telah selesai.')
-
-    if order_item.product is None:
-        return HttpResponseForbidden('Produk ini tidak tersedia untuk dinilai.')
-
-    try:
-        testimonial = order_item.testimonial
-    except Testimonial.DoesNotExist:
-        testimonial = None
-
-    if testimonial is not None:
-        context = {
-            'order_item': order_item,
-            'testimonial': testimonial,
-        }
-        return render(request, 'core/partials/testimonial_summary.html', context)
-
-    form = TestimonialForm()
-    context = {
-        'order': order,
-        'order_item': order_item,
-        'form': form,
-    }
-    return render(request, 'core/partials/testimonial_modal.html', context)
 
 
 @login_required
@@ -800,7 +765,7 @@ def submit_testimonial(request, order_number, item_id):
     """Allow a customer to submit a testimonial for a purchased product."""
 
     order = get_object_or_404(
-        Order.objects.prefetch_related('items__product', 'items__testimonial'),
+        Order.objects.prefetch_related('items__product'),
         order_number=order_number,
         user=request.user,
     )
@@ -812,77 +777,27 @@ def submit_testimonial(request, order_number, item_id):
         return redirect('core:order_detail', order_number=order_number)
 
     if order.status != 'delivered':
-        message = 'Penilaian hanya dapat diberikan untuk pesanan yang telah selesai.'
-        if request.headers.get('HX-Request') == 'true':
-            response = HttpResponse(message, status=403)
-            return response
-        messages.warning(request, message)
+        messages.warning(request, 'Penilaian hanya dapat diberikan untuk pesanan yang telah selesai.')
         return redirect('core:order_detail', order_number=order_number)
 
     if order_item.product is None:
-        message = 'Produk ini sudah tidak tersedia sehingga tidak dapat dinilai.'
-        if request.headers.get('HX-Request') == 'true':
-            response = HttpResponse(message, status=400)
-            return response
-        messages.error(request, message)
+        messages.error(request, 'Produk ini sudah tidak tersedia sehingga tidak dapat dinilai.')
         return redirect('core:order_detail', order_number=order_number)
 
-    try:
-        existing_testimonial = order_item.testimonial
-    except Testimonial.DoesNotExist:
-        existing_testimonial = None
-
-    if existing_testimonial is not None:
-        message = 'Anda sudah memberikan penilaian untuk produk ini.'
-        if request.headers.get('HX-Request') == 'true':
-            summary_html = render_to_string(
-                'core/partials/testimonial_summary.html',
-                {'order_item': order_item, 'testimonial': existing_testimonial},
-                request=request,
-            )
-            response = HttpResponse(status=204)
-            response['HX-Trigger'] = json.dumps({
-                'review-submitted': {
-                    'target': f'#review-section-{order_item.pk}',
-                    'html': summary_html,
-                }
-            })
-            return response
-        messages.info(request, message)
+    if Testimonial.objects.filter(user=request.user, product=order_item.product).exists():
+        messages.info(request, 'Anda sudah memberikan penilaian untuk produk ini.')
         return redirect('core:order_detail', order_number=order_number)
 
-    form = TestimonialForm(request.POST, request.FILES)
+    form = TestimonialForm(request.POST)
 
     if form.is_valid():
         testimonial = form.save(commit=False)
         testimonial.user = request.user
         testimonial.product = order_item.product
-        testimonial.order_item = order_item
-        testimonial.is_approved = True
+        testimonial.is_approved = False
         testimonial.save()
-        if request.headers.get('HX-Request') == 'true':
-            summary_html = render_to_string(
-                'core/partials/testimonial_summary.html',
-                {'order_item': order_item, 'testimonial': testimonial},
-                request=request,
-            )
-            response = HttpResponse(status=204)
-            response['HX-Trigger'] = json.dumps({
-                'review-submitted': {
-                    'target': f'#review-section-{order_item.pk}',
-                    'html': summary_html,
-                }
-            })
-            return response
-        messages.success(request, 'Terima kasih! Penilaian Anda telah diterima.')
+        messages.success(request, 'Terima kasih! Penilaian Anda telah dikirim dan akan ditinjau oleh admin.')
     else:
-        if request.headers.get('HX-Request') == 'true':
-            context = {
-                'order': order,
-                'order_item': order_item,
-                'form': form,
-            }
-            return render(request, 'core/partials/testimonial_modal.html', context, status=400)
         error_messages = ' '.join([' '.join(errors) for errors in form.errors.values()])
         if error_messages:
             messages.error(request, f'Gagal mengirim penilaian. {error_messages}')

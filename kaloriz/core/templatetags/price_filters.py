@@ -31,9 +31,14 @@ def dot_separator(value):
 def rating_stars(product):
     """Generate star rating HTML for product"""
     try:
-        avg_rating = product.get_average_rating()
-        review_count = product.get_review_count()
-        rating_text = f"{avg_rating:.1f}"
+        # Get average rating from testimonials
+        testimonials = product.testimonials.filter(is_approved=True)
+        if testimonials.exists():
+            avg_rating = sum(t.rating for t in testimonials) / testimonials.count()
+            rating_text = f"{avg_rating:.1f}"
+        else:
+            avg_rating = 0
+            rating_text = "0.0"
 
         html = '<div class="product-rating">'
 
@@ -46,8 +51,7 @@ def rating_stars(product):
             else:
                 html += '<i class="far fa-star"></i>'
 
-        html += f'<span class="rating-text">{rating_text} ★</span>'
-        html += f'<span class="rating-count text-muted">({review_count} ulasan)</span>'
+        html += f'<span class="rating-text">{rating_text}</span>'
         html += '</div>'
 
         return mark_safe(html)
@@ -56,7 +60,6 @@ def rating_stars(product):
         html = '<div class="product-rating">'
         for i in range(5):
             html += '<i class="far fa-star"></i>'
-        html += '<span class="rating-text">0.0 ★</span>'
-        html += '<span class="rating-count text-muted">(0 ulasan)</span>'
+        html += '<span class="rating-text">0.0</span>'
         html += '</div>'
         return mark_safe(html)
