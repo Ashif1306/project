@@ -12,8 +12,8 @@ from django.utils import timezone
 from django.utils.formats import number_format
 
 from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist, EmailVerification
-from catalog.models import Product, DiscountCode
-from .forms import CustomUserRegistrationForm
+from catalog.models import Product, DiscountCode, Testimonial
+from .forms import CustomUserRegistrationForm, TestimonialForm
 from .utils import send_verification_email, send_welcome_email
 from shipping.models import District, Address, Shipment
 from shipping.views import calculate_shipping_cost, validate_shipping_data
@@ -733,11 +733,78 @@ def order_list(request):
 @login_required
 def order_detail(request, order_number):
     """Order detail page"""
-    order = get_object_or_404(Order, order_number=order_number, user=request.user)
+    order = get_object_or_404(
+        Order.objects.prefetch_related('items__product'),
+        order_number=order_number,
+        user=request.user,
+    )
+
+    order_items = list(order.items.all())
+    product_ids = [item.product_id for item in order_items if item.product_id]
+
+    testimonials = Testimonial.objects.filter(
+        user=request.user,
+        product_id__in=product_ids,
+    )
+    testimonials_map = {testimonial.product_id: testimonial for testimonial in testimonials}
+
+    for item in order_items:
+        item.existing_testimonial = testimonials_map.get(item.product_id)
+
     context = {
         'order': order,
+        'order_items': order_items,
+        'order_can_review': order.status == 'delivered',
+        'testimonial_form': TestimonialForm(),
     }
     return render(request, 'core/order_detail.html', context)
+
+
+@login_required
+def submit_testimonial(request, order_number, item_id):
+    """Allow a customer to submit a testimonial for a purchased product."""
+
+    order = get_object_or_404(
+        Order.objects.prefetch_related('items__product'),
+        order_number=order_number,
+        user=request.user,
+    )
+
+    order_items_qs = order.items.select_related('product')
+    order_item = get_object_or_404(order_items_qs, pk=item_id)
+
+    if request.method != 'POST':
+        return redirect('core:order_detail', order_number=order_number)
+
+    if order.status != 'delivered':
+        messages.warning(request, 'Penilaian hanya dapat diberikan untuk pesanan yang telah selesai.')
+        return redirect('core:order_detail', order_number=order_number)
+
+    if order_item.product is None:
+        messages.error(request, 'Produk ini sudah tidak tersedia sehingga tidak dapat dinilai.')
+        return redirect('core:order_detail', order_number=order_number)
+
+    if Testimonial.objects.filter(user=request.user, product=order_item.product).exists():
+        messages.info(request, 'Anda sudah memberikan penilaian untuk produk ini.')
+        return redirect('core:order_detail', order_number=order_number)
+
+    form = TestimonialForm(request.POST)
+
+    if form.is_valid():
+        testimonial = form.save(commit=False)
+        testimonial.user = request.user
+        testimonial.product = order_item.product
+        testimonial.is_approved = False
+        testimonial.save()
+        messages.success(request, 'Terima kasih! Penilaian Anda telah dikirim dan akan ditinjau oleh admin.')
+    else:
+        error_messages = ' '.join([' '.join(errors) for errors in form.errors.values()])
+        if error_messages:
+            messages.error(request, f'Gagal mengirim penilaian. {error_messages}')
+        else:
+            messages.error(request, 'Gagal mengirim penilaian. Silakan coba lagi.')
+
+    return redirect('core:order_detail', order_number=order_number)
 
 
 # Authentication Views

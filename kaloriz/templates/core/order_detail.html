@@ -31,31 +31,75 @@
                 <th>Harga</th>
                 <th>Jumlah</th>
                 <th>Subtotal</th>
+                <th>Penilaian</th>
               </tr>
             </thead>
             <tbody>
-              {% for item in order.items.all %}
+              {% for item in order_items %}
               <tr>
-                <td>
+                <td class="align-middle">
                   <strong>{{ item.product_name }}</strong>
                 </td>
-                <td>Rp {{ item.product_price|floatformat:0 }}</td>
-                <td>{{ item.quantity }}</td>
-                <td><strong>Rp {{ item.subtotal|floatformat:0 }}</strong></td>
+                <td class="align-middle">Rp {{ item.product_price|floatformat:0 }}</td>
+                <td class="align-middle">{{ item.quantity }}</td>
+                <td class="align-middle"><strong>Rp {{ item.subtotal|floatformat:0 }}</strong></td>
+                <td class="align-middle">
+                  {% if item.product %}
+                    {% if item.existing_testimonial %}
+                      <span class="badge badge-success mb-2"><i class="fas fa-check"></i> Sudah Dinilai</span>
+                      <div class="mb-1 text-warning font-weight-bold">
+                        <i class="fas fa-star"></i> {{ item.existing_testimonial.rating }} / 5
+                      </div>
+                      <p class="small mb-0 text-muted">"{{ item.existing_testimonial.review }}"</p>
+                    {% elif order_can_review %}
+                      <button class="btn btn-outline-primary btn-sm" type="button" data-toggle="collapse" data-target="#reviewForm{{ item.id }}" aria-expanded="false" aria-controls="reviewForm{{ item.id }}">
+                        <i class="fas fa-star"></i> Beri Penilaian
+                      </button>
+                      <div class="collapse mt-3" id="reviewForm{{ item.id }}">
+                        <form method="post" action="{% url 'core:submit_testimonial' order.order_number item.id %}">
+                          {% csrf_token %}
+                          <div class="form-group mb-2">
+                            <label class="small font-weight-bold">{{ testimonial_form.fields.rating.label }}</label>
+                            <select name="rating" class="custom-select custom-select-sm" required>
+                              <option value="" disabled selected>Pilih rating</option>
+                              {% for value, label in testimonial_form.fields.rating.choices %}
+                              <option value="{{ value }}">{{ label }}</option>
+                              {% endfor %}
+                            </select>
+                          </div>
+                          <div class="form-group mb-3">
+                            <label class="small font-weight-bold">{{ testimonial_form.fields.review.label }}</label>
+                            <textarea name="review" class="form-control form-control-sm" rows="3" placeholder="{{ testimonial_form.fields.review.widget.attrs.placeholder }}" required></textarea>
+                          </div>
+                          <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="collapse" data-target="#reviewForm{{ item.id }}" aria-expanded="true" aria-controls="reviewForm{{ item.id }}">
+                              Batal
+                            </button>
+                            <button type="submit" class="btn btn-success btn-sm">Kirim Penilaian</button>
+                          </div>
+                        </form>
+                      </div>
+                    {% else %}
+                      <small class="text-muted">Penilaian tersedia setelah pesanan selesai.</small>
+                    {% endif %}
+                  {% else %}
+                    <small class="text-muted">Produk tidak tersedia.</small>
+                  {% endif %}
+                </td>
               </tr>
               {% endfor %}
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="3" class="text-right"><strong>Subtotal:</strong></td>
+                <td colspan="4" class="text-right"><strong>Subtotal:</strong></td>
                 <td><strong>Rp {{ order.subtotal|floatformat:0 }}</strong></td>
               </tr>
               <tr>
-                <td colspan="3" class="text-right"><strong>Ongkir:</strong></td>
+                <td colspan="4" class="text-right"><strong>Ongkir:</strong></td>
                 <td><strong>Rp {{ order.shipping_cost|floatformat:0 }}</strong></td>
               </tr>
               <tr class="table-success">
-                <td colspan="3" class="text-right"><strong>Total:</strong></td>
+                <td colspan="4" class="text-right"><strong>Total:</strong></td>
                 <td><strong>Rp {{ order.total|floatformat:0 }}</strong></td>
               </tr>
             </tfoot>
