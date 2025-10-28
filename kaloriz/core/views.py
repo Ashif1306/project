@@ -788,15 +788,15 @@ def submit_testimonial(request, order_number, item_id):
         messages.info(request, 'Anda sudah memberikan penilaian untuk produk ini.')
         return redirect('core:order_detail', order_number=order_number)
 
-    form = TestimonialForm(request.POST)
+    form = TestimonialForm(request.POST, request.FILES)
 
     if form.is_valid():
         testimonial = form.save(commit=False)
         testimonial.user = request.user
         testimonial.product = order_item.product
-        testimonial.is_approved = False
+        testimonial.is_approved = True
         testimonial.save()
-        messages.success(request, 'Terima kasih! Penilaian Anda telah dikirim dan akan ditinjau oleh admin.')
+        messages.success(request, 'Terima kasih! Penilaian Anda telah dikirim dan langsung ditampilkan.')
     else:
         error_messages = ' '.join([' '.join(errors) for errors in form.errors.values()])
         if error_messages:
