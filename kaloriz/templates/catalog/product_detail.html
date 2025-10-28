@@ -30,6 +30,13 @@
     <div class="col-md-7">
       <h1 class="mb-3">{{ product.name }}</h1>
 
+      <div class="d-flex align-items-center mb-3">
+        <span class="badge badge-warning badge-pill mr-2 px-3 py-2 text-dark font-weight-bold">
+          {{ product.get_average_rating|floatformat:1 }} ★
+        </span>
+        <small class="text-muted">{{ product.get_review_count }} ulasan</small>
+      </div>
+
       {% if product.is_on_sale %}
         <span class="badge badge-danger badge-lg mb-3">Diskon {{ product.get_discount_percentage }}%</span>
       {% endif %}
