@@ -151,7 +151,7 @@ class TestimonialForm(forms.ModelForm):
 
     class Meta:
         model = Testimonial
-        fields = ['rating', 'review']
+        fields = ['rating', 'review', 'photo']
         widgets = {
             'rating': forms.Select(
                 attrs={
@@ -167,9 +167,16 @@ class TestimonialForm(forms.ModelForm):
                     'required': True,
                 }
             ),
+            'photo': forms.ClearableFileInput(
+                attrs={
+                    'class': 'form-control-file',
+                    'accept': 'image/*',
+                }
+            ),
         }
         labels = {
             'rating': 'Rating',
             'review': 'Ulasan',
+            'photo': 'Foto (Opsional)',
         }
 
