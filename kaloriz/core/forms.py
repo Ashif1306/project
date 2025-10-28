@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 from .models import UserProfile
+from catalog.models import Testimonial
 
 
 class CustomUserRegistrationForm(UserCreationForm):
@@ -143,3 +144,32 @@ class CustomUserRegistrationForm(UserCreationForm):
             )
 
         return user
+
+
+class TestimonialForm(forms.ModelForm):
+    """Form for customers to submit product testimonials."""
+
+    class Meta:
+        model = Testimonial
+        fields = ['rating', 'review']
+        widgets = {
+            'rating': forms.Select(
+                attrs={
+                    'class': 'custom-select custom-select-sm',
+                    'required': True,
+                }
+            ),
+            'review': forms.Textarea(
+                attrs={
+                    'class': 'form-control form-control-sm',
+                    'rows': 3,
+                    'placeholder': 'Ceritakan pengalaman Anda menggunakan produk ini',
+                    'required': True,
+                }
+            ),
+        }
+        labels = {
+            'rating': 'Rating',
+            'review': 'Ulasan',
+        }
+

@@ -23,6 +23,7 @@ urlpatterns = [
     # Order URLs
     path('orders/', views.order_list, name='order_list'),
     path('order/<str:order_number>/', views.order_detail, name='order_detail'),
+    path('order/<str:order_number>/item/<int:item_id>/testimonial/', views.submit_testimonial, name='submit_testimonial'),
 
     # Auth URLs
     path('register/', views.register_view, name='register'),
