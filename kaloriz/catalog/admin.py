@@ -32,6 +32,11 @@ class ProductAdmin(admin.ModelAdmin):
                 'is_fragile', 'is_perishable',
             )
         }),
+        ('Informasi Nutrisi', {
+            'fields': (
+                'calories', 'protein', 'fat', 'vitamins', 'fiber'
+            )
+        }),
         ('Media', {
             'fields': ('image',)
         }),
