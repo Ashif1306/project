@@ -4,6 +4,188 @@
 {% block title %}{{ product.name }} - Kaloriz{% endblock %}
 
 {% block content %}
+<style>
+  .info-card {
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    opacity: 0;
+    transform: translateY(24px);
+    animation: cardFadeUp 0.7s ease forwards;
+  }
+
+  .description-card {
+    animation-delay: 0.1s;
+  }
+
+  .nutrition-card {
+    animation-delay: 0.25s;
+  }
+
+  .info-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 28px 55px rgba(15, 23, 42, 0.12);
+  }
+
+  .info-card .card-title {
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: 0.3px;
+  }
+
+  .product-description {
+    line-height: 1.75;
+    color: #475569;
+    font-size: 0.95rem;
+  }
+
+  .nutrition-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .nutrition-item {
+    background: linear-gradient(135deg, rgba(15, 118, 255, 0.08), rgba(59, 130, 246, 0.02));
+    border-radius: 16px;
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: itemFadeUp 0.55s ease forwards;
+    animation-delay: calc(0.2s + var(--item-index, 0) * 0.08s);
+  }
+
+  .nutrition-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 30px rgba(37, 99, 235, 0.12);
+  }
+
+  .nutrition-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .nutrition-label {
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .nutrition-value {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .nutrition-progress {
+    height: 8px;
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .nutrition-progress-bar {
+    position: relative;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #38bdf8);
+    width: 0;
+    animation: growBar 0.9s ease forwards;
+    animation-delay: calc(0.28s + var(--item-index, 0) * 0.1s);
+  }
+
+  .nutrition-progress-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0));
+  }
+
+  .nutrition-item--vitamins {
+    background: rgba(248, 250, 252, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+  }
+
+  .nutrition-item--vitamins .nutrition-highlight {
+    position: absolute;
+    left: 18px;
+    bottom: 12px;
+    width: 120px;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #f59e0b, #f97316);
+    opacity: 0.75;
+  }
+
+  @keyframes cardFadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes itemFadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes growBar {
+    from {
+      width: 0;
+    }
+    to {
+      width: min(100%, var(--progress-width, 0%));
+    }
+  }
+
+  @media (max-width: 992px) {
+    .info-card {
+      border-radius: 16px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .info-card {
+      margin-bottom: 1.5rem;
+    }
+
+    .nutrition-item {
+      padding: 14px 16px;
+    }
+
+    .nutrition-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .info-card,
+    .nutrition-item,
+    .nutrition-progress-bar {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
 <div class="container my-5">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
