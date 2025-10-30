@@ -1159,3 +1159,137 @@ img {
     column-count: 1;
   }
 }
+
+.info-card {
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  animation: card-fade-up 0.6s ease both;
+  background-color: #ffffff;
+}
+
+.info-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 26px 55px rgba(15, 23, 42, 0.14);
+}
+
+.description-card {
+  animation-delay: 0.08s;
+}
+
+.nutrition-card {
+  animation-delay: 0.16s;
+}
+
+.nutrition-card .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.nutrition-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.nutrition-item {
+  position: relative;
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12));
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+  overflow: hidden;
+}
+
+.nutrition-item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: var(--progress-width, 0%);
+  background: linear-gradient(120deg, rgba(59, 130, 246, 0.18), rgba(16, 185, 129, 0.18));
+  opacity: 0.45;
+  pointer-events: none;
+  transition: width 0.6s ease;
+}
+
+.nutrition-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
+}
+
+.nutrition-item--vitamins {
+  background: rgba(251, 191, 36, 0.12);
+}
+
+.nutrition-item--vitamins::before {
+  display: none;
+}
+
+.nutrition-header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  z-index: 1;
+}
+
+.nutrition-label {
+  font-weight: 600;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.nutrition-value {
+  font-weight: 700;
+  color: #0b1120;
+}
+
+.nutrition-progress {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.35);
+  margin-top: 0.75rem;
+  z-index: 1;
+}
+
+.nutrition-progress-bar {
+  height: 100%;
+  width: var(--progress-width, 0%);
+  background: linear-gradient(90deg, #4f46e5, #06b6d4, #22c55e);
+  border-radius: inherit;
+  transition: width 0.6s ease;
+}
+
+@keyframes card-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .nutrition-item {
+    padding: 0.85rem 1rem;
+  }
+
+  .nutrition-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .nutrition-value {
+    font-size: 0.95rem;
+  }
+}
+

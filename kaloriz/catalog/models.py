@@ -64,6 +64,14 @@ class Product(models.Model):
         verbose_name="Lemak (g)",
         help_text="Jumlah lemak per porsi dalam gram (opsional)",
     )
+    carbohydrates = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Karbohidrat (g)",
+        help_text="Jumlah karbohidrat per porsi dalam gram (opsional)",
+    )
     vitamins = models.CharField(
         max_length=255,
         blank=True,
@@ -157,6 +165,7 @@ class Product(models.Model):
             self.calories,
             self.protein,
             self.fat,
+            self.carbohydrates,
             self.vitamins,
             self.fiber,
         ]
