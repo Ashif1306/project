@@ -129,7 +129,7 @@
           {% if product.has_nutrition_info %}
             <div class="nutrition-list">
               {% if product.calories is not None %}
-                <div class="nutrition-item">
+                <div class="nutrition-item" style="--item-index: 0;">
                   <div class="nutrition-header">
                     <span class="nutrition-label">Kalori</span>
                     <strong class="nutrition-value">{{ product.calories }} kcal</strong>
@@ -140,7 +140,7 @@
                 </div>
               {% endif %}
               {% if product.protein is not None %}
-                <div class="nutrition-item">
+                <div class="nutrition-item" style="--item-index: 1;">
                   <div class="nutrition-header">
                     <span class="nutrition-label">Protein</span>
                     <strong class="nutrition-value">{{ product.protein|floatformat:-2 }} g</strong>
@@ -151,7 +151,7 @@
                 </div>
               {% endif %}
               {% if product.fat is not None %}
-                <div class="nutrition-item">
+                <div class="nutrition-item" style="--item-index: 2;">
                   <div class="nutrition-header">
                     <span class="nutrition-label">Lemak</span>
                     <strong class="nutrition-value">{{ product.fat|floatformat:-2 }} g</strong>
@@ -162,7 +162,7 @@
                 </div>
               {% endif %}
               {% if product.carbohydrates is not None %}
-                <div class="nutrition-item">
+                <div class="nutrition-item" style="--item-index: 3;">
                   <div class="nutrition-header">
                     <span class="nutrition-label">Karbohidrat</span>
                     <strong class="nutrition-value">{{ product.carbohydrates|floatformat:-2 }} g</strong>
@@ -173,7 +173,7 @@
                 </div>
               {% endif %}
               {% if product.fiber is not None %}
-                <div class="nutrition-item">
+                <div class="nutrition-item" style="--item-index: 4;">
                   <div class="nutrition-header">
                     <span class="nutrition-label">Serat</span>
                     <strong class="nutrition-value">{{ product.fiber|floatformat:-2 }} g</strong>
@@ -184,9 +184,12 @@
                 </div>
               {% endif %}
               {% if product.vitamins %}
-                <div class="nutrition-item nutrition-item--vitamins">
-                  <span class="nutrition-label text-muted">Vitamin</span>
-                  <strong class="nutrition-value">{{ product.vitamins }}</strong>
+                <div class="nutrition-item nutrition-item--vitamins" style="--item-index: 5;">
+                  <div class="nutrition-header">
+                    <span class="nutrition-label text-muted">Vitamin</span>
+                    <strong class="nutrition-value">{{ product.vitamins }}</strong>
+                  </div>
+                  <div class="nutrition-highlight"></div>
                 </div>
               {% endif %}
             </div>
