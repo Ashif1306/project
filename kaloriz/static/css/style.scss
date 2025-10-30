@@ -911,46 +911,96 @@ a:focus {
 
 .info-card {
   border: none;
-  border-radius: 20px;
-  box-shadow: 0 20px 35px rgba(31, 41, 55, 0.08);
+  border-radius: 22px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
   transition: transform 0.4s ease, box-shadow 0.4s ease;
-  animation: fade-up 0.6s ease both;
+  animation: fade-up 0.7s ease both;
   background-color: $white;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.14), transparent 55%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
 
   &:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 24px 45px rgba(15, 23, 42, 0.12);
+    transform: translateY(-8px);
+    box-shadow: 0 32px 60px rgba(15, 23, 42, 0.18);
+
+    &::before {
+      opacity: 1;
+    }
   }
 }
 
 .description-card {
-  animation-delay: 0.05s;
+  animation-delay: 0.06s;
+
+  .product-description {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #374151;
+  }
 }
 
 .nutrition-card {
-  animation-delay: 0.12s;
+  animation-delay: 0.16s;
+
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
 }
 
 .nutrition-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.1rem;
 }
 
 .nutrition-item {
-  padding: 0.75rem 1rem;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(16, 185, 129, 0.08));
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  padding: 1rem 1.1rem 1.1rem;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(16, 185, 129, 0.05));
+  backdrop-filter: blur(0px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+  animation: fade-in-up 0.7s ease both;
+  animation-delay: calc(var(--item-index, 0) * 0.08s + 0.24s);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    pointer-events: none;
+  }
 
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 16px 25px rgba(15, 23, 42, 0.08);
+    transform: translateY(-6px);
+    box-shadow: 0 22px 35px rgba(30, 64, 175, 0.1);
   }
 }
 
 .nutrition-item--vitamins {
-  background: rgba(59, 130, 246, 0.08);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(147, 197, 253, 0.1));
+
+  .nutrition-highlight {
+    height: 4px;
+    border-radius: 999px;
+    margin-top: 0.85rem;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.75), rgba(14, 165, 233, 0.75));
+    animation: pulse-highlight 1.6s ease-in-out infinite;
+  }
 }
 
 .nutrition-header {
@@ -962,7 +1012,8 @@ a:focus {
 
 .nutrition-label {
   font-weight: 600;
-  color: #0f172a;
+  color: #1f2937;
+  letter-spacing: 0.01em;
 }
 
 .nutrition-value {
@@ -972,26 +1023,37 @@ a:focus {
 
 .nutrition-progress {
   position: relative;
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(148, 163, 184, 0.35);
-  margin-top: 0.6rem;
+  background: rgba(203, 213, 225, 0.6);
+  margin-top: 0.7rem;
 }
 
 .nutrition-progress-bar {
   position: absolute;
   inset: 0;
   width: var(--progress-width);
-  background: linear-gradient(90deg, #4f46e5, #06b6d4, #22c55e);
+  background: linear-gradient(90deg, #4f46e5, #6366f1, #14b8a6, #22c55e);
   border-radius: inherit;
-  animation: fill-progress 1.1s ease forwards;
+  animation: fill-progress 1.2s ease forwards;
 }
 
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(25px);
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -1008,18 +1070,34 @@ a:focus {
   }
 }
 
+@keyframes pulse-highlight {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .info-card {
+    border-radius: 18px;
+  }
+}
+
 @media (max-width: 767.98px) {
   .nutrition-item {
-    padding: 0.75rem 0.85rem;
+    padding: 0.9rem 0.9rem 1rem;
   }
 
   .nutrition-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.35rem;
+    gap: 0.4rem;
   }
 
   .nutrition-value {
-    font-size: 0.95rem;
+    font-size: 0.98rem;
   }
 }
