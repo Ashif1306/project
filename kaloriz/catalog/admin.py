@@ -34,7 +34,7 @@ class ProductAdmin(admin.ModelAdmin):
         }),
         ('Informasi Nutrisi', {
             'fields': (
-                'calories', 'protein', 'fat', 'vitamins', 'fiber'
+                'calories', 'protein', 'fat', 'carbohydrates', 'vitamins', 'fiber'
             )
         }),
         ('Media', {
