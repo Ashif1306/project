@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load price_filters %}
+{% load price_filters nutrition_tags %}
 
 {% block title %}{{ product.name }} - Kaloriz{% endblock %}
 
@@ -113,7 +113,7 @@
   <!-- Description & Nutrition Section -->
   <div class="row mt-5">
     <div class="col-lg-7 mb-4 mb-lg-0">
-      <div class="card shadow-sm h-100">
+      <div class="card shadow-sm h-100 info-card description-card">
         <div class="card-body">
           <h4 class="card-title mb-3">Deskripsi Produk</h4>
           <div class="product-description">
@@ -123,42 +123,73 @@
       </div>
     </div>
     <div class="col-lg-5">
-      <div class="card shadow-sm h-100">
+      <div class="card shadow-sm h-100 info-card nutrition-card">
         <div class="card-body">
           <h4 class="card-title mb-3">Nutrisi</h4>
           {% if product.has_nutrition_info %}
-            <ul class="list-unstyled mb-0">
+            <div class="nutrition-list">
               {% if product.calories is not None %}
-                <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                  <span>Kalori</span>
-                  <strong>{{ product.calories }} kcal</strong>
-                </li>
+                <div class="nutrition-item">
+                  <div class="nutrition-header">
+                    <span class="nutrition-label">Kalori</span>
+                    <strong class="nutrition-value">{{ product.calories }} kcal</strong>
+                  </div>
+                  <div class="nutrition-progress">
+                    <div class="nutrition-progress-bar" style="--progress-width: {{ product.calories|nutrition_percent:600 }}%;"></div>
+                  </div>
+                </div>
               {% endif %}
               {% if product.protein is not None %}
-                <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                  <span>Protein</span>
-                  <strong>{{ product.protein|floatformat:-2 }} g</strong>
-                </li>
+                <div class="nutrition-item">
+                  <div class="nutrition-header">
+                    <span class="nutrition-label">Protein</span>
+                    <strong class="nutrition-value">{{ product.protein|floatformat:-2 }} g</strong>
+                  </div>
+                  <div class="nutrition-progress">
+                    <div class="nutrition-progress-bar" style="--progress-width: {{ product.protein|nutrition_percent:40 }}%;"></div>
+                  </div>
+                </div>
               {% endif %}
               {% if product.fat is not None %}
-                <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                  <span>Lemak</span>
-                  <strong>{{ product.fat|floatformat:-2 }} g</strong>
-                </li>
+                <div class="nutrition-item">
+                  <div class="nutrition-header">
+                    <span class="nutrition-label">Lemak</span>
+                    <strong class="nutrition-value">{{ product.fat|floatformat:-2 }} g</strong>
+                  </div>
+                  <div class="nutrition-progress">
+                    <div class="nutrition-progress-bar" style="--progress-width: {{ product.fat|nutrition_percent:30 }}%;"></div>
+                  </div>
+                </div>
+              {% endif %}
+              {% if product.carbohydrates is not None %}
+                <div class="nutrition-item">
+                  <div class="nutrition-header">
+                    <span class="nutrition-label">Karbohidrat</span>
+                    <strong class="nutrition-value">{{ product.carbohydrates|floatformat:-2 }} g</strong>
+                  </div>
+                  <div class="nutrition-progress">
+                    <div class="nutrition-progress-bar" style="--progress-width: {{ product.carbohydrates|nutrition_percent:80 }}%;"></div>
+                  </div>
+                </div>
               {% endif %}
               {% if product.fiber is not None %}
-                <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                  <span>Serat</span>
-                  <strong>{{ product.fiber|floatformat:-2 }} g</strong>
-                </li>
+                <div class="nutrition-item">
+                  <div class="nutrition-header">
+                    <span class="nutrition-label">Serat</span>
+                    <strong class="nutrition-value">{{ product.fiber|floatformat:-2 }} g</strong>
+                  </div>
+                  <div class="nutrition-progress">
+                    <div class="nutrition-progress-bar" style="--progress-width: {{ product.fiber|nutrition_percent:25 }}%;"></div>
+                  </div>
+                </div>
               {% endif %}
               {% if product.vitamins %}
-                <li class="py-2">
-                  <span class="d-block text-muted mb-1">Vitamin</span>
-                  <strong>{{ product.vitamins }}</strong>
-                </li>
+                <div class="nutrition-item nutrition-item--vitamins">
+                  <span class="nutrition-label text-muted">Vitamin</span>
+                  <strong class="nutrition-value">{{ product.vitamins }}</strong>
+                </div>
               {% endif %}
-            </ul>
+            </div>
           {% else %}
             <p class="text-muted mb-0">Informasi nutrisi belum tersedia.</p>
           {% endif %}
