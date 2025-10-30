@@ -107,10 +107,62 @@
         </a>
       {% endif %}
 
-      <!-- Description - Moved below buttons -->
-      <div class="mt-5 mb-4">
-        <h5>Deskripsi Produk</h5>
-        <p>{{ product.description|linebreaks }}</p>
+    </div>
+  </div>
+
+  <!-- Description & Nutrition Section -->
+  <div class="row mt-5">
+    <div class="col-lg-7 mb-4 mb-lg-0">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h4 class="card-title mb-3">Deskripsi Produk</h4>
+          <div class="product-description">
+            {{ product.description|linebreaks }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h4 class="card-title mb-3">Nutrisi</h4>
+          {% if product.has_nutrition_info %}
+            <ul class="list-unstyled mb-0">
+              {% if product.calories is not None %}
+                <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                  <span>Kalori</span>
+                  <strong>{{ product.calories }} kcal</strong>
+                </li>
+              {% endif %}
+              {% if product.protein is not None %}
+                <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                  <span>Protein</span>
+                  <strong>{{ product.protein|floatformat:-2 }} g</strong>
+                </li>
+              {% endif %}
+              {% if product.fat is not None %}
+                <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                  <span>Lemak</span>
+                  <strong>{{ product.fat|floatformat:-2 }} g</strong>
+                </li>
+              {% endif %}
+              {% if product.fiber is not None %}
+                <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                  <span>Serat</span>
+                  <strong>{{ product.fiber|floatformat:-2 }} g</strong>
+                </li>
+              {% endif %}
+              {% if product.vitamins %}
+                <li class="py-2">
+                  <span class="d-block text-muted mb-1">Vitamin</span>
+                  <strong>{{ product.vitamins }}</strong>
+                </li>
+              {% endif %}
+            </ul>
+          {% else %}
+            <p class="text-muted mb-0">Informasi nutrisi belum tersedia.</p>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>

@@ -41,6 +41,44 @@ class Product(models.Model):
     stock = models.PositiveIntegerField(default=0, verbose_name="Stok")
     available = models.BooleanField(default=True, verbose_name="Tersedia")
 
+    # === INFORMASI NUTRISI ===
+    calories = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Kalori (kcal)",
+        help_text="Total kalori per porsi (opsional)",
+    )
+    protein = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Protein (g)",
+        help_text="Jumlah protein per porsi dalam gram (opsional)",
+    )
+    fat = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Lemak (g)",
+        help_text="Jumlah lemak per porsi dalam gram (opsional)",
+    )
+    vitamins = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Vitamin",
+        help_text="Daftar vitamin utama (opsional)",
+    )
+    fiber = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Serat (g)",
+        help_text="Jumlah serat per porsi dalam gram (opsional)",
+    )
+
     # === FIELD PENGIRIMAN ===
     weight_gram = models.PositiveIntegerField(
         default=1000,
@@ -112,6 +150,17 @@ class Product(models.Model):
         if self.is_on_sale():
             return int(((self.price - self.discount_price) / self.price) * 100)
         return 0
+
+    def has_nutrition_info(self):
+        """Return True if at least one nutrition field contains a value."""
+        nutrition_fields = [
+            self.calories,
+            self.protein,
+            self.fat,
+            self.vitamins,
+            self.fiber,
+        ]
+        return any(value not in (None, "") for value in nutrition_fields)
 
 
 class Testimonial(models.Model):
