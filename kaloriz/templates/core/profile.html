@@ -62,6 +62,17 @@
             </div>
           </div>
 
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="font-weight-bold">Pekerjaan:</label>
+              <p>{{ profile.occupation|default:"-" }}</p>
+            </div>
+            <div class="col-md-6">
+              <label class="font-weight-bold">Informasi Tambahan:</label>
+              <p>{{ profile.additional_info|default:"-" }}</p>
+            </div>
+          </div>
+
           <hr>
 
           <div class="text-right">
@@ -206,6 +217,104 @@
     </div>
   </div>
 </div>
+
+<!-- Lengkapi Profil Modal -->
+<div class="modal fade" id="completeProfileModal" tabindex="-1" role="dialog" aria-labelledby="completeProfileModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="completeProfileModalLabel"><i class="fas fa-user-edit mr-2"></i>Lengkapi Profil Anda</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="complete_profile" value="1">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label for="full_name">Nama Lengkap</label>
+              <input type="text" class="form-control" id="full_name" name="full_name"
+                     placeholder="Nama lengkap sesuai identitas"
+                     value="{{ request.POST.full_name|default:user.get_full_name|default:user.first_name|default:user.username }}">
+            </div>
+            <div class="form-group col-md-6">
+              <label for="phone">Nomor Telepon</label>
+              <input type="text" class="form-control" id="phone" name="phone" placeholder="08xxxxxxxxxx"
+                     value="{{ request.POST.phone|default:profile.phone }}">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label for="gender">Jenis Kelamin</label>
+              <select class="form-control" id="gender" name="gender">
+                <option value="" {% if request.POST.gender == '' %}selected{% elif not request.POST.gender and not profile.gender %}selected{% endif %}>Pilih salah satu</option>
+                {% with selected_value=request.POST.gender|default:profile.gender %}
+                  {% for value, label in profile.GENDER_CHOICES %}
+                    <option value="{{ value }}" {% if selected_value == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                {% endwith %}
+              </select>
+            </div>
+            <div class="form-group col-md-6">
+              <label for="birth_date">Tanggal Lahir</label>
+              <input type="date" class="form-control" id="birth_date" name="birth_date"
+                     value="{{ request.POST.birth_date|default:profile.birth_date|date:'Y-m-d' }}">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label for="occupation">Pekerjaan</label>
+              <input type="text" class="form-control" id="occupation" name="occupation" placeholder="Pekerjaan saat ini"
+                     value="{{ request.POST.occupation|default:profile.occupation }}">
+            </div>
+            <div class="form-group col-md-6">
+              <label for="photo">Foto Profil</label>
+              <div class="custom-file">
+                <input type="file" class="custom-file-input" id="photo" name="photo" accept="image/*">
+                <label class="custom-file-label" for="photo">Pilih foto (jpg/png)</label>
+              </div>
+              <small class="form-text text-muted">Ukuran maksimal 2MB.</small>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="additional_info">Informasi Tambahan</label>
+            <textarea class="form-control" id="additional_info" name="additional_info" rows="3"
+                      placeholder="Contoh: minat belanja, preferensi merk, dll">{{ request.POST.additional_info|default:profile.additional_info }}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-2"></i>Simpan dan Mulai Belanja</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    {% if show_completion_modal %}
+      $('#completeProfileModal').modal('show');
+    {% endif %}
+
+    $('#completeProfileModal').on('shown.bs.modal', function () {
+      const fileInput = document.getElementById('photo');
+      if (fileInput) {
+        fileInput.addEventListener('change', function () {
+          const fileName = this.files && this.files.length ? this.files[0].name : '';
+          const label = this.nextElementSibling;
+          if (label && fileName) {
+            label.textContent = fileName;
+          }
+        });
+      }
+    });
+  });
+</script>
 
 <!-- Add Address Modal -->
 <div class="modal fade" id="addAddressModal" tabindex="-1">
