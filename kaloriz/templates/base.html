@@ -110,14 +110,19 @@
 
   /* Modern Minimalist Navbar */
   .modern-navbar {
-    background: linear-gradient(135deg, #faf9f7 0%, #fff8f0 100%);
-    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+    --navbar-link-color: #1f2937;
+    --navbar-icon-color: #1f2937;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    box-shadow: none;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 1000;
-    padding: 15px 0;
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+    transition: background 0.4s ease, box-shadow 0.4s ease, padding 0.4s ease, transform 0.4s ease;
   }
 
   .navbar-content {
@@ -125,6 +130,26 @@
     align-items: center;
     justify-content: space-between;
     position: relative;
+  }
+
+  .modern-navbar.scrolled {
+    --navbar-link-color: #ffffff;
+    --navbar-icon-color: #ffffff;
+    background: linear-gradient(135deg, #38b6ff 0%, #74d2ff 100%);
+    box-shadow: 0 6px 20px rgba(56, 182, 255, 0.25);
+    border-bottom: none;
+    padding: 12px 0;
+    animation: navbarSlideDown 0.45s ease forwards;
+  }
+
+  @keyframes navbarSlideDown {
+    from {
+      transform: translateY(-100%);
+    }
+
+    to {
+      transform: translateY(0);
+    }
   }
 
   /* Left Menu */
@@ -135,7 +160,7 @@
   }
 
   .nav-link-modern {
-    color: #2d3748;
+    color: var(--navbar-link-color);
     text-decoration: none;
     font-weight: 500;
     font-size: 0.95rem;
@@ -145,7 +170,7 @@
   }
 
   .nav-link-modern:hover {
-    color: #667eea;
+    color: #1a8cd8;
   }
 
   .nav-link-modern::after {
@@ -155,8 +180,16 @@
     left: 0;
     width: 0;
     height: 2px;
-    background: #667eea;
+    background: #38b6ff;
     transition: width 0.3s ease;
+  }
+
+  .modern-navbar.scrolled .nav-link-modern::after {
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .modern-navbar.scrolled .nav-link-modern:hover {
+    color: #e9f7ff;
   }
 
   .nav-link-modern:hover::after {
@@ -189,7 +222,7 @@
   }
 
   .nav-icon {
-    color: #2d3748;
+    color: var(--navbar-icon-color);
     font-size: 1.2rem;
     text-decoration: none;
     transition: all 0.3s ease;
@@ -198,8 +231,12 @@
   }
 
   .nav-icon:hover {
-    color: #667eea;
+    color: #1a8cd8;
     transform: scale(1.1);
+  }
+
+  .modern-navbar.scrolled .nav-icon:hover {
+    color: #e9f7ff;
   }
 
   .icon-badge {
@@ -224,7 +261,7 @@
   .search-form {
     display: flex;
     align-items: center;
-    background: white;
+    background: rgba(255,255,255,0.85);
     border-radius: 25px;
     padding: 5px 10px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -242,12 +279,17 @@
     font-size: 0.9rem;
     width: 180px;
     background: transparent;
+    color: #1f2937;
+  }
+
+  .search-input::placeholder {
+    color: rgba(31, 41, 55, 0.6);
   }
 
   .search-btn {
     background: none;
     border: none;
-    color: #667eea;
+    color: #38b6ff;
     cursor: pointer;
     font-size: 1rem;
     padding: 0 5px;
@@ -258,13 +300,34 @@
     transform: scale(1.1);
   }
 
+  .modern-navbar.scrolled .search-form {
+    background: rgba(255, 255, 255, 0.18);
+    box-shadow: none;
+  }
+
+  .modern-navbar.scrolled .search-form:focus-within {
+    box-shadow: 0 6px 18px rgba(21, 101, 192, 0.25);
+  }
+
+  .modern-navbar.scrolled .search-input {
+    color: #ffffff;
+  }
+
+  .modern-navbar.scrolled .search-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .modern-navbar.scrolled .search-btn {
+    color: #ffffff;
+  }
+
   /* Mobile Toggle */
   .mobile-toggle {
     display: none;
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: #2d3748;
+    color: var(--navbar-icon-color);
     cursor: pointer;
   }
 
@@ -562,9 +625,23 @@
       root.style.setProperty('--header-h', `${height}px`);
     }
 
+    function handleScroll() {
+      const scrollThreshold = 60;
+
+      if (window.scrollY > scrollThreshold) {
+        if (!header.classList.contains('scrolled')) {
+          header.classList.add('scrolled');
+        }
+      } else if (header.classList.contains('scrolled')) {
+        header.classList.remove('scrolled');
+      }
+    }
+
     updateHeaderHeight();
+    handleScroll();
     window.addEventListener('load', updateHeaderHeight);
     window.addEventListener('resize', updateHeaderHeight);
+    window.addEventListener('scroll', handleScroll, { passive: true });
   })();
   </script>
 
