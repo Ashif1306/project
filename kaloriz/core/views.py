@@ -726,8 +726,6 @@ def order_list(request):
     orders = Order.objects.filter(user=request.user)
     context = {
         'orders': orders,
-        'profile': UserProfile.objects.get_or_create(user=request.user)[0],
-        'active_tab': 'orders',
     }
     return render(request, 'core/order_list.html', context)
 
@@ -1026,7 +1024,6 @@ def profile_view(request):
         'user': request.user,
         'user_addresses': user_addresses,
         'districts': districts,
-        'active_tab': 'profile',
     }
     return render(request, 'core/profile.html', context)
 
@@ -1074,7 +1071,6 @@ def profile_settings(request):
     context = {
         'profile': profile,
         'user': request.user,
-        'active_tab': 'profile',
     }
     return render(request, 'core/profile_settings.html', context)
 
@@ -1157,27 +1153,8 @@ def watchlist_view(request):
 
     context = {
         'watchlist_items': watchlist_items,
-        'profile': UserProfile.objects.get_or_create(user=request.user)[0],
-        'active_tab': 'watchlist',
     }
     return render(request, 'core/watchlist.html', context)
-
-
-@login_required
-def notifications_view(request):
-    """Display user notifications"""
-    profile, _ = UserProfile.objects.get_or_create(user=request.user)
-
-    notifications = []
-    if hasattr(request.user, 'notifications'):
-        notifications = list(request.user.notifications.all())
-
-    context = {
-        'profile': profile,
-        'notifications': notifications,
-        'active_tab': 'notifications',
-    }
-    return render(request, 'core/notifications.html', context)
 
 
 @login_required
