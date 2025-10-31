@@ -1,342 +1,119 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}Register - Kaloriz{% endblock %}
 
-{% block navbar %}{% endblock %}
-
-{% block global_messages %}{% endblock %}
-
-{% block extra_head %}
-<style>
-  :root {
-    --header-h: 0px;
-  }
-
-  body {
-    background: linear-gradient(160deg, #f5f9ff 0%, #ffffff 45%, #eef6ff 100%);
-  }
-
-  main {
-    padding-top: 0;
-  }
-
-  .auth-wrapper {
-    min-height: calc(100vh - 40px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-  }
-
-  .auth-card {
-    width: 100%;
-    max-width: 1150px;
-    background: #ffffff;
-    border-radius: 28px;
-    box-shadow: 0 24px 60px rgba(56, 182, 255, 0.18);
-    overflow: hidden;
-  }
-
-  .auth-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .auth-form {
-    padding: 50px 70px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .auth-form h1 {
-    font-size: 2.15rem;
-    font-weight: 700;
-    color: #1e3a8a;
-    margin-bottom: 12px;
-  }
-
-  .auth-form p {
-    color: #64748b;
-    margin-bottom: 30px;
-  }
-
-  .auth-form .form-group {
-    margin-bottom: 20px;
-  }
-
-  .auth-form .form-control {
-    width: 100%;
-    padding: 16px 18px;
-    border-radius: 14px;
-    border: 1px solid #dbeafe;
-    background: #f8fbff;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-    font-size: 1rem;
-    color: #1f2937;
-  }
-
-  .auth-form .form-control:focus {
-    outline: none;
-    border-color: #38b6ff;
-    box-shadow: 0 0 0 4px rgba(56, 182, 255, 0.15);
-    background: #ffffff;
-  }
-
-  .auth-label {
-    font-weight: 600;
-    color: #1f2937;
-    display: block;
-    margin-bottom: 8px;
-  }
-
-  .help-text {
-    color: #94a3b8;
-    font-size: 0.85rem;
-    margin-top: 6px;
-  }
-
-  .text-danger.small {
-    margin-top: 6px;
-  }
-
-  .auth-button {
-    width: 100%;
-    padding: 16px;
-    border: none;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #38b6ff, #1d4ed8);
-    color: #ffffff;
-    font-size: 1.05rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    margin-top: 12px;
-  }
-
-  .auth-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 35px rgba(29, 78, 216, 0.25);
-  }
-
-  .auth-illustration {
-    background: linear-gradient(155deg, rgba(56, 182, 255, 0.12), rgba(29, 78, 216, 0.05));
-    padding: 60px 50px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    position: relative;
-  }
-
-  .auth-illustration::before {
-    content: '';
-    position: absolute;
-    inset: 20px;
-    border-radius: 28px;
-    background: linear-gradient(135deg, rgba(56, 182, 255, 0.25), rgba(29, 78, 216, 0.2));
-    filter: blur(60px);
-    opacity: 0.6;
-  }
-
-  .auth-illustration-content {
-    position: relative;
-    z-index: 1;
-    text-align: center;
-    color: #1e293b;
-  }
-
-  .auth-illustration img {
-    max-width: 340px;
-    width: 100%;
-    margin: 0 auto 30px;
-  }
-
-  .auth-illustration h3 {
-    font-size: 1.7rem;
-    font-weight: 700;
-    margin-bottom: 12px;
-  }
-
-  .auth-illustration ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    color: #475569;
-    text-align: left;
-    max-width: 360px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .auth-illustration li {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 16px;
-    align-items: flex-start;
-  }
-
-  .auth-illustration li i {
-    color: #1d4ed8;
-    font-size: 1.15rem;
-    margin-top: 4px;
-  }
-
-  .auth-footer {
-    margin-top: 30px;
-    text-align: center;
-    color: #64748b;
-  }
-
-  .auth-footer a {
-    color: #1d4ed8;
-    font-weight: 600;
-  }
-
-  .form-check {
-    background: #f8fbff;
-    padding: 14px 18px;
-    border-radius: 14px;
-    border: 1px solid #dbeafe;
-  }
-
-  .form-check-input {
-    width: 18px;
-    height: 18px;
-    margin-top: 0.2rem;
-    accent-color: #38b6ff;
-  }
-
-  .rounded-xl {
-    border-radius: 24px;
-  }
-
-  @media (max-width: 992px) {
-    .auth-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .auth-form,
-    .auth-illustration {
-      padding: 40px 30px;
-    }
-
-    .auth-illustration {
-      order: -1;
-    }
-  }
-
-  @media (max-width: 576px) {
-    .auth-form {
-      padding: 32px 24px;
-    }
-
-    .auth-wrapper {
-      padding: 24px 16px;
-    }
-  }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="auth-wrapper">
-  <div class="auth-card">
-    <div class="auth-grid">
-      <div class="auth-form">
-        {% if messages %}
-          {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} mb-3" role="alert">{{ message }}</div>
-          {% endfor %}
-        {% endif %}
-        <h1>Buat Akun Kaloriz</h1>
-        <p>Lengkapi informasi berikut untuk menikmati pengalaman belanja yang lebih personal dan aman.</p>
-        <form method="post" novalidate>
-          {% csrf_token %}
-
-          {% if form.non_field_errors %}
-            <div class="alert alert-danger mb-3">
-              {{ form.non_field_errors }}
-            </div>
-          {% endif %}
-
-          <div class="form-group">
-            <label class="auth-label" for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }} <span class="text-danger">*</span></label>
-            {{ form.first_name }}
-            {% if form.first_name.errors %}
-              <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
-            {% endif %}
-          </div>
-
-          <div class="form-group">
-            <label class="auth-label" for="{{ form.email.id_for_label }}">{{ form.email.label }} <span class="text-danger">*</span></label>
-            {{ form.email }}
-            <small class="help-text">Email akan digunakan untuk login dan verifikasi.</small>
-            {% if form.email.errors %}
-              <div class="text-danger small">{{ form.email.errors.0 }}</div>
-            {% endif %}
-          </div>
-
-          <div class="form-group">
-            <label class="auth-label" for="{{ form.phone.id_for_label }}">{{ form.phone.label }} <span class="text-danger">*</span></label>
-            {{ form.phone }}
-            {% if form.phone.errors %}
-              <div class="text-danger small">{{ form.phone.errors.0 }}</div>
-            {% endif %}
-          </div>
-
-          <div class="form-group">
-            <label class="auth-label" for="{{ form.birth_date.id_for_label }}">{{ form.birth_date.label }} <span class="text-danger">*</span></label>
-            {{ form.birth_date }}
-            {% if form.birth_date.errors %}
-              <div class="text-danger small">{{ form.birth_date.errors.0 }}</div>
-            {% endif %}
-          </div>
-
-          <div class="form-group">
-            <label class="auth-label" for="{{ form.password1.id_for_label }}">{{ form.password1.label }} <span class="text-danger">*</span></label>
-            {{ form.password1 }}
-            <small class="help-text">Password harus minimal 8 karakter dan tidak boleh terlalu umum.</small>
-            {% if form.password1.errors %}
-              <div class="text-danger small">{{ form.password1.errors.0 }}</div>
-            {% endif %}
-          </div>
-
-          <div class="form-group">
-            <label class="auth-label" for="{{ form.password2.id_for_label }}">{{ form.password2.label }} <span class="text-danger">*</span></label>
-            {{ form.password2 }}
-            {% if form.password2.errors %}
-              <div class="text-danger small">{{ form.password2.errors.0 }}</div>
-            {% endif %}
-          </div>
-
-          <div class="form-group">
-            <div class="form-check">
-              {{ form.agree_to_terms }}
-              <label class="form-check-label ml-2" for="{{ form.agree_to_terms.id_for_label }}">
-                {{ form.agree_to_terms.label }} <span class="text-danger">*</span>
-                <a href="#" data-toggle="modal" data-target="#termsModal">(Baca Syarat dan Ketentuan)</a>
-              </label>
-            </div>
-            {% if form.agree_to_terms.errors %}
-              <div class="text-danger small mt-2">{{ form.agree_to_terms.errors.0 }}</div>
-            {% endif %}
-          </div>
-
-          <button type="submit" class="auth-button"><i class="fas fa-user-plus mr-2"></i>Daftar Sekarang</button>
-        </form>
-        <div class="auth-footer">
-          Sudah punya akun? <a href="{% url 'core:login' %}">Login di sini</a>
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow">
+        <div class="card-header bg-success text-white text-center">
+          <h4 class="mb-0"><i class="fas fa-user-plus"></i> Daftar Akun Baru</h4>
         </div>
-      </div>
-      <div class="auth-illustration">
-        <div class="auth-illustration-content">
-          <img src="{% static 'images/banner.jpg' %}" alt="Daftar di Kaloriz" class="img-fluid rounded-xl">
-          <h3>Bergabung dan nikmati manfaat eksklusif</h3>
-          <ul>
-            <li><i class="fas fa-shield-check"></i><span>Keamanan transaksi terjamin dengan verifikasi email dan sistem enkripsi modern.</span></li>
-            <li><i class="fas fa-gift"></i><span>Dapatkan penawaran spesial dan rekomendasi produk sesuai preferensi Anda.</span></li>
-            <li><i class="fas fa-truck"></i><span>Lacak pesanan Anda secara real-time hingga sampai di depan rumah.</span></li>
-          </ul>
+        <div class="card-body p-4">
+          <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+
+            <!-- Nama Lengkap -->
+            <div class="form-group">
+              <label for="{{ form.first_name.id_for_label }}">
+                {{ form.first_name.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}
+                <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+              <label for="{{ form.email.id_for_label }}">
+                {{ form.email.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="text-danger small">{{ form.email.errors.0 }}</div>
+              {% endif %}
+              <small class="form-text text-muted">Email akan digunakan untuk login dan verifikasi.</small>
+            </div>
+
+            <!-- Nomor Telepon -->
+            <div class="form-group">
+              <label for="{{ form.phone.id_for_label }}">
+                {{ form.phone.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.phone }}
+              {% if form.phone.errors %}
+                <div class="text-danger small">{{ form.phone.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Tanggal Lahir -->
+            <div class="form-group">
+              <label for="{{ form.birth_date.id_for_label }}">
+                {{ form.birth_date.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.birth_date }}
+              {% if form.birth_date.errors %}
+                <div class="text-danger small">{{ form.birth_date.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+              <label for="{{ form.password1.id_for_label }}">
+                {{ form.password1.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.password1 }}
+              {% if form.password1.errors %}
+                <div class="text-danger small">{{ form.password1.errors.0 }}</div>
+              {% endif %}
+              <small class="form-text text-muted">
+                Password harus minimal 8 karakter dan tidak boleh terlalu umum.
+              </small>
+            </div>
+
+            <!-- Konfirmasi Password -->
+            <div class="form-group">
+              <label for="{{ form.password2.id_for_label }}">
+                {{ form.password2.label }} <span class="text-danger">*</span>
+              </label>
+              {{ form.password2 }}
+              {% if form.password2.errors %}
+                <div class="text-danger small">{{ form.password2.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Terms and Conditions -->
+            <div class="form-group">
+              <div class="form-check">
+                {{ form.agree_to_terms }}
+                <label class="form-check-label" for="{{ form.agree_to_terms.id_for_label }}">
+                  {{ form.agree_to_terms.label }} <span class="text-danger">*</span>
+                  <a href="#" data-toggle="modal" data-target="#termsModal">(Baca Syarat dan Ketentuan)</a>
+                </label>
+                {% if form.agree_to_terms.errors %}
+                  <div class="text-danger small">{{ form.agree_to_terms.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-success btn-block btn-lg mt-4">
+              <i class="fas fa-user-plus"></i> Daftar Sekarang
+            </button>
+          </form>
+
+          <hr>
+
+          <div class="text-center">
+            <p class="mb-0">Sudah punya akun? <a href="{% url 'core:login' %}">Login di sini</a></p>
+          </div>
         </div>
       </div>
     </div>

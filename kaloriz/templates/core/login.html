@@ -1,287 +1,53 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}Login - Kaloriz{% endblock %}
 
-{% block navbar %}{% endblock %}
-
-{% block global_messages %}{% endblock %}
-
-{% block extra_head %}
-<style>
-  :root {
-    --header-h: 0px;
-  }
-
-  body {
-    background: linear-gradient(160deg, #f5f9ff 0%, #ffffff 45%, #eef6ff 100%);
-  }
-
-  main {
-    padding-top: 0;
-  }
-
-  .auth-wrapper {
-    min-height: calc(100vh - 40px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-  }
-
-  .auth-card {
-    width: 100%;
-    max-width: 1100px;
-    background: #ffffff;
-    border-radius: 28px;
-    box-shadow: 0 24px 60px rgba(56, 182, 255, 0.18);
-    overflow: hidden;
-  }
-
-  .auth-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .auth-form {
-    padding: 60px 70px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .auth-form h1 {
-    font-size: 2.25rem;
-    font-weight: 700;
-    color: #1e3a8a;
-    margin-bottom: 12px;
-  }
-
-  .auth-form p {
-    color: #64748b;
-    margin-bottom: 32px;
-  }
-
-  .auth-input {
-    width: 100%;
-    padding: 16px 18px;
-    border-radius: 14px;
-    border: 1px solid #dbeafe;
-    background: #f8fbff;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-    font-size: 1rem;
-    color: #1f2937;
-  }
-
-  .auth-input:focus {
-    outline: none;
-    border-color: #38b6ff;
-    box-shadow: 0 0 0 4px rgba(56, 182, 255, 0.15);
-    background: #ffffff;
-  }
-
-  .auth-label {
-    font-weight: 600;
-    color: #1f2937;
-    display: block;
-    margin-bottom: 8px;
-  }
-
-  .auth-action-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 18px 0 30px;
-  }
-
-  .auth-checkbox {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.95rem;
-    color: #475569;
-    cursor: pointer;
-  }
-
-  .auth-checkbox input {
-    width: 18px;
-    height: 18px;
-    accent-color: #38b6ff;
-  }
-
-  .forgot-link {
-    font-weight: 600;
-    color: #38b6ff;
-    text-decoration: none;
-  }
-
-  .forgot-link:hover {
-    text-decoration: underline;
-  }
-
-  .auth-button {
-    width: 100%;
-    padding: 16px;
-    border: none;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #38b6ff, #1d4ed8);
-    color: #ffffff;
-    font-size: 1.05rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .auth-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 35px rgba(29, 78, 216, 0.25);
-  }
-
-  .auth-footer {
-    margin-top: 28px;
-    text-align: center;
-    color: #64748b;
-  }
-
-  .auth-footer a {
-    color: #1d4ed8;
-    font-weight: 600;
-  }
-
-  .auth-illustration {
-    background: linear-gradient(155deg, rgba(56, 182, 255, 0.12), rgba(29, 78, 216, 0.05));
-    padding: 60px 50px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    position: relative;
-  }
-
-  .auth-illustration::before {
-    content: '';
-    position: absolute;
-    inset: 20px;
-    border-radius: 28px;
-    background: linear-gradient(135deg, rgba(56, 182, 255, 0.25), rgba(29, 78, 216, 0.2));
-    filter: blur(60px);
-    opacity: 0.6;
-  }
-
-  .auth-illustration-content {
-    position: relative;
-    z-index: 1;
-    text-align: center;
-    color: #1e293b;
-  }
-
-  .auth-illustration img {
-    max-width: 320px;
-    width: 100%;
-    margin: 0 auto 30px;
-  }
-
-  .rounded-xl {
-    border-radius: 24px;
-  }
-
-  .auth-illustration h3 {
-    font-size: 1.6rem;
-    font-weight: 700;
-    margin-bottom: 14px;
-  }
-
-  .auth-illustration p {
-    color: #475569;
-    font-size: 1rem;
-    line-height: 1.6;
-  }
-
-  .message-container {
-    margin-bottom: 20px;
-  }
-
-  @media (max-width: 992px) {
-    .auth-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .auth-form,
-    .auth-illustration {
-      padding: 40px 30px;
-    }
-
-    .auth-illustration {
-      order: -1;
-    }
-  }
-
-  @media (max-width: 576px) {
-    .auth-form {
-      padding: 32px 24px;
-    }
-
-    .auth-form h1 {
-      font-size: 1.8rem;
-    }
-
-    .auth-action-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 16px;
-    }
-
-    .auth-wrapper {
-      padding: 24px 16px;
-    }
-  }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="auth-wrapper">
-  <div class="auth-card">
-    <div class="auth-grid">
-      <div class="auth-form">
-        <div class="message-container">
-          {% if messages %}
-            {% for message in messages %}
-              <div class="alert alert-{{ message.tags }} mb-3" role="alert">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white text-center">
+          <h4 class="mb-0"><i class="fas fa-sign-in-alt"></i> Login</h4>
         </div>
-        <h1>Selamat Datang Kembali</h1>
-        <p>Masuk untuk melanjutkan belanja Anda dengan pengalaman yang lebih personal.</p>
-        <form method="post" novalidate>
-          {% csrf_token %}
-          <div class="form-group mb-4">
-            <label class="auth-label" for="username">Email atau Username</label>
-            <input type="text" id="username" name="username" class="auth-input"
-                   placeholder="contoh@email.com"
-                   value="{{ request.POST.username|default:'' }}" required>
+        <div class="card-body p-4">
+          <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+
+            <div class="form-group">
+              <label for="{{ form.username.id_for_label }}">Username</label>
+              <input type="text" class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                     id="{{ form.username.id_for_label }}" name="username" required>
+              {% if form.username.errors %}
+                <div class="invalid-feedback">{{ form.username.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.password.id_for_label }}">Password</label>
+              <input type="password" class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+                     id="{{ form.password.id_for_label }}" name="password" required>
+              {% if form.password.errors %}
+                <div class="invalid-feedback">{{ form.password.errors }}</div>
+              {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block btn-lg">
+              <i class="fas fa-sign-in-alt"></i> Login
+            </button>
+          </form>
+
+          <hr>
+
+          <div class="text-center">
+            <p class="mb-0">Belum punya akun? <a href="{% url 'core:register' %}">Daftar di sini</a></p>
           </div>
-          <div class="form-group mb-2">
-            <label class="auth-label" for="password">Password</label>
-            <input type="password" id="password" name="password" class="auth-input"
-                   placeholder="Masukkan password" required>
-          </div>
-          <div class="auth-action-row">
-            <label class="auth-checkbox">
-              <input type="checkbox" name="remember_me" {% if request.POST.remember_me %}checked{% endif %}>
-              Remember me
-            </label>
-            <a href="#" class="forgot-link">Forgot password?</a>
-          </div>
-          <button type="submit" class="auth-button">Login</button>
-        </form>
-        <div class="auth-footer">
-          Belum punya akun? <a href="{% url 'core:register' %}">Buat akun sekarang</a>
-        </div>
-      </div>
-      <div class="auth-illustration">
-        <div class="auth-illustration-content">
-          <img src="{% static 'images/banner.jpg' %}" alt="Belanja di Kaloriz" class="img-fluid rounded-xl">
-          <h3>Belanja nyaman dengan akun Kaloriz</h3>
-          <p>Nikmati penawaran eksklusif, pelacakan pesanan real-time, dan rekomendasi produk yang sesuai kebutuhan Anda.</p>
         </div>
       </div>
     </div>

@@ -1,6 +1,5 @@
 import json
 import uuid
-from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -11,7 +10,6 @@ from django.contrib import messages
 from django.db.models import F, Count
 from django.utils import timezone
 from django.utils.formats import number_format
-from django.urls import reverse
 
 from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist, EmailVerification
 from catalog.models import Product, DiscountCode, Testimonial
@@ -872,10 +870,6 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
-            if not request.POST.get('remember_me'):
-                request.session.set_expiry(0)
-            else:
-                request.session.set_expiry(None)
             messages.success(request, f'Selamat datang, {user.first_name or user.username}!')
             next_url = request.GET.get('next', 'catalog:home')
             return redirect(next_url)
@@ -923,9 +917,7 @@ def verify_email_view(request):
                     del request.session['verification_id']
 
                     messages.success(request, f'Email berhasil diverifikasi! Selamat datang, {user.first_name}!')
-                    request.session['show_profile_completion'] = True
-                    profile_url = reverse('core:profile')
-                    return redirect(f"{profile_url}?complete_profile=1")
+                    return redirect('catalog:home')
                 else:
                     messages.error(request, 'Kode verifikasi salah. Silakan coba lagi.')
             else:
@@ -988,53 +980,6 @@ def profile_view(request):
     """User profile page with address information"""
     profile, created = UserProfile.objects.get_or_create(user=request.user)
 
-    show_completion_modal = False
-
-    if request.method == 'POST' and request.POST.get('complete_profile') == '1':
-        show_completion_modal = True
-
-        full_name = request.POST.get('full_name', '').strip()
-        phone = request.POST.get('phone', '').strip()
-        gender = request.POST.get('gender', '').strip()
-        occupation = request.POST.get('occupation', '').strip()
-        additional_info = request.POST.get('additional_info', '').strip()
-        birth_date_str = request.POST.get('birth_date', '').strip()
-
-        has_error = False
-        parsed_birth_date = None
-
-        if birth_date_str:
-            try:
-                parsed_birth_date = datetime.strptime(birth_date_str, '%Y-%m-%d').date()
-            except ValueError:
-                messages.error(request, 'Tanggal lahir tidak valid.')
-                has_error = True
-
-        if not has_error:
-            if full_name:
-                request.user.first_name = full_name
-            request.user.last_name = ''
-            request.user.save(update_fields=['first_name', 'last_name'])
-
-            if request.FILES.get('photo'):
-                if profile.photo:
-                    profile.photo.delete(save=False)
-                profile.photo = request.FILES['photo']
-
-            profile.phone = phone
-            profile.gender = gender if gender in dict(UserProfile.GENDER_CHOICES) else ''
-            profile.occupation = occupation
-            profile.additional_info = additional_info
-            profile.birth_date = parsed_birth_date
-            profile.save()
-
-            messages.success(request, 'Profil berhasil dilengkapi. Selamat berbelanja di Kaloriz!')
-            return redirect('catalog:home')
-
-    session_flag = request.session.pop('show_profile_completion', False)
-    query_flag = request.GET.get('complete_profile') == '1'
-    show_completion_modal = show_completion_modal or session_flag or query_flag
-
     # Get all shipping addresses
     user_addresses = Address.objects.filter(
         user=request.user,
@@ -1051,7 +996,6 @@ def profile_view(request):
         'user': request.user,
         'user_addresses': user_addresses,
         'districts': districts,
-        'show_completion_modal': show_completion_modal,
     }
     return render(request, 'core/profile.html', context)
 

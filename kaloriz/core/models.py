@@ -183,9 +183,7 @@ class UserProfile(models.Model):
     city = models.CharField(max_length=100, blank=True, verbose_name="Kota")
     postal_code = models.CharField(max_length=10, blank=True, verbose_name="Kode Pos")
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True, verbose_name="Jenis Kelamin")
-    occupation = models.CharField(max_length=150, blank=True, verbose_name="Pekerjaan")
     birth_date = models.DateField(null=True, blank=True, verbose_name="Tanggal Lahir")
-    additional_info = models.TextField(blank=True, verbose_name="Informasi Tambahan")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,221 +1,53 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}Verifikasi Email - Kaloriz{% endblock %}
 
-{% block navbar %}{% endblock %}
-
-{% block global_messages %}{% endblock %}
-
-{% block extra_head %}
-<style>
-  :root {
-    --header-h: 0px;
-  }
-
-  body {
-    background: linear-gradient(160deg, #f5f9ff 0%, #ffffff 45%, #eef6ff 100%);
-  }
-
-  main {
-    padding-top: 0;
-  }
-
-  .verify-wrapper {
-    min-height: calc(100vh - 40px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-  }
-
-  .verify-card {
-    width: 100%;
-    max-width: 900px;
-    background: #ffffff;
-    border-radius: 28px;
-    box-shadow: 0 24px 60px rgba(56, 182, 255, 0.18);
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    overflow: hidden;
-  }
-
-  .verify-content {
-    padding: 60px 70px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .verify-content h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #1e3a8a;
-    margin-bottom: 12px;
-  }
-
-  .verify-content p {
-    color: #64748b;
-    margin-bottom: 10px;
-  }
-
-  .email-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 18px;
-    border-radius: 999px;
-    background: rgba(56, 182, 255, 0.1);
-    color: #1d4ed8;
-    font-weight: 600;
-    margin-bottom: 24px;
-  }
-
-  .code-input {
-    width: 100%;
-    padding: 18px 24px;
-    border-radius: 16px;
-    border: 1px solid #dbeafe;
-    background: #f8fbff;
-    text-align: center;
-    letter-spacing: 12px;
-    font-size: 1.8rem;
-    font-family: 'Courier New', monospace;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .code-input:focus {
-    outline: none;
-    border-color: #38b6ff;
-    box-shadow: 0 0 0 4px rgba(56, 182, 255, 0.15);
-    background: #ffffff;
-  }
-
-  .verify-button {
-    width: 100%;
-    padding: 16px;
-    border-radius: 16px;
-    border: none;
-    background: linear-gradient(135deg, #38b6ff, #1d4ed8);
-    color: #ffffff;
-    font-size: 1.05rem;
-    font-weight: 600;
-    margin-top: 26px;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .verify-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 35px rgba(29, 78, 216, 0.25);
-  }
-
-  .resend-link {
-    margin-top: 28px;
-    text-align: center;
-    color: #475569;
-  }
-
-  .resend-link a {
-    color: #1d4ed8;
-    font-weight: 600;
-  }
-
-  .verify-illustration {
-    background: linear-gradient(155deg, rgba(56, 182, 255, 0.12), rgba(29, 78, 216, 0.05));
-    padding: 60px 50px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-  }
-
-  .verify-illustration::before {
-    content: '';
-    position: absolute;
-    inset: 20px;
-    border-radius: 28px;
-    background: linear-gradient(135deg, rgba(56, 182, 255, 0.25), rgba(29, 78, 216, 0.2));
-    filter: blur(60px);
-    opacity: 0.6;
-  }
-
-  .verify-illustration-content {
-    position: relative;
-    z-index: 1;
-    text-align: center;
-    color: #1e293b;
-  }
-
-  .verify-illustration img {
-    max-width: 260px;
-    width: 100%;
-    margin: 0 auto 24px;
-  }
-
-  .rounded-xl {
-    border-radius: 24px;
-  }
-
-  .verify-illustration h3 {
-    font-size: 1.45rem;
-    font-weight: 700;
-    margin-bottom: 12px;
-  }
-
-  .verify-illustration p {
-    color: #475569;
-    line-height: 1.6;
-  }
-
-  @media (max-width: 768px) {
-    .verify-content,
-    .verify-illustration {
-      padding: 40px 30px;
-    }
-
-    .code-input {
-      letter-spacing: 8px;
-      font-size: 1.5rem;
-    }
-  }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="verify-wrapper">
-  <div class="verify-card">
-    <div class="verify-content">
-      {% if messages %}
-        {% for message in messages %}
-          <div class="alert alert-{{ message.tags }} mb-3" role="alert">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-      <h1>Verifikasi Email Anda</h1>
-      <p>Masukkan kode verifikasi 6 digit yang baru saja kami kirimkan.</p>
-      <div class="email-pill">
-        <i class="fas fa-envelope-circle-check"></i>
-        <span>{{ masked_email }}</span>
-      </div>
-      <form method="post" novalidate>
-        {% csrf_token %}
-        <input type="text" id="code" name="code" maxlength="6" pattern="[0-9]{6}" class="code-input"
-               placeholder="000000" required autofocus>
-        <small class="help-text text-muted d-block mt-3 text-center">Kode berlaku selama 10 menit.</small>
-        <button type="submit" class="verify-button"><i class="fas fa-check-circle mr-2"></i>Verifikasi &amp; Lanjutkan</button>
-      </form>
-      <div class="resend-link">
-        Tidak menerima kode? <a href="{% url 'core:resend_verification' %}">Kirim ulang kode</a>
-      </div>
-    </div>
-    <div class="verify-illustration">
-      <div class="verify-illustration-content">
-        <img src="{% static 'images/banner.jpg' %}" alt="Verifikasi Kaloriz" class="img-fluid rounded-xl">
-        <h3>Akun Anda hampir siap!</h3>
-        <p>Verifikasi email membantu kami menjaga keamanan akun dan memastikan pengalaman belanja Anda tetap nyaman.</p>
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow">
+        <div class="card-header bg-success text-white text-center">
+          <h4 class="mb-0"><i class="fas fa-envelope-circle-check"></i> Verifikasi Email Anda</h4>
+        </div>
+        <div class="card-body p-4 text-center">
+          <div class="mb-4">
+            <i class="fas fa-envelope-open-text fa-4x text-success mb-3"></i>
+            <p class="lead">Kode verifikasi telah dikirim ke:</p>
+            <p class="font-weight-bold text-success">{{ masked_email }}</p>
+            <p class="text-muted small">Silakan periksa inbox atau folder spam Anda.</p>
+          </div>
+
+          <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+              <label for="code">Masukkan Kode Verifikasi (6 digit)</label>
+              <input type="text" class="form-control form-control-lg text-center"
+                     id="code" name="code" maxlength="6" pattern="[0-9]{6}"
+                     placeholder="000000" required autofocus style="letter-spacing: 8px; font-size: 24px;">
+              <small class="form-text text-muted">Kode berlaku selama 10 menit</small>
+            </div>
+
+            <button type="submit" class="btn btn-success btn-block btn-lg">
+              <i class="fas fa-check-circle"></i> Verifikasi & Lanjutkan
+            </button>
+          </form>
+
+          <hr>
+
+          <div class="text-center">
+            <p class="mb-0">Tidak menerima kode?</p>
+            <a href="{% url 'core:resend_verification' %}" class="btn btn-link">Kirim Ulang Kode</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<style>
+input[type="text"]#code {
+  font-family: 'Courier New', monospace;
+}
+</style>
 {% endblock %}
