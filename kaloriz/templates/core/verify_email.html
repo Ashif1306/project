@@ -1,53 +1,60 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Verifikasi Email - Kaloriz{% endblock %}
 
+{% block extra_head %}
+<style>
+  :root {
+    --header-h: 0px;
+  }
+</style>
+{% endblock %}
+
+{% block navbar %}{% endblock %}
+
 {% block content %}
-<div class="container my-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-      <div class="card shadow">
-        <div class="card-header bg-success text-white text-center">
-          <h4 class="mb-0"><i class="fas fa-envelope-circle-check"></i> Verifikasi Email Anda</h4>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-content">
+      <div>
+        <span class="auth-highlight"><i class="fas fa-envelope-circle-check"></i> Satu Langkah Lagi</span>
+        <h2>Verifikasi Email Anda</h2>
+        <p>Kami telah mengirimkan kode 6 digit ke <strong>{{ masked_email }}</strong>. Masukkan kode tersebut untuk mengaktifkan akun dan mulai berbelanja.</p>
+      </div>
+
+      <form method="post" class="auth-form">
+        {% csrf_token %}
+        <div>
+          <label for="code" class="auth-label">Kode Verifikasi</label>
+          <input
+            type="text"
+            id="code"
+            name="code"
+            maxlength="6"
+            pattern="[0-9]{6}"
+            class="auth-input verification-input"
+            placeholder="000000"
+            required
+            autofocus>
+          <small class="verification-help d-block mt-2">Kode berlaku selama 10 menit. Mohon periksa folder spam jika tidak menemukan email.</small>
         </div>
-        <div class="card-body p-4 text-center">
-          <div class="mb-4">
-            <i class="fas fa-envelope-open-text fa-4x text-success mb-3"></i>
-            <p class="lead">Kode verifikasi telah dikirim ke:</p>
-            <p class="font-weight-bold text-success">{{ masked_email }}</p>
-            <p class="text-muted small">Silakan periksa inbox atau folder spam Anda.</p>
-          </div>
 
-          <form method="post">
-            {% csrf_token %}
-            <div class="form-group">
-              <label for="code">Masukkan Kode Verifikasi (6 digit)</label>
-              <input type="text" class="form-control form-control-lg text-center"
-                     id="code" name="code" maxlength="6" pattern="[0-9]{6}"
-                     placeholder="000000" required autofocus style="letter-spacing: 8px; font-size: 24px;">
-              <small class="form-text text-muted">Kode berlaku selama 10 menit</small>
-            </div>
+        <button type="submit" class="auth-submit">Verifikasi &amp; Lanjutkan</button>
+      </form>
 
-            <button type="submit" class="btn btn-success btn-block btn-lg">
-              <i class="fas fa-check-circle"></i> Verifikasi & Lanjutkan
-            </button>
-          </form>
-
-          <hr>
-
-          <div class="text-center">
-            <p class="mb-0">Tidak menerima kode?</p>
-            <a href="{% url 'core:resend_verification' %}" class="btn btn-link">Kirim Ulang Kode</a>
-          </div>
-        </div>
+      <div class="auth-message">
+        Tidak menerima kode? <a href="{% url 'core:resend_verification' %}" class="auth-link">Kirim ulang kode verifikasi</a>
+      </div>
+    </div>
+    <div class="auth-visual">
+      <div class="auth-visual-content">
+        <img src="{% static 'images/banner.jpg' %}" alt="Verifikasi email Kaloriz" loading="lazy">
+        <span class="auth-highlight"><i class="fas fa-shield-check"></i> Keamanan Terjamin</span>
+        <h3>Perlindungan untuk Akun Anda</h3>
+        <p class="auth-description">Verifikasi email membantu kami menjaga keamanan data pribadi dan memberikan rekomendasi produk yang relevan untuk Anda.</p>
       </div>
     </div>
   </div>
 </div>
-
-<style>
-input[type="text"]#code {
-  font-family: 'Courier New', monospace;
-}
-</style>
 {% endblock %}

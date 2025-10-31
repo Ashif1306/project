@@ -848,10 +848,25 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect('catalog:home')
 
+    entered_username = ''
+    remember_me = False
+
     if request.method == 'POST':
         # Try to authenticate with username or email
         username_or_email = request.POST.get('username')
         password = request.POST.get('password')
+        username_or_email = (username_or_email or '').strip()
+        entered_username = username_or_email
+        remember_me = bool(request.POST.get('remember_me'))
+
+        if not username_or_email or not password:
+            messages.error(request, 'Silakan masukkan username/email dan password Anda.')
+            context = {
+                'form': AuthenticationForm(),
+                'entered_username': entered_username,
+                'remember_me': remember_me,
+            }
+            return render(request, 'core/login.html', context)
 
         # Try to find user by username or email
         from django.contrib.auth.models import User
@@ -863,13 +878,22 @@ def login_view(request):
                 username = username_or_email
         except User.DoesNotExist:
             messages.error(request, 'Username atau email tidak ditemukan.')
-            return render(request, 'core/login.html', {'form': AuthenticationForm()})
+            context = {
+                'form': AuthenticationForm(),
+                'entered_username': entered_username,
+                'remember_me': remember_me,
+            }
+            return render(request, 'core/login.html', context)
 
         # Authenticate
         user = authenticate(username=username, password=password)
 
         if user is not None:
             login(request, user)
+            if remember_me:
+                request.session.set_expiry(1209600)  # 2 weeks
+            else:
+                request.session.set_expiry(0)
             messages.success(request, f'Selamat datang, {user.first_name or user.username}!')
             next_url = request.GET.get('next', 'catalog:home')
             return redirect(next_url)
@@ -877,7 +901,11 @@ def login_view(request):
             messages.error(request, 'Username/email atau password salah.')
 
     form = AuthenticationForm()
-    context = {'form': form}
+    context = {
+        'form': form,
+        'entered_username': entered_username,
+        'remember_me': remember_me,
+    }
     return render(request, 'core/login.html', context)
 
 
