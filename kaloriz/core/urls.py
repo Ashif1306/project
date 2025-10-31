@@ -37,6 +37,7 @@ urlpatterns = [
     path('profile/settings/', views.profile_settings, name='profile_settings'),
     path('profile/change-password/', views.change_password, name='change_password'),
     path('profile/address/edit/', views.profile_address_edit, name='profile_address_edit'),
+    path('profile/notifications/', views.notifications_view, name='notifications'),
 
     # Watchlist URLs
     path('watchlist/', views.watchlist_view, name='watchlist'),
