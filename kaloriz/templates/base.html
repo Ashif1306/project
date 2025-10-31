@@ -74,18 +74,10 @@
 
           <!-- Profile Icon -->
           {% if user.is_authenticated %}
-          <div class="nav-icon-wrapper dropdown">
-            <a href="#" class="nav-icon" id="profileDropdown" data-toggle="dropdown">
+          <div class="nav-icon-wrapper">
+            <a href="{% url 'core:profile' %}" class="nav-icon" title="Profil">
               <i class="fas fa-user"></i>
             </a>
-            <div class="dropdown-menu dropdown-menu-right">
-              <a class="dropdown-item" href="{% url 'core:profile' %}"><i class="fas fa-user-circle"></i> Profil</a>
-              <a class="dropdown-item" href="{% url 'core:watchlist' %}"><i class="fas fa-heart"></i> Watchlist</a>
-              <a class="dropdown-item" href="{% url 'core:order_list' %}"><i class="fas fa-receipt"></i> Pesanan</a>
-              <a class="dropdown-item" href="{% url 'core:profile_settings' %}"><i class="fas fa-cog"></i> Pengaturan</a>
-              <div class="dropdown-divider"></div>
-              <a class="dropdown-item" href="{% url 'core:logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a>
-            </div>
           </div>
           {% else %}
           <div class="nav-icon-wrapper">
