@@ -723,9 +723,12 @@ def place_order_from_address(request):
 @login_required
 def order_list(request):
     """List user's orders"""
-    orders = Order.objects.filter(user=request.user)
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
     context = {
+        'profile': profile,
         'orders': orders,
+        'active_tab': 'orders',
     }
     return render(request, 'core/order_list.html', context)
 
@@ -1024,6 +1027,7 @@ def profile_view(request):
         'user': request.user,
         'user_addresses': user_addresses,
         'districts': districts,
+        'active_tab': 'profile',
     }
     return render(request, 'core/profile.html', context)
 
@@ -1071,6 +1075,7 @@ def profile_settings(request):
     context = {
         'profile': profile,
         'user': request.user,
+        'active_tab': 'settings',
     }
     return render(request, 'core/profile_settings.html', context)
 
@@ -1149,12 +1154,33 @@ def profile_address_edit(request):
 @login_required
 def watchlist_view(request):
     """Display user's watchlist"""
-    watchlist_items = Watchlist.objects.filter(user=request.user).select_related('product')
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    watchlist_items = (
+        Watchlist.objects.filter(user=request.user)
+        .select_related('product')
+        .order_by('-added_at')
+    )
 
     context = {
+        'profile': profile,
         'watchlist_items': watchlist_items,
+        'active_tab': 'watchlist',
     }
     return render(request, 'core/watchlist.html', context)
+
+
+@login_required
+def notifications_view(request):
+    """Display user notifications placeholder"""
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    notifications = []
+
+    context = {
+        'profile': profile,
+        'notifications': notifications,
+        'active_tab': 'notifications',
+    }
+    return render(request, 'core/notifications.html', context)
 
 
 @login_required

@@ -1,226 +1,187 @@
-{% extends 'base.html' %}
+{% extends 'core/profile_layout.html' %}
 
 {% block title %}Pengaturan Profil - Kaloriz{% endblock %}
 
-{% block content %}
-<div class="container my-5">
-  <h2 class="mb-4"><i class="fas fa-cog"></i> Pengaturan Profil</h2>
-
-  <div class="row">
-    <div class="col-md-9">
-      <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">Edit Informasi Profil</h5>
-        </div>
-        <div class="card-body">
-          <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-
-            <h5 class="mb-3">Foto Profil</h5>
-
-            <div class="form-group text-center">
-              <div class="mb-3">
-                {% if profile.photo %}
-                  <img src="{{ profile.photo.url }}" id="photo-preview" alt="Profile Photo"
-                       class="rounded-circle" style="width: 150px; height: 150px; object-fit: cover; border: 3px solid #007bff;">
-                {% else %}
-                  <i class="fas fa-user-circle" id="photo-preview" style="font-size: 150px; color: #007bff;"></i>
-                {% endif %}
-              </div>
-              <div>
-                <label for="photo" class="btn btn-primary">
-                  <i class="fas fa-camera"></i> Pilih Foto
-                </label>
-                <input type="file" id="photo" name="photo" accept="image/*" style="display: none;" onchange="previewPhoto(this)">
-                {% if profile.photo %}
-                  <button type="button" class="btn btn-danger" onclick="removePhoto()">
-                    <i class="fas fa-trash"></i> Hapus Foto
-                  </button>
-                  <input type="hidden" name="remove_photo" id="remove_photo" value="0">
-                {% endif %}
-              </div>
-              <small class="text-muted d-block mt-2">Format: JPG, PNG. Maksimal 5MB</small>
-            </div>
-
-            <hr>
-
-            <h5 class="mb-3">Informasi Akun</h5>
-
-            <div class="form-row">
-              <div class="form-group col-md-6">
-                <label for="first_name">Nama Depan</label>
-                <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}">
-              </div>
-              <div class="form-group col-md-6">
-                <label for="last_name">Nama Belakang</label>
-                <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="email">Email</label>
-              <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}">
-            </div>
-
-            <hr>
-
-            <h5 class="mb-3">Informasi Pribadi</h5>
-
-            <div class="form-row">
-              <div class="form-group col-md-6">
-                <label for="phone">Nomor Telepon</label>
-                <input type="tel" class="form-control" id="phone" name="phone" value="{{ profile.phone }}">
-              </div>
-              <div class="form-group col-md-6">
-                <label for="gender">Jenis Kelamin</label>
-                <select class="form-control" id="gender" name="gender">
-                  <option value="">-- Pilih --</option>
-                  <option value="M" {% if profile.gender == 'M' %}selected{% endif %}>Laki-laki</option>
-                  <option value="F" {% if profile.gender == 'F' %}selected{% endif %}>Perempuan</option>
-                  <option value="O" {% if profile.gender == 'O' %}selected{% endif %}>Lainnya</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="birth_date">Tanggal Lahir</label>
-              <input type="date" class="form-control" id="birth_date" name="birth_date" value="{{ profile.birth_date|date:'Y-m-d' }}">
-            </div>
-
-            <hr>
-
-            <h5 class="mb-3">Alamat</h5>
-
-            <div class="form-group">
-              <label for="address">Alamat Lengkap</label>
-              <textarea class="form-control" id="address" name="address" rows="3">{{ profile.address }}</textarea>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group col-md-6">
-                <label for="city">Kota</label>
-                <input type="text" class="form-control" id="city" name="city" value="{{ profile.city }}">
-              </div>
-              <div class="form-group col-md-6">
-                <label for="postal_code">Kode Pos</label>
-                <input type="text" class="form-control" id="postal_code" name="postal_code" value="{{ profile.postal_code }}">
-              </div>
-            </div>
-
-            <hr>
-
-            <div class="form-group mb-0">
-              <button type="submit" class="btn btn-primary btn-lg">
-                <i class="fas fa-save"></i> Simpan Perubahan
-              </button>
-              <a href="{% url 'core:profile' %}" class="btn btn-secondary btn-lg">
-                <i class="fas fa-times"></i> Batal
-              </a>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card shadow">
-        <div class="card-header bg-secondary text-white">
-          <h6 class="mb-0">Menu Cepat</h6>
-        </div>
-        <div class="list-group list-group-flush">
-          <a href="{% url 'core:profile' %}" class="list-group-item list-group-item-action">
-            <i class="fas fa-user-circle"></i> Profil
-          </a>
-          <a href="{% url 'core:watchlist' %}" class="list-group-item list-group-item-action">
-            <i class="fas fa-heart"></i> Watchlist
-          </a>
-          <a href="{% url 'core:order_list' %}" class="list-group-item list-group-item-action">
-            <i class="fas fa-receipt"></i> Pesanan Saya
-          </a>
-          <a href="{% url 'core:profile_settings' %}" class="list-group-item list-group-item-action active">
-            <i class="fas fa-cog"></i> Pengaturan
-          </a>
-        </div>
-      </div>
+{% block profile_content %}
+<div class="profile-section">
+  <div class="profile-section-header">
+    <div>
+      <h2>Pengaturan Akun</h2>
+      <p>Kelola foto profil dan informasi dasar akun Anda.</p>
     </div>
   </div>
 
-  <!-- Change Password Section -->
-  <div class="row mt-4">
-    <div class="col-md-9">
-      <div class="card shadow">
-        <div class="card-header bg-danger text-white">
-          <h5 class="mb-0"><i class="fas fa-lock"></i> Ubah Password</h5>
-        </div>
-        <div class="card-body">
-          <form method="post" action="{% url 'core:change_password' %}">
-            {% csrf_token %}
+  <form method="post" enctype="multipart/form-data" class="profile-form">
+    {% csrf_token %}
 
-            <div class="form-group">
-              <label for="old_password">Password Lama</label>
-              <input type="password" class="form-control" id="old_password" name="old_password" required>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group col-md-6">
-                <label for="new_password1">Password Baru</label>
-                <input type="password" class="form-control" id="new_password1" name="new_password1" required>
-                <small class="text-muted">Minimal 8 karakter</small>
-              </div>
-              <div class="form-group col-md-6">
-                <label for="new_password2">Konfirmasi Password Baru</label>
-                <input type="password" class="form-control" id="new_password2" name="new_password2" required>
-              </div>
-            </div>
-
-            <div class="form-group mb-0">
-              <button type="submit" class="btn btn-danger">
-                <i class="fas fa-key"></i> Ubah Password
-              </button>
-            </div>
-          </form>
-        </div>
+    <div class="profile-photo-editor">
+      <div class="profile-photo-frame">
+        {% if profile.photo %}
+          <img src="{{ profile.photo.url }}" alt="Foto profil" id="photo-preview" class="profile-photo-img">
+        {% else %}
+          <div id="photo-preview" class="profile-photo-placeholder">
+            <i class="fas fa-user"></i>
+          </div>
+        {% endif %}
+      </div>
+      <div class="profile-photo-actions">
+        <label for="photo" class="btn btn-primary">
+          <i class="fas fa-camera"></i> Pilih Foto
+        </label>
+        <input type="file" id="photo" name="photo" accept="image/*" hidden onchange="previewPhoto(this)">
+        <input type="hidden" name="remove_photo" id="remove_photo" value="0">
+        {% if profile.photo %}
+        <button type="button" class="btn btn-outline-secondary" onclick="removePhoto()">
+          <i class="fas fa-trash"></i> Hapus Foto
+        </button>
+        {% endif %}
+        <small class="text-muted d-block mt-2">Format: JPG, PNG. Maksimal 5MB</small>
       </div>
     </div>
+
+    <hr class="my-4">
+    <h5 class="font-weight-bold text-primary mb-3">Informasi Akun</h5>
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="first_name">Nama Depan</label>
+        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}">
+      </div>
+      <div class="form-group col-md-6">
+        <label for="last_name">Nama Belakang</label>
+        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}">
+    </div>
+
+    <hr class="my-4">
+    <h5 class="font-weight-bold text-primary mb-3">Informasi Pribadi</h5>
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="phone">Nomor Telepon</label>
+        <input type="tel" class="form-control" id="phone" name="phone" value="{{ profile.phone }}">
+      </div>
+      <div class="form-group col-md-6">
+        <label for="gender">Jenis Kelamin</label>
+        <select class="form-control" id="gender" name="gender">
+          <option value="">-- Pilih --</option>
+          <option value="M" {% if profile.gender == 'M' %}selected{% endif %}>Laki-laki</option>
+          <option value="F" {% if profile.gender == 'F' %}selected{% endif %}>Perempuan</option>
+          <option value="O" {% if profile.gender == 'O' %}selected{% endif %}>Lainnya</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="birth_date">Tanggal Lahir</label>
+      <input type="date" class="form-control" id="birth_date" name="birth_date" value="{{ profile.birth_date|date:'Y-m-d' }}">
+    </div>
+
+    <hr class="my-4">
+    <h5 class="font-weight-bold text-primary mb-3">Alamat</h5>
+    <div class="form-group">
+      <label for="address">Alamat Lengkap</label>
+      <textarea class="form-control" id="address" name="address" rows="3">{{ profile.address }}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="city">Kota</label>
+        <input type="text" class="form-control" id="city" name="city" value="{{ profile.city }}">
+      </div>
+      <div class="form-group col-md-6">
+        <label for="postal_code">Kode Pos</label>
+        <input type="text" class="form-control" id="postal_code" name="postal_code" value="{{ profile.postal_code }}">
+      </div>
+    </div>
+
+    <div class="profile-form-actions">
+      <button type="submit" class="btn btn-primary mr-2">
+        <i class="fas fa-save"></i> Simpan Perubahan
+      </button>
+      <a href="{% url 'core:profile' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-times"></i> Batalkan
+      </a>
+    </div>
+  </form>
+</div>
+
+<div class="profile-section">
+  <div class="profile-section-header">
+    <div>
+      <h2>Ubah Password</h2>
+      <p>Lindungi akun Anda dengan password yang kuat.</p>
+    </div>
   </div>
+
+  <form method="post" action="{% url 'core:change_password' %}" class="profile-form">
+    {% csrf_token %}
+    <div class="form-group">
+      <label for="old_password">Password Lama</label>
+      <input type="password" class="form-control" id="old_password" name="old_password" required>
+    </div>
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="new_password1">Password Baru</label>
+        <input type="password" class="form-control" id="new_password1" name="new_password1" required>
+        <small class="text-muted">Minimal 8 karakter</small>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="new_password2">Konfirmasi Password Baru</label>
+        <input type="password" class="form-control" id="new_password2" name="new_password2" required>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">
+      <i class="fas fa-key"></i> Ubah Password
+    </button>
+  </form>
 </div>
 
 <script>
-function previewPhoto(input) {
-  if (input.files && input.files[0]) {
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-      const preview = document.getElementById('photo-preview');
-      if (preview.tagName === 'IMG') {
-        preview.src = e.target.result;
-      } else {
-        // Replace icon with image
-        const img = document.createElement('img');
-        img.src = e.target.result;
-        img.id = 'photo-preview';
-        img.className = 'rounded-circle';
-        img.style.cssText = 'width: 150px; height: 150px; object-fit: cover; border: 3px solid #007bff;';
-        preview.parentNode.replaceChild(img, preview);
-      }
-    }
-
-    reader.readAsDataURL(input.files[0]);
+  function createPlaceholder() {
+    const placeholder = document.createElement('div');
+    placeholder.id = 'photo-preview';
+    placeholder.className = 'profile-photo-placeholder';
+    placeholder.innerHTML = '<i class="fas fa-user"></i>';
+    return placeholder;
   }
-}
 
-function removePhoto() {
-  if (confirm('Hapus foto profil?')) {
-    document.getElementById('remove_photo').value = '1';
+  function previewPhoto(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const container = document.querySelector('.profile-photo-frame');
+        let preview = document.getElementById('photo-preview');
+        if (preview && preview.tagName.toLowerCase() === 'img') {
+          preview.src = e.target.result;
+        } else {
+          if (preview) {
+            container.removeChild(preview);
+          }
+          const img = document.createElement('img');
+          img.id = 'photo-preview';
+          img.src = e.target.result;
+          img.alt = 'Foto profil';
+          img.className = 'profile-photo-img';
+          container.appendChild(img);
+        }
+      };
+      reader.readAsDataURL(input.files[0]);
+      document.getElementById('remove_photo').value = '0';
+    }
+  }
+
+  function removePhoto() {
+    const container = document.querySelector('.profile-photo-frame');
     const preview = document.getElementById('photo-preview');
-    if (preview.tagName === 'IMG') {
-      const icon = document.createElement('i');
-      icon.id = 'photo-preview';
-      icon.className = 'fas fa-user-circle';
-      icon.style.cssText = 'font-size: 150px; color: #007bff;';
-      preview.parentNode.replaceChild(icon, preview);
+    if (preview) {
+      container.replaceChild(createPlaceholder(), preview);
     }
+    const fileInput = document.getElementById('photo');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+    document.getElementById('remove_photo').value = '1';
   }
-}
 </script>
 {% endblock %}
