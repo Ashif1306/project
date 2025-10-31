@@ -1,54 +1,79 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Login - Kaloriz{% endblock %}
 
+{% block extra_head %}
+<style>
+  :root {
+    --header-h: 0px;
+  }
+</style>
+{% endblock %}
+
+{% block navbar %}{% endblock %}
+
 {% block content %}
-<div class="container my-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-      <div class="card shadow">
-        <div class="card-header bg-primary text-white text-center">
-          <h4 class="mb-0"><i class="fas fa-sign-in-alt"></i> Login</h4>
-        </div>
-        <div class="card-body p-4">
-          <form method="post">
-            {% csrf_token %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-content">
+      <div>
+        <span class="auth-highlight"><i class="fas fa-sparkles"></i> Senang Melihat Anda Kembali</span>
+        <h2>Masuk ke Akun Kaloriz</h2>
+        <p>Akses koleksi produk pilihan Anda dan lanjutkan pengalaman belanja yang menyenangkan.</p>
+      </div>
+      <form method="post" class="auth-form">
+        {% csrf_token %}
 
-            {% if form.non_field_errors %}
-              <div class="alert alert-danger">
-                {{ form.non_field_errors }}
-              </div>
-            {% endif %}
-
-            <div class="form-group">
-              <label for="{{ form.username.id_for_label }}">Username</label>
-              <input type="text" class="form-control {% if form.username.errors %}is-invalid{% endif %}"
-                     id="{{ form.username.id_for_label }}" name="username" required>
-              {% if form.username.errors %}
-                <div class="invalid-feedback">{{ form.username.errors }}</div>
-              {% endif %}
-            </div>
-
-            <div class="form-group">
-              <label for="{{ form.password.id_for_label }}">Password</label>
-              <input type="password" class="form-control {% if form.password.errors %}is-invalid{% endif %}"
-                     id="{{ form.password.id_for_label }}" name="password" required>
-              {% if form.password.errors %}
-                <div class="invalid-feedback">{{ form.password.errors }}</div>
-              {% endif %}
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-block btn-lg">
-              <i class="fas fa-sign-in-alt"></i> Login
-            </button>
-          </form>
-
-          <hr>
-
-          <div class="text-center">
-            <p class="mb-0">Belum punya akun? <a href="{% url 'core:register' %}">Daftar di sini</a></p>
+        {% if form.non_field_errors %}
+          <div class="auth-message">
+            {{ form.non_field_errors|join:' ' }}
           </div>
+        {% endif %}
+
+        <div>
+          <label for="username" class="auth-label">Username atau Email</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            class="auth-input"
+            value="{{ entered_username }}"
+            placeholder="Masukkan username atau email"
+            required
+            autofocus>
         </div>
+
+        <div>
+          <label for="password" class="auth-label">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="auth-input"
+            placeholder="Masukkan password"
+            required>
+        </div>
+
+        <div class="auth-action">
+          <label class="auth-remember" for="remember_me">
+            <input type="checkbox" id="remember_me" name="remember_me" {% if remember_me %}checked{% endif %}>
+            Remember me
+          </label>
+          <a href="mailto:info@kaloriz.com?subject=Lupa%20Password" class="auth-link">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="auth-submit">Login</button>
+      </form>
+
+      <p class="auth-meta">Belum punya akun? <a href="{% url 'core:register' %}">Sign up</a></p>
+    </div>
+    <div class="auth-visual">
+      <div class="auth-visual-content">
+        <img src="{% static 'images/banner.jpg' %}" alt="Kaloriz illustration" loading="lazy">
+        <span class="auth-highlight"><i class="fas fa-bolt"></i> Belanja Kilat</span>
+        <h3>Temukan Produk Terbaik Setiap Hari</h3>
+        <p class="auth-description">Nikmati pengalaman belanja dengan rekomendasi yang dipersonalisasi, penawaran eksklusif, dan pengiriman cepat.</p>
       </div>
     </div>
   </div>
