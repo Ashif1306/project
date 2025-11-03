@@ -28,10 +28,12 @@
       <div class="navbar-content">
         <!-- Left Menu -->
         <div class="navbar-left">
-          <a href="{% url 'catalog:home' %}" class="nav-link-modern">Home</a>
-          <a href="{% url 'catalog:product_list' %}" class="nav-link-modern">Product</a>
-          <a href="{% url 'catalog:about' %}" class="nav-link-modern">Tentang</a>
-          <a href="{% url 'catalog:contact' %}" class="nav-link-modern">Kontak</a>
+          {% with current_url=request.resolver_match.url_name %}
+          <a href="{% url 'catalog:home' %}" class="nav-link-modern {% if current_url == 'home' %}active{% endif %}">Home</a>
+          <a href="{% url 'catalog:product_list' %}" class="nav-link-modern {% if current_url == 'product_list' or current_url == 'product_detail' or current_url == 'category_detail' or current_url == 'search' %}active{% endif %}">Product</a>
+          <a href="{% url 'catalog:about' %}" class="nav-link-modern {% if current_url == 'about' %}active{% endif %}">Tentang</a>
+          <a href="{% url 'catalog:contact' %}" class="nav-link-modern {% if current_url == 'contact' %}active{% endif %}">Kontak</a>
+          {% endwith %}
         </div>
 
         <!-- Center Logo -->
@@ -110,14 +112,15 @@
 
   /* Modern Minimalist Navbar */
   .modern-navbar {
-    background: linear-gradient(135deg, #faf9f7 0%, #fff8f0 100%);
-    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+    background: rgba(255, 255, 255, 0);
+    box-shadow: none;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 1000;
     padding: 15px 0;
+    transition: background-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
   }
 
   .navbar-content {
@@ -155,12 +158,36 @@
     left: 0;
     width: 0;
     height: 2px;
-    background: #667eea;
+    background: #38b6ff;
     transition: width 0.3s ease;
   }
 
   .nav-link-modern:hover::after {
     width: 100%;
+  }
+
+  .nav-link-modern.active {
+    color: #38b6ff;
+  }
+
+  .nav-link-modern.active::after {
+    width: 100%;
+  }
+
+  .modern-navbar.is-sticky {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 18px 35px rgba(56, 182, 255, 0.22);
+    backdrop-filter: blur(12px);
+    animation: navbarSlideDown 0.4s ease forwards;
+  }
+
+  @keyframes navbarSlideDown {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(0);
+    }
   }
 
   /* Center Logo */
@@ -572,16 +599,27 @@
     }
 
     function updateHeaderHeight() {
-      if (!header) {
-        return;
-      }
       const height = header.offsetHeight || 0;
       root.style.setProperty('--header-h', `${height}px`);
     }
 
+    function handleScroll() {
+      if (window.scrollY > 10) {
+        header.classList.add('is-sticky');
+      } else {
+        header.classList.remove('is-sticky');
+      }
+    }
+
     updateHeaderHeight();
-    window.addEventListener('load', updateHeaderHeight);
+    handleScroll();
+
+    window.addEventListener('load', () => {
+      updateHeaderHeight();
+      handleScroll();
+    });
     window.addEventListener('resize', updateHeaderHeight);
+    document.addEventListener('scroll', handleScroll, { passive: true });
   })();
   </script>
 
