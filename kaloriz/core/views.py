@@ -897,7 +897,7 @@ def login_view(request):
                 request.session.set_expiry(1209600)  # 2 weeks
             else:
                 request.session.set_expiry(0)
-            messages.success(request, f'Selamat datang, {user.first_name or user.username}!')
+            messages.success(request, 'Login Berhasil')
             next_url = request.GET.get('next', 'catalog:home')
             return redirect(next_url)
         else:
