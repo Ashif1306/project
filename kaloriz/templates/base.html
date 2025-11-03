@@ -91,9 +91,40 @@
         </div>
 
         <!-- Mobile Toggle -->
-        <button class="mobile-toggle" onclick="toggleMobileMenu()">
+        <button class="mobile-toggle" type="button" aria-label="Toggle navigation" onclick="toggleMobileMenu()">
           <i class="fas fa-bars"></i>
         </button>
+      </div>
+      <!-- Mobile Menu -->
+      <div id="mobile-menu" class="mobile-menu">
+        {% with current_url=request.resolver_match.url_name %}
+        <a href="{% url 'catalog:home' %}" class="mobile-menu-link {% if current_url == 'home' %}active{% endif %}">Home</a>
+        <a href="{% url 'catalog:product_list' %}" class="mobile-menu-link {% if current_url == 'product_list' or current_url == 'product_detail' or current_url == 'category_detail' or current_url == 'search' %}active{% endif %}">Product</a>
+        <a href="{% url 'catalog:about' %}" class="mobile-menu-link {% if current_url == 'about' %}active{% endif %}">Tentang</a>
+        <a href="{% url 'catalog:contact' %}" class="mobile-menu-link {% if current_url == 'contact' %}active{% endif %}">Kontak</a>
+        {% endwith %}
+        <div class="mobile-menu-divider"></div>
+        <div class="mobile-menu-icons">
+          {% if user.is_authenticated %}
+          <a href="{% url 'core:profile' %}" class="mobile-icon-link" title="Profil">
+            <i class="fas fa-user"></i>
+            <span>Profil</span>
+          </a>
+          <a href="{% url 'core:cart' %}" class="mobile-icon-link" title="Keranjang">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Keranjang</span>
+          </a>
+          {% else %}
+          <a href="{% url 'core:login' %}" class="mobile-icon-link" title="Login">
+            <i class="fas fa-user"></i>
+            <span>Login</span>
+          </a>
+          <a href="{% url 'core:login' %}" class="mobile-icon-link" title="Keranjang">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Keranjang</span>
+          </a>
+          {% endif %}
+        </div>
       </div>
     </div>
   </nav>
@@ -121,6 +152,10 @@
     z-index: 1000;
     padding: 15px 0;
     transition: background-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
+  }
+
+  .modern-navbar .container {
+    position: relative;
   }
 
   .navbar-content {
@@ -293,6 +328,97 @@
     font-size: 1.5rem;
     color: #2d3748;
     cursor: pointer;
+    transition: color 0.3s ease;
+  }
+
+  .mobile-toggle.is-active {
+    color: #667eea;
+  }
+
+  .mobile-toggle i {
+    transition: transform 0.3s ease;
+  }
+
+  .mobile-toggle.is-active i {
+    transform: rotate(90deg);
+  }
+
+  .mobile-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 15px);
+    right: 0;
+    left: 0;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 18px 35px rgba(56, 182, 255, 0.12);
+    border-radius: 16px;
+    padding: 20px 24px;
+    transform: translateY(-10px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-menu.open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .mobile-menu-link {
+    display: block;
+    color: #2d3748;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(102, 126, 234, 0.15);
+    transition: color 0.3s ease;
+  }
+
+  .mobile-menu-link:last-of-type {
+    border-bottom: none;
+  }
+
+  .mobile-menu-link:hover,
+  .mobile-menu-link.active {
+    color: #667eea;
+  }
+
+  .mobile-menu-divider {
+    height: 1px;
+    background: rgba(102, 126, 234, 0.15);
+    margin: 15px 0;
+  }
+
+  .mobile-menu-icons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .mobile-icon-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(102, 126, 234, 0.08);
+    color: #2d3748;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-icon-link i {
+    font-size: 1.1rem;
+  }
+
+  .mobile-icon-link:hover {
+    background: rgba(102, 126, 234, 0.18);
+    color: #667eea;
   }
 
   @media (max-width: 992px) {
@@ -315,6 +441,31 @@
 
     .search-input {
       width: 120px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .navbar-left,
+    .navbar-right,
+    .search-wrapper {
+      display: none !important;
+    }
+
+    .navbar-content {
+      justify-content: space-between;
+    }
+
+    .navbar-center {
+      position: static;
+      transform: none;
+    }
+
+    .mobile-toggle {
+      display: block;
+    }
+
+    .mobile-menu {
+      display: block;
     }
   }
 
@@ -495,6 +646,54 @@
       }, 400);
     }, 3500);
   }
+
+  function toggleMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    const toggle = document.querySelector('.mobile-toggle');
+
+    if (!menu || !toggle) {
+      return;
+    }
+
+    menu.classList.toggle('open');
+    toggle.classList.toggle('is-active');
+  }
+
+  document.addEventListener('click', (event) => {
+    const menu = document.getElementById('mobile-menu');
+    const toggle = document.querySelector('.mobile-toggle');
+
+    if (!menu || !toggle) {
+      return;
+    }
+
+    const clickedToggle = toggle.contains(event.target);
+    const clickedInsideMenu = menu.contains(event.target);
+
+    if (!clickedToggle && !clickedInsideMenu) {
+      menu.classList.remove('open');
+      toggle.classList.remove('is-active');
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const menu = document.getElementById('mobile-menu');
+    if (!menu) {
+      return;
+    }
+
+    const links = menu.querySelectorAll('.mobile-menu-link, .mobile-icon-link');
+    const toggle = document.querySelector('.mobile-toggle');
+
+    links.forEach((link) => {
+      link.addEventListener('click', () => {
+        menu.classList.remove('open');
+        if (toggle) {
+          toggle.classList.remove('is-active');
+        }
+      });
+    });
+  });
 
   function updateCartBadge(count) {
     const cartLink = document.querySelector('.navbar-right .nav-icon-wrapper a[href$="/cart/"]');
