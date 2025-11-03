@@ -309,14 +309,9 @@
 
   <!-- Messages -->
   {% if messages %}
-  <div class="container mt-3">
+  <div id="django-message-storage" class="d-none" aria-hidden="true">
     {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
+    <span class="django-message" data-tags="{{ message.tags }}" data-message="{{ message|escape }}"></span>
     {% endfor %}
   </div>
   {% endif %}
@@ -545,6 +540,28 @@
   } else {
     attachCartFormHandlers();
   }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const messageStorage = document.getElementById('django-message-storage');
+    if (!messageStorage) {
+      return;
+    }
+
+    const messageElements = messageStorage.querySelectorAll('.django-message');
+    messageElements.forEach((element) => {
+      const tags = (element.dataset.tags || '').split(' ');
+      const text = element.dataset.message || '';
+      if (!text) {
+        return;
+      }
+
+      const hasError = tags.some((tag) => ['error', 'danger', 'warning'].includes(tag));
+      const type = hasError ? 'error' : 'success';
+      showToast(text, type);
+    });
+
+    messageStorage.remove();
+  });
 
   (function() {
     const root = document.documentElement;
