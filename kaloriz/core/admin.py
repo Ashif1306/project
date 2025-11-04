@@ -1,9 +1,61 @@
 from django.contrib import admin
-from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist, EmailVerification
+from .models import (
+    Cart,
+    CartItem,
+    Order,
+    OrderItem,
+    PaymentMethod,
+    UserProfile,
+    Watchlist,
+    EmailVerification,
+)
 
 admin.site.site_header = "Kaloriz Admin"
 admin.site.site_title = "Kaloriz Admin"
 admin.site.index_title = "Dashboard"
+
+
+@admin.register(PaymentMethod)
+class PaymentMethodAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'is_active', 'display_order', 'updated_at']
+    list_editable = ['is_active', 'display_order']
+    search_fields = ['name', 'slug', 'description']
+    list_filter = ['is_active']
+    readonly_fields = ['created_at', 'updated_at']
+    prepopulated_fields = {'slug': ('name',)}
+
+    fieldsets = (
+        (
+            'Informasi Utama',
+            {
+                'fields': (
+                    'name',
+                    'slug',
+                    'tagline',
+                    'description',
+                    'additional_info',
+                )
+            },
+        ),
+        (
+            'Tampilan',
+            {
+                'fields': (
+                    'logo',
+                    'button_label',
+                    'display_order',
+                    'is_active',
+                )
+            },
+        ),
+        (
+            'Metadata',
+            {
+                'classes': ('collapse',),
+                'fields': ('created_at', 'updated_at'),
+            },
+        ),
+    )
 
 
 class CartItemInline(admin.TabularInline):

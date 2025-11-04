@@ -57,7 +57,7 @@
             {% endif %}
             <div class="d-flex flex-wrap">
               <span class="meta-label mr-2">Pembayaran:</span>
-              <span class="meta-value">{{ payment_method_display }}</span>
+              <span class="meta-value text-uppercase">{{ payment_method_display }}</span>
             </div>
           </div>
         </div>
@@ -146,10 +146,17 @@
             <strong class="text-dark h4 mb-0" id="total-amount">{{ total_display }}</strong>
           </div>
 
-          <button type="button" class="btn btn-primary btn-lg w-100 mt-4" id="midtrans-checkout-btn">
-            Checkout
+          <button
+            type="button"
+            class="btn btn-primary btn-lg w-100 mt-4"
+            id="midtrans-checkout-btn"
+            data-payment-method="{{ payment_method }}"
+          >
+            {{ payment_method_button_label }}
           </button>
-          <p class="text-muted small text-center mt-2 mb-0">Pembayaran akan diproses melalui Midtrans Snap.</p>
+          {% if payment_method_additional_info %}
+          <p class="text-muted small text-center mt-2 mb-0">{{ payment_method_additional_info|linebreaksbr }}</p>
+          {% endif %}
         </div>
       </div>
     </div>
