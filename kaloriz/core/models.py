@@ -5,8 +5,56 @@ from decimal import Decimal
 import random
 from datetime import timedelta
 from django.utils import timezone
+from django.utils.text import slugify
 from django.db.models import Sum, F, DecimalField, ExpressionWrapper
 from django.db.models.functions import Coalesce
+
+
+class PaymentMethod(models.Model):
+    name = models.CharField(max_length=100, verbose_name="Nama Metode")
+    slug = models.SlugField(max_length=100, unique=True, verbose_name="Slug")
+    tagline = models.CharField(max_length=150, blank=True, verbose_name="Tagline")
+    description = models.TextField(blank=True, verbose_name="Deskripsi")
+    additional_info = models.TextField(blank=True, verbose_name="Informasi Tambahan")
+    button_label = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Teks Tombol Checkout",
+        help_text="Kosongkan untuk menggunakan teks default 'Checkout'",
+    )
+    logo = models.ImageField(
+        upload_to='payment_methods/',
+        blank=True,
+        null=True,
+        verbose_name="Logo",
+        help_text="Opsional, tampilkan logo di daftar metode pembayaran",
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Aktif")
+    display_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Urutan Tampil",
+        help_text="Metode dengan angka lebih kecil akan tampil lebih dulu",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Dibuat")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Diperbarui")
+
+    class Meta:
+        verbose_name = "Metode Pembayaran"
+        verbose_name_plural = "Metode Pembayaran"
+        ordering = ['display_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    @property
+    def checkout_button_label(self):
+        return self.button_label or 'Checkout'
+
 
 class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carts', verbose_name="Pengguna")

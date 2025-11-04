@@ -11,7 +11,16 @@ from django.db.models import F, Count
 from django.utils import timezone
 from django.utils.formats import number_format
 
-from .models import Cart, CartItem, Order, OrderItem, UserProfile, Watchlist, EmailVerification
+from .models import (
+    Cart,
+    CartItem,
+    Order,
+    OrderItem,
+    PaymentMethod,
+    UserProfile,
+    Watchlist,
+    EmailVerification,
+)
 from catalog.models import Product, DiscountCode, Testimonial
 from .forms import CustomUserRegistrationForm, TestimonialForm
 from .utils import send_verification_email, send_welcome_email
@@ -367,17 +376,48 @@ def checkout_payment(request):
     subtotal = Decimal(cart.get_selected_total() or 0)
     total = subtotal + shipping_cost
 
+    payment_methods_qs = PaymentMethod.objects.filter(is_active=True).order_by('display_order', 'name')
+    payment_methods = list(payment_methods_qs)
+
+    if not payment_methods:
+        messages.warning(
+            request,
+            'Belum ada metode pembayaran yang dapat dipilih. Silakan hubungi admin toko.',
+        )
+
+    selected_payment_slug = checkout_data.get('payment_method')
+    selected_payment_method = None
+
+    if selected_payment_slug:
+        selected_payment_method = next(
+            (m for m in payment_methods if m.slug.lower() == selected_payment_slug.lower()),
+            None,
+        )
+        if selected_payment_method is None:
+            checkout_data.pop('payment_method', None)
+            request.session['checkout'] = checkout_data
+            request.session.modified = True
+
+    if selected_payment_method is None and payment_methods:
+        selected_payment_method = payment_methods[0]
+
     if request.method == 'POST':
-        payment_method = request.POST.get('payment_method', '').lower()
-        if payment_method != 'midtrans':
+        submitted_slug = (request.POST.get('payment_method') or '').strip()
+        chosen_method = (
+            payment_methods_qs.filter(slug__iexact=submitted_slug).first()
+            if submitted_slug
+            else None
+        )
+
+        if not chosen_method:
             messages.error(request, 'Pilih metode pembayaran yang tersedia.')
         else:
-            checkout_data['payment_method'] = payment_method
+            checkout_data['payment_method'] = chosen_method.slug
             request.session['checkout'] = checkout_data
             request.session.modified = True
             return redirect('core:checkout_review')
 
-    selected_payment_method = checkout_data.get('payment_method')
+    selected_payment_slug = selected_payment_method.slug if selected_payment_method else None
     shipping_method_label = 'Express' if str(shipping_method).upper() == 'EXP' else 'Reguler'
     eta = checkout_data.get('eta')
 
@@ -391,7 +431,9 @@ def checkout_payment(request):
         'total_display': _format_rupiah(total),
         'shipping_method_label': shipping_method_label,
         'eta': eta,
-        'selected_payment_method': selected_payment_method,
+        'payment_methods': payment_methods,
+        'selected_payment_method': selected_payment_slug,
+        'selected_payment_method_obj': selected_payment_method,
     }
     return render(request, 'core/checkout_payment.html', context)
 
@@ -408,8 +450,23 @@ def checkout_review(request):
 
     checkout_data = request.session.get('checkout', {})
     address_id = checkout_data.get('address_id')
-    if not checkout_data.get('payment_method'):
+
+    payment_method_slug = checkout_data.get('payment_method')
+    if not payment_method_slug:
         messages.warning(request, 'Silakan pilih metode pembayaran terlebih dahulu.')
+        return redirect('core:checkout_payment')
+
+    payment_method = (
+        PaymentMethod.objects.filter(slug__iexact=payment_method_slug, is_active=True)
+        .order_by('display_order', 'name')
+        .first()
+    )
+
+    if payment_method is None:
+        checkout_data.pop('payment_method', None)
+        request.session['checkout'] = checkout_data
+        request.session.modified = True
+        messages.warning(request, 'Metode pembayaran yang dipilih tidak tersedia. Silakan pilih ulang.')
         return redirect('core:checkout_payment')
 
     shipping_address = None
@@ -497,8 +554,10 @@ def checkout_review(request):
         'subtotal_display': _format_rupiah(subtotal),
         'shipping_cost_display': _format_rupiah(shipping_cost),
         'total_display': _format_rupiah(total),
-        'payment_method': checkout_data.get('payment_method'),
-        'payment_method_display': 'Midtrans Snap' if checkout_data.get('payment_method') == 'midtrans' else checkout_data.get('payment_method'),
+        'payment_method': payment_method.slug,
+        'payment_method_display': payment_method.name,
+        'payment_method_button_label': payment_method.checkout_button_label,
+        'payment_method_additional_info': payment_method.additional_info,
         'shipping_method_label': shipping_method_label,
         'eta': checkout_data.get('eta'),
         'shipping_address': shipping_address,

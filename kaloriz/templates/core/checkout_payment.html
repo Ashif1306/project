@@ -49,27 +49,44 @@
             <h5 class="mb-0">Pilih Metode Pembayaran</h5>
           </div>
           <div class="card-body">
-            <label class="payment-option {% if selected_payment_method == 'midtrans' %}selected{% endif %}">
-              <input type="radio"
-                     name="payment_method"
-                     value="midtrans"
-                     {% if selected_payment_method == 'midtrans' %}checked{% endif %}>
-              <div class="payment-option-indicator" aria-hidden="true"></div>
-              <div class="payment-option-content">
-                <div class="payment-option-header">
-                  <div class="payment-option-logo">
-                    <img src="{% static 'images/midtrans-logo.svg' %}" alt="Midtrans" loading="lazy">
+            {% if payment_methods %}
+              {% for method in payment_methods %}
+                <label class="payment-option {% if selected_payment_method == method.slug %}selected{% endif %}">
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    value="{{ method.slug }}"
+                    {% if selected_payment_method == method.slug %}checked{% endif %}
+                  >
+                  <div class="payment-option-indicator" aria-hidden="true"></div>
+                  <div class="payment-option-content">
+                    <div class="payment-option-header">
+                      <div class="payment-option-logo">
+                        {% if method.logo %}
+                          <img src="{{ method.logo.url }}" alt="{{ method.name }}" loading="lazy">
+                        {% else %}
+                          <span class="payment-option-logo-placeholder" aria-hidden="true">{{ method.name|slice:":1" }}</span>
+                        {% endif %}
+                      </div>
+                      <div class="payment-option-title">
+                        <span class="name">{{ method.name }}</span>
+                        {% if method.tagline %}
+                          <span class="tag">{{ method.tagline }}</span>
+                        {% endif %}
+                      </div>
+                    </div>
+                    {% if method.description %}
+                      <p class="payment-option-description mb-2">{{ method.description }}</p>
+                    {% endif %}
+                    {% if method.additional_info %}
+                      <p class="payment-option-note mb-0 text-muted small">{{ method.additional_info|linebreaksbr }}</p>
+                    {% endif %}
                   </div>
-                  <div class="payment-option-title">
-                    <span class="name">Midtrans</span>
-                    <span class="tag">Pembayaran Online</span>
-                  </div>
-                </div>
-                <p class="payment-option-description mb-0">
-                  Pembayaran Anda akan diproses secara aman melalui Midtrans.
-                </p>
-              </div>
-            </label>
+                </label>
+              {% endfor %}
+            {% else %}
+              <p class="text-muted mb-0">Belum ada metode pembayaran yang dapat dipilih.</p>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -106,7 +123,7 @@
             <button type="submit"
                     class="btn btn-dark btn-block btn-lg rounded-pill"
                     id="continue-btn"
-                    {% if selected_payment_method != 'midtrans' %}disabled{% endif %}>
+                    {% if not selected_payment_method %}disabled{% endif %}>
               Lanjutkan
             </button>
           </div>
@@ -251,6 +268,20 @@
   padding: 8px 16px;
 }
 
+.payment-option-logo-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #dee2e6;
+  color: #343a40;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+}
+
 .payment-option-logo img {
   max-width: 100%;
   max-height: 100%;
@@ -278,6 +309,11 @@
 .payment-option-description {
   color: #495057;
   font-size: 0.95rem;
+}
+
+.payment-option-note {
+  color: #6c757d;
+  line-height: 1.5;
 }
 
 .payment-option.selected,
