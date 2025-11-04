@@ -9,81 +9,88 @@
   <div class="row g-4">
     <!-- ====== TABEL KERANJANG ====== -->
     <div class="col-lg-8">
-      <div class="card shadow-sm cart-card">
+      <div class="card shadow-sm">
         <div class="card-body">
-          <div class="cart-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-            <div class="d-flex align-items-center gap-2">
-              <input type="checkbox" id="check-all" title="Pilih semua" class="form-check-input">
-              <label for="check-all" class="fw-semibold mb-0">Pilih Semua</label>
-            </div>
-            <div class="d-flex gap-2">
-              <button type="button" id="btn-delete-selected" class="btn btn-outline-danger btn-sm" disabled>
-                <i class="fas fa-trash-alt"></i> Hapus Dipilih
-              </button>
-              <form method="post" action="{% url 'core:clear_cart' %}" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('Kosongkan keranjang?')">
-                  <i class="fas fa-trash"></i> Kosongkan Keranjang
-                </button>
-              </form>
-            </div>
-          </div>
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th width="36"><input type="checkbox" id="check-all" title="Pilih semua"></th>
+                  <th>Produk</th>
+                  <th width="120">Harga</th>
+                  <th width="160">Jumlah</th>
+                  <th width="140">Subtotal</th>
+                  <th width="64">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in cart.items.all %}
+                <tr class="cart-row {% if item.is_selected %}selected{% endif %}"
+                    data-item-id="{{ item.id }}"
+                    data-price="{{ item.product.get_display_price }}"> {# ANGKA DARI DB #}
 
-          <div class="cart-list">
-            {% for item in cart.items.all %}
-            <div class="cart-row card border-0 shadow-sm mb-3 {% if item.is_selected %}selected{% endif %}"
-                 data-item-id="{{ item.id }}"
-                 data-price="{{ item.product.get_display_price }}"> {# ANGKA DARI DB #}
-              <div class="card-body p-3 p-md-4">
-                <div class="cart-row-inner">
-                  <div class="cart-row-left">
-                    <div class="form-check me-3">
-                      <input type="checkbox" class="form-check-input item-check" {% if item.is_selected %}checked{% endif %}>
-                    </div>
-                    <div class="product-cell">
-                      {% if item.product.image %}
-                        <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
-                      {% endif %}
-                      <div class="product-info">
-                        <a href="{% url 'catalog:product_detail' item.product.slug %}">
-                          {{ item.product.name }}
-                        </a>
-                        <small class="text-muted">{{ item.product.category.name }}</small>
-                      </div>
+                  <td>
+                    <input type="checkbox" class="item-check" {% if item.is_selected %}checked{% endif %}>
+                  </td>
+
+                  <td>
+                  <div class="product-cell">
+                    {% if item.product.image %}
+                      <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+                    {% endif %}
+                    <div class="product-info">
+                      <a href="{% url 'catalog:product_detail' item.product.slug %}">
+                        {{ item.product.name }}
+                      </a>
+                      <small class="text-muted">{{ item.product.category.name }}</small>
                     </div>
                   </div>
+                </td>
 
-                  <div class="cart-row-right">
-                    <div class="price-cell text-muted">Rp {{ item.product.get_display_price|floatformat:0 }}</div>
+                  <td class="price-cell">Rp {{ item.product.get_display_price|floatformat:0 }}</td>
 
-                    <form method="post" action="{% url 'core:update_cart_item' item.id %}" class="qty-form d-flex align-items-center">
+                  <td>
+                    <form method="post" action="{% url 'core:update_cart_item' item.id %}" class="qty-form d-flex">
                       {% csrf_token %}
-                      <label class="me-2 text-muted small mb-0 d-none d-md-inline">Jumlah</label>
-                      <input type="number" name="quantity" class="form-control form-control-sm qty-input text-center"
+                      <input type="number" name="quantity" class="form-control form-control-sm qty-input"
                              min="1" max="{{ item.product.stock }}" value="{{ item.quantity }}">
                       <button type="submit" class="btn btn-sm btn-primary ms-2" title="Simpan">
                         <i class="fas fa-check"></i>
                       </button>
                     </form>
+                  </td>
 
-                    <div class="line-subtotal text-end">
-                      <span class="label text-muted small d-md-none">Subtotal</span>
-                      <strong class="line-subtotal-text d-block">Rp {{ item.get_subtotal|floatformat:0 }}</strong>
-                    </div>
+                  <td class="line-subtotal">
+                    <strong><span class="line-subtotal-text">Rp {{ item.get_subtotal|floatformat:0 }}</span></strong>
+                  </td>
+                  
+                  <td>
+                    <form method="post" action="{% url 'core:remove_from_cart' item.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Hapus item ini?')" title="Hapus">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  </td>
+                  
 
-                    <div class="action-cell text-end">
-                      <form method="post" action="{% url 'core:remove_from_cart' item.id %}" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-link text-danger p-0" onclick="return confirm('Hapus item ini?')" title="Hapus">
-                          <i class="fas fa-trash"></i>
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
+                </tr>
+
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <button type="button" id="btn-delete-selected" class="btn btn-outline-danger" disabled>
+              <i class="fas fa-trash-alt"></i> Hapus Dipilih
+            </button>
+            <form method="post" action="{% url 'core:clear_cart' %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-secondary" onclick="return confirm('Kosongkan keranjang?')">
+                <i class="fas fa-trash"></i> Kosongkan Keranjang
+              </button>
+            </form>
           </div>
         </div>
       </div>
@@ -91,31 +98,29 @@
 
     <!-- ====== RINGKASAN ====== -->
     <div class="col-lg-4">
-      <div class="card shadow-sm sticky-top sticky-summary" style="top:20px">
-        <div class="card-body p-4">
-          <h5 class="fw-semibold mb-4">Ringkasan Belanja</h5>
-          <div class="d-flex justify-content-between mb-3">
-            <span class="text-muted">Subtotal (<span id="selected-count">{{ cart.get_selected_items_count }}</span> item dipilih)</span>
-            <span class="fw-semibold" id="selected-subtotal">Rp {{ cart.get_selected_total|floatformat:0 }}</span>
+      <div class="card shadow-sm sticky-top" style="top:20px">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Ringkasan Belanja</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            <span>Subtotal (<span id="selected-count">{{ cart.get_selected_items_count }}</span> item dipilih)</span>
+            <span id="selected-subtotal">Rp {{ cart.get_selected_total|floatformat:0 }}</span>
           </div>
-          <div class="d-flex justify-content-between mb-3">
-            <span class="text-muted">Ongkir</span>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Ongkir</span>
             <span class="text-muted"><small>Dihitung di checkout</small></span>
           </div>
-          <div class="summary-total mb-4">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <span class="text-muted d-block">Total</span>
-                <strong class="fs-4 text-primary" id="grand-total">Rp {{ cart.get_selected_total|floatformat:0 }}</strong>
-              </div>
-              <div class="badge bg-primary-subtle text-primary fw-semibold">Termasuk PPN</div>
-            </div>
+          <hr>
+          <div class="d-flex justify-content-between mb-3">
+            <strong>Total Sementara</strong>
+            <strong class="text-primary" id="grand-total">Rp {{ cart.get_selected_total|floatformat:0 }}</strong>
           </div>
-          <button type="button" id="btn-checkout" class="btn btn-primary w-100 btn-lg mb-2" {% if not cart.get_selected_items_count %}disabled{% endif %}>
-            <i class="fas fa-credit-card me-1"></i> Checkout (<span id="checkout-count">{{ cart.get_selected_items_count }}</span>)
+          <button type="button" id="btn-checkout" class="btn btn-primary w-100 btn-lg" {% if not cart.get_selected_items_count %}disabled{% endif %}>
+            <i class="fas fa-credit-card"></i> Checkout (<span id="checkout-count">{{ cart.get_selected_items_count }}</span>)
           </button>
-          <a href="{% url 'catalog:product_list' %}" class="btn btn-outline-secondary w-100 summary-link">
-            <i class="fas fa-arrow-left me-1"></i> Lanjut Belanja
+          <a href="{% url 'catalog:product_list' %}" class="btn btn-outline-secondary w-100 mt-2">
+            <i class="fas fa-arrow-left"></i> Lanjut Belanja
           </a>
         </div>
       </div>
@@ -134,188 +139,73 @@
 </div>
 
 <style>
-  .cart-card {
-    border: none;
-    border-radius: 16px;
-  }
+  .cart-row.selected { background:#f8f9fa; transition:background .15s }
+  .item-check, #check-all { width:20px; height:20px; cursor:pointer }
+</style>
+<style>
+  .cart-row.selected { background:#f8f9fa; transition:background .15s; }
+  .item-check, #check-all { width:20px; height:20px; cursor:pointer; }
 
-  .cart-header {
-    border: 1px solid #e6e8ef;
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
-    background: #f8f9ff;
-  }
-
-  .cart-list .cart-row {
-    border-radius: 16px;
-    transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
-  }
-
-  .cart-row.selected {
-    background: #f0f4ff;
-    box-shadow: 0 10px 25px rgba(31, 77, 197, 0.15);
-  }
-
-  .cart-row-inner {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 1.5rem;
-  }
-
-  .cart-row-left {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-  }
-
+  /* ========== RESPONSIVE PRODUCT CELL ========== */
   .product-cell {
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    align-items: flex-start;
+    gap: 1rem; /* Jarak antara gambar dan teks */
   }
 
   .product-cell img {
-    width: 74px;
-    height: 74px;
-    border-radius: 12px;
+    width: 70px;
+    height: 70px;
+    border-radius: 8px;
     object-fit: cover;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+  }
+
+  .product-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   .product-info a {
-    color: #1f4dc5;
-    font-weight: 600;
+    color: #007bff;
     text-decoration: none;
+    font-weight: 600;
   }
 
   .product-info a:hover {
     text-decoration: underline;
   }
 
-  .cart-row-right {
-    display: grid;
-    grid-template-columns: repeat(4, auto);
-    gap: 1.25rem;
-    align-items: center;
-  }
-
-  .price-cell {
-    font-weight: 600;
-    color: #4a4f63;
-  }
-
-  .qty-form .qty-input {
-    width: 80px;
-    border-radius: 10px;
-  }
-
-  .line-subtotal strong {
-    font-size: 1.1rem;
-    color: #1f4dc5;
-  }
-
-  .action-cell .btn {
-    font-size: 1rem;
-  }
-
-  .sticky-summary {
-    border-radius: 16px;
-    overflow: hidden;
-  }
-
-  .summary-total {
-    background: #f8f9ff;
-    border-radius: 12px;
-    padding: 1rem;
-  }
-
-  #btn-checkout {
-    border-radius: 999px;
-    box-shadow: 0 12px 20px rgba(31, 77, 197, 0.25);
-  }
-
-  .summary-link {
-    border-radius: 999px;
-  }
-
-  /* ========== RESPONSIVE ========== */
-  @media (max-width: 1200px) {
-    .cart-row-right {
-      grid-template-columns: repeat(3, auto);
-      row-gap: 1rem;
-    }
-
-    .action-cell {
-      grid-column: 1 / -1;
-      text-align: right;
-    }
-  }
-
+  /* Responsif untuk tablet */
   @media (max-width: 992px) {
-    .cart-row-inner {
-      grid-template-columns: 1fr;
-    }
-
-    .cart-row-left {
-      align-items: flex-start;
-    }
-
-    .cart-row-right {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .line-subtotal,
-    .action-cell {
-      text-align: left;
-    }
-  }
-
-  @media (max-width: 768px) {
     .product-cell {
-      align-items: flex-start;
+      gap: 0.8rem;
     }
-
     .product-cell img {
-      width: 64px;
-      height: 64px;
-    }
-
-    .cart-row-right {
-      grid-template-columns: 1fr;
-      gap: 0.75rem;
-    }
-
-    .qty-form {
-      justify-content: flex-start;
-    }
-
-    .line-subtotal-text {
-      font-size: 1rem;
+      width: 60px;
+      height: 60px;
     }
   }
 
+  /* Responsif untuk mobile */
   @media (max-width: 576px) {
-    .cart-card {
-      border-radius: 12px;
+    .table {
+      font-size: 14px;
     }
-
-    .cart-row {
-      border-radius: 12px !important;
-    }
-
     .product-cell {
-      gap: 0.75rem;
-    }
-
-    .product-cell img {
-      width: 58px;
-      height: 58px;
-      box-shadow: none;
-    }
-
-    .cart-header {
       flex-direction: column;
-      align-items: flex-start !important;
+      align-items: center;
+      text-align: center;
+      gap: 0.5rem;
+    }
+    .product-cell img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 0.3rem;
+    }
+    .product-info {
+      align-items: center;
     }
   }
 </style>
