@@ -5,7 +5,6 @@ from .models import (
     Order,
     OrderItem,
     PaymentMethod,
-    PaymentTransaction,
     UserProfile,
     Watchlist,
     EmailVerification,
@@ -136,90 +135,3 @@ class EmailVerificationAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'user__email', 'code']
     readonly_fields = ['created_at']
     date_hierarchy = 'created_at'
-
-
-@admin.register(PaymentTransaction)
-class PaymentTransactionAdmin(admin.ModelAdmin):
-    list_display = [
-        'transaction_id',
-        'order',
-        'payment_method',
-        'transaction_status',
-        'gross_amount',
-        'payment_type',
-        'created_at',
-    ]
-    list_filter = ['transaction_status', 'fraud_status', 'payment_type', 'created_at']
-    search_fields = [
-        'transaction_id',
-        'order__order_number',
-        'order__user__username',
-        'order__email',
-    ]
-    readonly_fields = [
-        'transaction_id',
-        'snap_token',
-        'payment_type',
-        'transaction_status',
-        'fraud_status',
-        'status_code',
-        'signature_key',
-        'response_midtrans',
-        'created_at',
-        'updated_at',
-    ]
-    date_hierarchy = 'created_at'
-
-    fieldsets = (
-        (
-            'Informasi Transaksi',
-            {
-                'fields': (
-                    'order',
-                    'payment_method',
-                    'transaction_id',
-                    'snap_token',
-                    'gross_amount',
-                )
-            },
-        ),
-        (
-            'Status Pembayaran',
-            {
-                'fields': (
-                    'transaction_status',
-                    'fraud_status',
-                    'payment_type',
-                    'status_code',
-                )
-            },
-        ),
-        (
-            'Verifikasi',
-            {
-                'classes': ('collapse',),
-                'fields': ('signature_key',),
-            },
-        ),
-        (
-            'Response Midtrans',
-            {
-                'classes': ('collapse',),
-                'fields': ('response_midtrans',),
-            },
-        ),
-        (
-            'Timestamp',
-            {
-                'fields': ('created_at', 'updated_at'),
-            },
-        ),
-    )
-
-    def has_add_permission(self, request):
-        # Prevent manual creation of payment transactions
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        # Prevent deletion of payment transactions
-        return False

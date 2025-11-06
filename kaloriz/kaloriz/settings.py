@@ -185,8 +185,6 @@ JAZZMIN_SETTINGS = {
         "catalog.Testimonial": "fas fa-star",
         "core.Cart": "fas fa-shopping-cart",
         "core.Order": "fas fa-receipt",
-        "core.PaymentMethod": "fas fa-credit-card",
-        "core.PaymentTransaction": "fas fa-money-check-alt",
         "core.UserProfile": "fas fa-user-circle",
         "core.Watchlist": "fas fa-heart",
     },
@@ -248,21 +246,3 @@ JAZZMIN_UI_TWEAKS = {
 SHIPPING_ENABLED = True
 DEFAULT_SHIPPING_CITY = "Makassar"
 DEFAULT_SHIPPING_PROVINCE = "Sulawesi Selatan"
-
-# ============================================
-# MIDTRANS PAYMENT GATEWAY CONFIGURATION
-# ============================================
-# Set these values in your .env file:
-# MIDTRANS_MERCHANT_ID=your_merchant_id
-# MIDTRANS_CLIENT_KEY=your_client_key
-# MIDTRANS_SERVER_KEY=your_server_key
-# MIDTRANS_IS_PRODUCTION=False
-
-MIDTRANS_MERCHANT_ID = os.getenv('MIDTRANS_MERCHANT_ID', '')
-MIDTRANS_CLIENT_KEY = os.getenv('MIDTRANS_CLIENT_KEY', '')
-MIDTRANS_SERVER_KEY = os.getenv('MIDTRANS_SERVER_KEY', '')
-MIDTRANS_IS_PRODUCTION = os.getenv('MIDTRANS_IS_PRODUCTION', 'False') == 'True'
-
-# Midtrans Snap API URLs
-MIDTRANS_SNAP_URL = 'https://app.midtrans.com/snap/v1/transactions' if MIDTRANS_IS_PRODUCTION else 'https://app.sandbox.midtrans.com/snap/v1/transactions'
-MIDTRANS_API_URL = 'https://api.midtrans.com/v2' if MIDTRANS_IS_PRODUCTION else 'https://api.sandbox.midtrans.com/v2'

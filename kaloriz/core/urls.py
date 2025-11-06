@@ -25,11 +25,6 @@ urlpatterns = [
     path('order/<str:order_number>/', views.order_detail, name='order_detail'),
     path('order/<str:order_number>/item/<int:item_id>/testimonial/', views.submit_testimonial, name='submit_testimonial'),
 
-    # Payment URLs (Midtrans)
-    path('payment/create-snap-token/', views.create_snap_token, name='create_snap_token'),
-    path('payment/midtrans-notification/', views.midtrans_notification, name='midtrans_notification'),
-    path('payment/check-status/<str:order_number>/', views.check_payment_status, name='check_payment_status'),
-
     # Auth URLs
     path('register/', views.register_view, name='register'),
     path('register/verify/', views.verify_email_view, name='verify_email'),
