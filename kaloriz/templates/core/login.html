@@ -14,24 +14,25 @@
 {% block navbar %}{% endblock %}
 
 {% block content %}
-<div class="auth-page">
+<div class="auth-page auth-page--login">
   <div class="auth-card">
     <div class="auth-content">
-      <div>
-        <span class="auth-highlight"><i class="fas fa-sparkles"></i> Senang Melihat Anda Kembali</span>
-        <h2>Masuk ke Akun Kaloriz</h2>
-        <p>Akses koleksi produk pilihan Anda dan lanjutkan pengalaman belanja yang menyenangkan.</p>
+      <div class="auth-header">
+        <span class="auth-badge"><i class="fas fa-door-open"></i> Masuk</span>
+        <h2>Selamat Datang Kembali di Kaloriz</h2>
+        <p>Masuk untuk menyimpan keranjang, melacak pesanan, dan mendapatkan rekomendasi produk sesuai selera Anda.</p>
       </div>
+
       <form method="post" class="auth-form">
         {% csrf_token %}
 
         {% if form.non_field_errors %}
-          <div class="auth-message">
+          <div class="auth-message auth-message--error">
             {{ form.non_field_errors|join:' ' }}
           </div>
         {% endif %}
 
-        <div>
+        <div class="auth-field">
           <label for="username" class="auth-label">Username atau Email</label>
           <input
             type="text"
@@ -44,7 +45,7 @@
             autofocus>
         </div>
 
-        <div>
+        <div class="auth-field">
           <label for="password" class="auth-label">Password</label>
           <input
             type="password"
@@ -58,22 +59,30 @@
         <div class="auth-action">
           <label class="auth-remember" for="remember_me">
             <input type="checkbox" id="remember_me" name="remember_me" {% if remember_me %}checked{% endif %}>
-            Remember me
+            Ingat saya
           </label>
-          <a href="mailto:info@kaloriz.com?subject=Lupa%20Password" class="auth-link">Forgot password?</a>
+          <a href="mailto:info@kaloriz.com?subject=Lupa%20Password" class="auth-link">Lupa password?</a>
         </div>
 
-        <button type="submit" class="auth-submit">Login</button>
+        <button type="submit" class="auth-submit">Masuk Sekarang</button>
       </form>
 
-      <p class="auth-meta">Belum punya akun? <a href="{% url 'core:register' %}">Sign up</a></p>
+      <p class="auth-meta">Belum punya akun? <a href="{% url 'core:register' %}">Daftar gratis</a></p>
     </div>
+
     <div class="auth-visual">
+      <div class="auth-illustration">
+        <img src="{% static 'images/auth-illustration.svg' %}" alt="Kaloriz UI preview" loading="lazy">
+      </div>
       <div class="auth-visual-content">
-        <img src="{% static 'images/banner.jpg' %}" alt="Kaloriz illustration" loading="lazy">
-        <span class="auth-highlight"><i class="fas fa-bolt"></i> Belanja Kilat</span>
-        <h3>Temukan Produk Terbaik Setiap Hari</h3>
-        <p class="auth-description">Nikmati pengalaman belanja dengan rekomendasi yang dipersonalisasi, penawaran eksklusif, dan pengiriman cepat.</p>
+        <span class="auth-pill">High quality UI assets for designers</span>
+        <h3>Semua alat desain terbaik dalam satu dashboard</h3>
+        <p class="auth-description">Kelola inspirasi belanja, simpan produk favorit, dan nikmati update promo eksklusif setiap minggunya.</p>
+        <ul class="auth-benefits">
+          <li><i class="fas fa-check"></i> Koleksi produk kurasi desainer</li>
+          <li><i class="fas fa-check"></i> Rekomendasi personal sesuai aktivitas</li>
+          <li><i class="fas fa-check"></i> Penawaran spesial hanya untuk member</li>
+        </ul>
       </div>
     </div>
   </div>
