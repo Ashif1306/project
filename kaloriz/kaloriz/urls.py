@@ -8,6 +8,7 @@ urlpatterns = [
     path("", include("catalog.urls")),
     path("", include("core.urls")),
     path("shipping/", include("shipping.urls")),  # Shipping module
+    path("payment/", include("payment.urls")),
 ]
 
 if settings.DEBUG:

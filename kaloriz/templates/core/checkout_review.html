@@ -146,10 +146,19 @@
             <strong class="text-dark h4 mb-0" id="total-amount">{{ total_display }}</strong>
           </div>
 
+          <div
+            id="checkout-summary-data"
+            data-subtotal="{{ subtotal_raw }}"
+            data-shipping-cost="{{ shipping_cost_raw }}"
+            data-discount="{{ discount_amount_raw }}"
+            data-total="{{ total_raw }}"
+            class="d-none"
+          ></div>
+
           <button
             type="button"
             class="btn btn-primary btn-lg w-100 mt-4"
-            id="midtrans-checkout-btn"
+            id="btn-checkout"
             data-payment-method="{{ payment_method }}"
           >
             {{ payment_method_button_label }}
@@ -484,5 +493,131 @@
     cancelBtn.addEventListener('click', cancelDiscount);
   }
 })();
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ MIDTRANS_CLIENT_KEY }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const checkoutBtn = document.getElementById('btn-checkout');
+    const summaryData = document.getElementById('checkout-summary-data');
+    const createTokenUrl = '{{ payment_create_snap_token_url }}';
+    const finishUrl = '{{ payment_finish_url }}';
+    const orderCompleteUrl = '{{ order_complete_url }}';
+
+    if (!checkoutBtn) {
+      return;
+    }
+
+    function showNotification(message, type = 'success') {
+      if (!message) {
+        return;
+      }
+      if (typeof window.showToast === 'function') {
+        window.showToast(message, type);
+      } else {
+        alert(message);
+      }
+    }
+
+    function toggleLoading(state) {
+      if (!checkoutBtn) {
+        return;
+      }
+      if (state) {
+        checkoutBtn.dataset.originalText = checkoutBtn.textContent;
+        checkoutBtn.textContent = 'Memproses...';
+        checkoutBtn.disabled = true;
+      } else {
+        const originalText = checkoutBtn.dataset.originalText;
+        if (originalText) {
+          checkoutBtn.textContent = originalText;
+        }
+        checkoutBtn.disabled = false;
+      }
+    }
+
+    function postFinish(status, result) {
+      return fetch(finishUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken') || ''
+        },
+        body: JSON.stringify({ status, result })
+      }).catch((error) => {
+        console.warn('Gagal mengirim status pembayaran', error);
+      });
+    }
+
+    async function handleCheckoutClick() {
+      if (!window.snap) {
+        showNotification('Midtrans Snap belum siap. Muat ulang halaman dan coba lagi.', 'error');
+        return;
+      }
+
+      toggleLoading(true);
+
+      const payload = summaryData
+        ? {
+            subtotal: summaryData.dataset.subtotal,
+            shipping_cost: summaryData.dataset.shippingCost,
+            discount: summaryData.dataset.discount,
+            total: summaryData.dataset.total
+          }
+        : {};
+
+      try {
+        const response = await fetch(createTokenUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken') || ''
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error('Gagal membuat Snap Token');
+        }
+
+        const data = await response.json();
+        const token = data && data.token;
+
+        if (!token) {
+          throw new Error('Token Snap tidak ditemukan');
+        }
+
+        toggleLoading(false);
+
+        window.snap.pay(token, {
+          onSuccess: function (result) {
+            showNotification('Pembayaran berhasil.', 'success');
+            postFinish('success', result).finally(function () {
+              window.location.href = orderCompleteUrl;
+            });
+          },
+          onPending: function (result) {
+            showNotification('Pembayaran dalam proses. Silakan selesaikan pembayaran Anda.', 'warning');
+            postFinish('pending', result);
+          },
+          onError: function (result) {
+            showNotification('Terjadi kesalahan dalam pembayaran.', 'error');
+            postFinish('error', result);
+          },
+          onClose: function () {
+            showNotification('Anda menutup pop-up pembayaran sebelum selesai.', 'warning');
+          }
+        });
+      } catch (error) {
+        console.error(error);
+        showNotification(error.message || 'Gagal membuat Snap Token', 'error');
+        toggleLoading(false);
+      }
+    }
+
+    checkoutBtn.addEventListener('click', handleCheckoutClick);
+  });
 </script>
 {% endblock %}

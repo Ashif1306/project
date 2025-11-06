@@ -2,6 +2,7 @@ import json
 import uuid
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
@@ -10,6 +11,7 @@ from django.contrib import messages
 from django.db.models import F, Count
 from django.utils import timezone
 from django.utils.formats import number_format
+from django.urls import reverse
 
 from .models import (
     Cart,
@@ -562,6 +564,14 @@ def checkout_review(request):
         'eta': checkout_data.get('eta'),
         'shipping_address': shipping_address,
         'discount_code': discount_code,
+        'subtotal_raw': subtotal,
+        'shipping_cost_raw': shipping_cost,
+        'discount_amount_raw': discount_amount,
+        'total_raw': total,
+        'MIDTRANS_CLIENT_KEY': settings.MIDTRANS_CLIENT_KEY,
+        'payment_create_snap_token_url': reverse('payment:create_snap_token'),
+        'payment_finish_url': reverse('payment:finish'),
+        'order_complete_url': reverse('core:order_list'),
     }
     return render(request, 'core/checkout_review.html', context)
 
