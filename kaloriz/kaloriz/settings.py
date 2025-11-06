@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "core",
     "catalog",
     "shipping",
+    "payment",
 ]
 
 
@@ -163,6 +164,12 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')          # wajib terisi
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # wajib terisi (App Password TANPA spasi)
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+
+# Midtrans configuration
+MIDTRANS_IS_PRODUCTION = os.getenv('MIDTRANS_IS_PRODUCTION', 'False') == 'True'
+MIDTRANS_SERVER_KEY = os.getenv('MIDTRANS_SERVER_KEY', '')
+MIDTRANS_CLIENT_KEY = os.getenv('MIDTRANS_CLIENT_KEY', '')
 
 
 # Jazzmin settings
