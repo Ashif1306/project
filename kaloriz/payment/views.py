@@ -114,6 +114,7 @@ def _call_doku_api(target: str, payload: dict) -> tuple[int, dict, dict]:
         "Client-Id": client_id,
         "Request-Id": request_id,
         "Request-Timestamp": timestamp,
+        "Request-Target": normalized_target,
         "Signature": signature,
         "Digest": digest_header,
         "Content-Type": "application/json",
