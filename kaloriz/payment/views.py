@@ -73,7 +73,7 @@ def _compute_doku_signature(
         f"Request-Target:{target}",
         f"Digest:{digest_header_value}",
     ]
-    string_to_sign = "".join(f"{line}\n" for line in lines)
+    string_to_sign = "\n".join(lines)
     signature = base64.b64encode(
         hmac.new(secret_key.encode("utf-8"), string_to_sign.encode("utf-8"), hashlib.sha256).digest()
     ).decode("utf-8")
@@ -97,79 +97,59 @@ def _call_doku_api(target: str, payload: dict) -> tuple[int, dict, dict]:
     base_url = _get_doku_base_url().rstrip("/") + "/"
     url = urljoin(base_url, normalized_target.lstrip("/"))
 
-    digest_header_variants = [f"SHA-256={digest_value}", digest_value]
+    digest_header = f"SHA-256={digest_value}"
 
-    last_response: tuple[int, dict, dict] | None = None
-    last_body = ""
+    request_id = str(uuid.uuid4())
+    timestamp = _format_iso_timestamp(timezone.now())
+    signature = _compute_doku_signature(
+        normalized_target,
+        client_id=client_id,
+        secret_key=secret_key,
+        request_id=request_id,
+        timestamp=timestamp,
+        digest_header_value=digest_header,
+    )
 
-    for digest_header in digest_header_variants:
-        request_id = str(uuid.uuid4())
-        timestamp = _format_iso_timestamp(timezone.now())
-        signature = _compute_doku_signature(
-            normalized_target,
-            client_id=client_id,
-            secret_key=secret_key,
-            request_id=request_id,
-            timestamp=timestamp,
-            digest_header_value=digest_header,
-        )
+    headers = {
+        "Client-Id": client_id,
+        "Request-Id": request_id,
+        "Request-Timestamp": timestamp,
+        "Signature": signature,
+        "Digest": digest_header,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
 
-        headers = {
-            "Client-Id": client_id,
-            "Request-Id": request_id,
-            "Request-Timestamp": timestamp,
-            "Signature": signature,
-            "Digest": digest_header,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        }
+    request_obj = urllib_request.Request(url, data=body_bytes, headers=headers, method="POST")
+    response_body = ""
+    response_headers: dict[str, str] = {}
 
-        request_obj = urllib_request.Request(url, data=body_bytes, headers=headers, method="POST")
-        response_body = ""
-        response_headers = {}
+    try:
+        with urllib_request.urlopen(request_obj, timeout=30) as response:
+            response_body = response.read().decode("utf-8")
+            response_status = response.status
+            response_headers = dict(response.headers.items())
+    except HTTPError as exc:  # pragma: no cover - network failures are hard to simulate
+        response_body = exc.read().decode("utf-8", errors="replace")
+        response_status = exc.code
+        response_headers = dict(getattr(exc, "headers", {}) or {})
+    except URLError as exc:  # pragma: no cover - network failures are hard to simulate
+        raise RuntimeError(f"Gagal menghubungi DOKU: {exc.reason}") from exc
 
+    if not response_body:
+        response_data = {}
+    else:
         try:
-            with urllib_request.urlopen(request_obj, timeout=30) as response:
-                response_body = response.read().decode("utf-8")
-                response_status = response.status
-                response_headers = dict(response.headers.items())
-        except HTTPError as exc:  # pragma: no cover - network failures are hard to simulate
-            response_body = exc.read().decode("utf-8", errors="replace")
-            response_status = exc.code
-            response_headers = dict(getattr(exc, "headers", {}) or {})
-        except URLError as exc:  # pragma: no cover - network failures are hard to simulate
-            raise RuntimeError(f"Gagal menghubungi DOKU: {exc.reason}") from exc
-
-        if not response_body:
-            response_data = {}
-        else:
-            try:
-                response_data = json.loads(response_body)
-            except json.JSONDecodeError:
-                response_data = {"raw": response_body}
-
-        last_response = (response_status, response_data, response_headers)
-        last_body = response_body
-
-        response_body_lower = (response_body or "").lower()
-        invalid_signature = response_status == 401 and "invalid header signature" in response_body_lower
-        if not invalid_signature and isinstance(response_data, dict):
-            invalid_signature = "invalid header signature" in json.dumps(response_data).lower()
-
-        if not invalid_signature:
-            break
-
-    if last_response is None:
-        raise RuntimeError("Tidak ada respons dari DOKU.")
-
-    response_status, response_data, response_headers = last_response
+            response_data = json.loads(response_body)
+        except json.JSONDecodeError:
+            response_data = {"raw": response_body}
 
     if not (200 <= response_status < 300):
         logger.error(
             "DOKU API call to %s returned status %s with body: %s",
             normalized_target,
             response_status,
-            last_body,
+            response_body,
         )
 
     return response_status, response_data, response_headers
@@ -293,7 +273,12 @@ def _build_customer_details(shipping_address: Address, user) -> dict:
     }
 
 
-def _build_doku_line_items(selected_items, shipping_cost: Decimal, discount_amount: Decimal):
+def _build_doku_line_items(
+    selected_items,
+    shipping_cost: Decimal,
+    discount_amount: Decimal,
+    total_amount: Decimal,
+):
     has_discount = discount_amount and discount_amount > 0
     line_items = []
 
@@ -324,8 +309,18 @@ def _build_doku_line_items(selected_items, shipping_cost: Decimal, discount_amou
 
     # DOKU does not accept negative price items. When discounts are applied, omit line items
     # to avoid mismatched totals between payload and amount.
-    if has_discount:
+    total_amount_int = _to_int_amount(total_amount)
+    if total_amount_int <= 0:
         return []
+
+    if has_discount:
+        return [
+            {
+                "name": "Total Pesanan",
+                "price": total_amount_int,
+                "quantity": 1,
+            }
+        ]
 
     return line_items
 
@@ -551,7 +546,7 @@ def payment_create_doku_checkout(request):
     eta = checkout_data.get("eta")
     notes = checkout_data.get("notes", "")
 
-    line_items = _build_doku_line_items(selected_items, shipping_cost, discount_amount)
+    line_items = _build_doku_line_items(selected_items, shipping_cost, discount_amount, total)
 
     order_payload = {
         "amount": _to_int_amount(total),
