@@ -61,7 +61,7 @@ def _compute_doku_signature(target: str, body: str, *, client_id: str, secret_ke
     body_bytes = body.encode("utf-8")
     digest_raw = hashlib.sha256(body_bytes).digest()
     digest = base64.b64encode(digest_raw).decode("utf-8")
-    signature_components = "\n".join(
+    string_to_sign = "\n".join(
         [
             f"Client-Id:{client_id}",
             f"Request-Id:{request_id}",
@@ -71,7 +71,7 @@ def _compute_doku_signature(target: str, body: str, *, client_id: str, secret_ke
         ]
     )
     signature = base64.b64encode(
-        hmac.new(secret_key.encode("utf-8"), signature_components.encode("utf-8"), hashlib.sha256).digest()
+        hmac.new(secret_key.encode("utf-8"), string_to_sign.encode("utf-8"), hashlib.sha256).digest()
     ).decode("utf-8")
     return f"HMACSHA256={signature}", digest
 
@@ -84,11 +84,12 @@ def _call_doku_api(target: str, payload: dict) -> tuple[int, dict, dict]:
     if not client_id or not secret_key:
         raise RuntimeError("Konfigurasi DOKU belum lengkap.")
 
+    normalized_target = "/" + target.lstrip("/")
     body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     request_id = str(uuid.uuid4())
     timestamp = _format_iso_timestamp(timezone.now())
     signature, digest = _compute_doku_signature(
-        target,
+        normalized_target,
         body,
         client_id=client_id,
         secret_key=secret_key,
@@ -107,7 +108,7 @@ def _call_doku_api(target: str, payload: dict) -> tuple[int, dict, dict]:
     }
 
     base_url = _get_doku_base_url().rstrip("/") + "/"
-    url = urljoin(base_url, target.lstrip("/"))
+    url = urljoin(base_url, normalized_target.lstrip("/"))
 
     request_obj = urllib_request.Request(url, data=body.encode("utf-8"), headers=headers, method="POST")
     response_body = ""
@@ -132,6 +133,14 @@ def _call_doku_api(target: str, payload: dict) -> tuple[int, dict, dict]:
             response_data = json.loads(response_body)
         except json.JSONDecodeError:
             response_data = {"raw": response_body}
+
+    if not (200 <= response_status < 300):
+        logger.error(
+            "DOKU API call to %s returned status %s with body: %s",
+            normalized_target,
+            response_status,
+            response_body,
+        )
 
     return response_status, response_data, response_headers
 
@@ -449,11 +458,6 @@ def payment_create_snap_token(request):
 def payment_create_doku_checkout(request):
     """Create a DOKU redirect checkout session."""
 
-    try:
-        client_payload = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
-        client_payload = {}
-
     checkout_data = request.session.get("checkout", {})
     doku_slug = getattr(settings, "DOKU_PAYMENT_METHOD_SLUG", "doku")
     selected_payment_slug = (checkout_data.get("payment_method") or "").strip().lower()
@@ -498,16 +502,6 @@ def payment_create_doku_checkout(request):
     if total < 0:
         total = Decimal("0")
 
-    client_total_value = client_payload.get("total")
-    if client_total_value is not None:
-        client_total = _to_decimal(client_total_value)
-        if client_total != total:
-            logger.warning(
-                "Client total %s does not match server total %s for DOKU.",
-                client_total,
-                total,
-            )
-
     selected_items, selected_quantities = _prepare_selected_cart_items(selected_items_qs)
     if not selected_items:
         return JsonResponse({"message": "Tidak ada item yang dipilih untuk pembayaran."}, status=400)
@@ -530,7 +524,7 @@ def payment_create_doku_checkout(request):
     line_items = _build_doku_line_items(selected_items, shipping_cost, discount_amount)
 
     order_payload = {
-        "amount": f"{_to_decimal(total).quantize(Decimal('0.01'))}",
+        "amount": _to_int_amount(total),
         "invoice_number": order_id,
         "currency": "IDR",
         "callback_url": request.build_absolute_uri(reverse("payment:doku_notification")),
