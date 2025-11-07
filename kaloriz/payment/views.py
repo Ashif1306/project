@@ -1,5 +1,6 @@
 """Views for handling payment integrations."""
 import base64
+import datetime
 import json
 import logging
 import uuid
@@ -51,12 +52,9 @@ def _get_doku_config() -> dict:
 
 def _format_iso_timestamp(dt) -> str:
     if dt.tzinfo is None:
-        dt = timezone.make_aware(dt, timezone=timezone.utc)
-    dt = dt.astimezone(timezone.utc)
-    timestamp = dt.strftime("%Y-%m-%dT%H:%M:%S%z")
-    if len(timestamp) == 24:  # Format +HHMM -> +HH:MM
-        return f"{timestamp[:-2]}:{timestamp[-2:]}"
-    return timestamp
+        dt = timezone.make_aware(dt, timezone=datetime.timezone.utc)
+    dt = dt.astimezone(datetime.timezone.utc)
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _compute_doku_signature(target: str, body: str, *, client_id: str, secret_key: str, request_id: str, timestamp: str) -> tuple[str, str]:
@@ -75,7 +73,7 @@ def _compute_doku_signature(target: str, body: str, *, client_id: str, secret_ke
     signature = base64.b64encode(
         hmac.new(secret_key.encode("utf-8"), signature_components.encode("utf-8"), hashlib.sha256).digest()
     ).decode("utf-8")
-    return signature, digest
+    return f"HMACSHA256={signature}", digest
 
 
 def _call_doku_api(target: str, payload: dict) -> tuple[int, dict, dict]:
