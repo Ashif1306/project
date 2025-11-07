@@ -628,4 +628,92 @@
   });
 </script>
 {% endif %}
+{% if is_doku_payment %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const checkoutBtn = document.getElementById('btn-checkout');
+    const summaryData = document.getElementById('checkout-summary-data');
+    const createPaymentUrl = '{{ payment_create_doku_payment_url }}';
+    const dokuSlug = '{{ doku_payment_slug|lower }}';
+
+    if (!checkoutBtn || !createPaymentUrl) {
+      return;
+    }
+
+    const selectedPaymentSlug = (checkoutBtn.dataset.paymentMethod || '').toLowerCase();
+    if (selectedPaymentSlug !== dokuSlug) {
+      return;
+    }
+
+    function showNotification(message, type = 'success') {
+      if (!message) {
+        return;
+      }
+      if (typeof window.showToast === 'function') {
+        window.showToast(message, type);
+      } else {
+        alert(message);
+      }
+    }
+
+    function toggleLoading(state) {
+      if (!checkoutBtn) {
+        return;
+      }
+      if (state) {
+        checkoutBtn.dataset.originalText = checkoutBtn.textContent;
+        checkoutBtn.textContent = 'Mengalihkan ke DOKU...';
+        checkoutBtn.disabled = true;
+      } else {
+        const originalText = checkoutBtn.dataset.originalText;
+        if (originalText) {
+          checkoutBtn.textContent = originalText;
+        }
+        checkoutBtn.disabled = false;
+      }
+    }
+
+    async function handleCheckoutClick() {
+      toggleLoading(true);
+
+      const payload = summaryData
+        ? {
+            subtotal: summaryData.dataset.subtotal,
+            shipping_cost: summaryData.dataset.shippingCost,
+            discount: summaryData.dataset.discount,
+            total: summaryData.dataset.total,
+          }
+        : {};
+
+      try {
+        const response = await fetch(createPaymentUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error((data && data.message) || 'Gagal membuat pembayaran DOKU.');
+        }
+
+        if (!data.redirect_url) {
+          throw new Error('URL pembayaran DOKU tidak tersedia.');
+        }
+
+        window.location.href = data.redirect_url;
+      } catch (error) {
+        console.error(error);
+        showNotification(error.message || 'Gagal membuat pembayaran DOKU.', 'error');
+        toggleLoading(false);
+      }
+    }
+
+    checkoutBtn.addEventListener('click', handleCheckoutClick);
+  });
+</script>
+{% endif %}
 {% endblock %}

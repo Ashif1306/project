@@ -174,6 +174,18 @@ MIDTRANS_SERVER_KEY = os.getenv('MIDTRANS_SERVER_KEY', '')
 MIDTRANS_CLIENT_KEY = os.getenv('MIDTRANS_CLIENT_KEY', '')
 MIDTRANS_PAYMENT_METHOD_SLUG = os.getenv('MIDTRANS_PAYMENT_METHOD_SLUG', 'midtrans').strip().lower()
 
+# DOKU configuration
+DOKU_IS_PRODUCTION = os.getenv('DOKU_IS_PRODUCTION', 'False') == 'True'
+DOKU_CLIENT_ID = os.getenv('DOKU_CLIENT_ID', '')
+DOKU_CLIENT_SECRET = os.getenv('DOKU_CLIENT_SECRET', '')
+DOKU_MERCHANT_CODE = os.getenv('DOKU_MERCHANT_CODE', '')
+DOKU_PAYMENT_METHOD_SLUG = os.getenv('DOKU_PAYMENT_METHOD_SLUG', 'doku').strip().lower()
+DOKU_CURRENCY = os.getenv('DOKU_CURRENCY', 'IDR').upper()
+try:
+    DOKU_PAYMENT_EXPIRE_MINUTES = int(os.getenv('DOKU_PAYMENT_EXPIRE_MINUTES', 60))
+except (TypeError, ValueError):
+    DOKU_PAYMENT_EXPIRE_MINUTES = 60
+
 
 # Jazzmin settings
 JAZZMIN_SETTINGS = {
