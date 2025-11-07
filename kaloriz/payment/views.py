@@ -57,23 +57,27 @@ def _format_iso_timestamp(dt) -> str:
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _compute_doku_signature(target: str, body: str, *, client_id: str, secret_key: str, request_id: str, timestamp: str) -> tuple[str, str]:
-    body_bytes = body.encode("utf-8")
-    digest_raw = hashlib.sha256(body_bytes).digest()
-    digest = base64.b64encode(digest_raw).decode("utf-8")
-    string_to_sign = "\n".join(
-        [
-            f"Client-Id:{client_id}",
-            f"Request-Id:{request_id}",
-            f"Request-Timestamp:{timestamp}",
-            f"Request-Target:{target}",
-            f"Digest:SHA-256={digest}",
-        ]
-    )
+def _compute_doku_signature(
+    target: str,
+    *,
+    client_id: str,
+    secret_key: str,
+    request_id: str,
+    timestamp: str,
+    digest_header_value: str,
+) -> str:
+    lines = [
+        f"Client-Id:{client_id}",
+        f"Request-Id:{request_id}",
+        f"Request-Timestamp:{timestamp}",
+        f"Request-Target:{target}",
+        f"Digest:{digest_header_value}",
+    ]
+    string_to_sign = "".join(f"{line}\n" for line in lines)
     signature = base64.b64encode(
         hmac.new(secret_key.encode("utf-8"), string_to_sign.encode("utf-8"), hashlib.sha256).digest()
     ).decode("utf-8")
-    return f"HMACSHA256={signature}", digest
+    return f"HMACSHA256={signature}"
 
 
 def _call_doku_api(target: str, payload: dict) -> tuple[int, dict, dict]:
@@ -86,60 +90,86 @@ def _call_doku_api(target: str, payload: dict) -> tuple[int, dict, dict]:
 
     normalized_target = "/" + target.lstrip("/")
     body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
-    request_id = str(uuid.uuid4())
-    timestamp = _format_iso_timestamp(timezone.now())
-    signature, digest = _compute_doku_signature(
-        normalized_target,
-        body,
-        client_id=client_id,
-        secret_key=secret_key,
-        request_id=request_id,
-        timestamp=timestamp,
-    )
-
-    headers = {
-        "Client-Id": client_id,
-        "Request-Id": request_id,
-        "Request-Timestamp": timestamp,
-        "Signature": signature,
-        "Digest": f"SHA-256={digest}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
+    body_bytes = body.encode("utf-8")
+    digest_raw = hashlib.sha256(body_bytes).digest()
+    digest_value = base64.b64encode(digest_raw).decode("utf-8")
 
     base_url = _get_doku_base_url().rstrip("/") + "/"
     url = urljoin(base_url, normalized_target.lstrip("/"))
 
-    request_obj = urllib_request.Request(url, data=body.encode("utf-8"), headers=headers, method="POST")
-    response_body = ""
-    response_headers = {}
+    digest_header_variants = [f"SHA-256={digest_value}", digest_value]
 
-    try:
-        with urllib_request.urlopen(request_obj, timeout=30) as response:
-            response_body = response.read().decode("utf-8")
-            response_status = response.status
-            response_headers = dict(response.headers.items())
-    except HTTPError as exc:  # pragma: no cover - network failures are hard to simulate
-        response_body = exc.read().decode("utf-8", errors="replace")
-        response_status = exc.code
-        response_headers = dict(getattr(exc, "headers", {}) or {})
-    except URLError as exc:  # pragma: no cover - network failures are hard to simulate
-        raise RuntimeError(f"Gagal menghubungi DOKU: {exc.reason}") from exc
+    last_response: tuple[int, dict, dict] | None = None
+    last_body = ""
 
-    if not response_body:
-        response_data = {}
-    else:
+    for digest_header in digest_header_variants:
+        request_id = str(uuid.uuid4())
+        timestamp = _format_iso_timestamp(timezone.now())
+        signature = _compute_doku_signature(
+            normalized_target,
+            client_id=client_id,
+            secret_key=secret_key,
+            request_id=request_id,
+            timestamp=timestamp,
+            digest_header_value=digest_header,
+        )
+
+        headers = {
+            "Client-Id": client_id,
+            "Request-Id": request_id,
+            "Request-Timestamp": timestamp,
+            "Signature": signature,
+            "Digest": digest_header,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        request_obj = urllib_request.Request(url, data=body_bytes, headers=headers, method="POST")
+        response_body = ""
+        response_headers = {}
+
         try:
-            response_data = json.loads(response_body)
-        except json.JSONDecodeError:
-            response_data = {"raw": response_body}
+            with urllib_request.urlopen(request_obj, timeout=30) as response:
+                response_body = response.read().decode("utf-8")
+                response_status = response.status
+                response_headers = dict(response.headers.items())
+        except HTTPError as exc:  # pragma: no cover - network failures are hard to simulate
+            response_body = exc.read().decode("utf-8", errors="replace")
+            response_status = exc.code
+            response_headers = dict(getattr(exc, "headers", {}) or {})
+        except URLError as exc:  # pragma: no cover - network failures are hard to simulate
+            raise RuntimeError(f"Gagal menghubungi DOKU: {exc.reason}") from exc
+
+        if not response_body:
+            response_data = {}
+        else:
+            try:
+                response_data = json.loads(response_body)
+            except json.JSONDecodeError:
+                response_data = {"raw": response_body}
+
+        last_response = (response_status, response_data, response_headers)
+        last_body = response_body
+
+        response_body_lower = (response_body or "").lower()
+        invalid_signature = response_status == 401 and "invalid header signature" in response_body_lower
+        if not invalid_signature and isinstance(response_data, dict):
+            invalid_signature = "invalid header signature" in json.dumps(response_data).lower()
+
+        if not invalid_signature:
+            break
+
+    if last_response is None:
+        raise RuntimeError("Tidak ada respons dari DOKU.")
+
+    response_status, response_data, response_headers = last_response
 
     if not (200 <= response_status < 300):
         logger.error(
             "DOKU API call to %s returned status %s with body: %s",
             normalized_target,
             response_status,
-            response_body,
+            last_body,
         )
 
     return response_status, response_data, response_headers
