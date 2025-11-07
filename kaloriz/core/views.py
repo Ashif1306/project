@@ -546,6 +546,9 @@ def checkout_review(request):
     shipping_method = checkout_data.get('shipping_method')
     shipping_method_label = 'Express' if str(shipping_method).upper() == 'EXP' else 'Reguler'
 
+    midtrans_payment_slug = getattr(settings, 'MIDTRANS_PAYMENT_METHOD_SLUG', 'midtrans')
+    is_midtrans_payment = payment_method.slug.lower() == (midtrans_payment_slug or '').lower()
+
     context = {
         'cart': cart,
         'selected_items': selected_items,
@@ -562,6 +565,8 @@ def checkout_review(request):
         'payment_method_display': payment_method.name,
         'payment_method_button_label': payment_method.checkout_button_label,
         'payment_method_additional_info': payment_method.additional_info,
+        'is_midtrans_payment': is_midtrans_payment,
+        'midtrans_payment_slug': midtrans_payment_slug,
         'shipping_method_label': shipping_method_label,
         'eta': checkout_data.get('eta'),
         'shipping_address': shipping_address,
