@@ -6,6 +6,7 @@ load_dotenv()
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+from dotenv import load_dotenv; load_dotenv()
 
 # Load .env dari ROOT PROJECT (selevel manage.py)
 env_file = BASE_DIR / '.env'
