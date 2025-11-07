@@ -7,6 +7,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.db import transaction
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -14,6 +15,7 @@ from django.views.decorators.http import require_POST
 from catalog.models import DiscountCode
 from core.models import Order
 from core.views import _get_active_cart, _prepare_selected_cart_items
+from core.services.orders import create_order_from_checkout, restore_order_stock
 from shipping.models import Address
 
 logger = logging.getLogger(__name__)
@@ -204,15 +206,26 @@ def payment_create_snap_token(request):
                 total,
             )
 
-    selected_items, _ = _prepare_selected_cart_items(selected_items_qs)
+    selected_items, selected_quantities = _prepare_selected_cart_items(selected_items_qs)
     if not selected_items:
         return JsonResponse({"message": "Tidak ada item yang dipilih untuk pembayaran."}, status=400)
+
+    for item in selected_items:
+        quantity = selected_quantities.get(item.pk, item.quantity)
+        if item.product.stock < quantity:
+            return JsonResponse(
+                {"message": f"Stok {item.product.name} tidak mencukupi."},
+                status=400,
+            )
 
     item_details = _build_item_details(selected_items, shipping_cost, discount_amount, discount_code or "")
 
     order_id = f"INV-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
-    request.session["midtrans_order_id"] = order_id
-    request.session.modified = True
+    service_code = str(checkout_data.get("shipping_method") or "").upper()
+    service_label = "Express" if service_code == "EXP" else "Reguler"
+    district_name = getattr(getattr(shipping_address, "district", None), "name", "")
+    eta = checkout_data.get("eta")
+    notes = checkout_data.get("notes", "")
 
     transaction_payload = {
         "transaction_details": {
@@ -227,18 +240,49 @@ def payment_create_snap_token(request):
         },
     }
 
+    token = None
+    order = None
     try:
-        snap_response = snap_client.create_transaction(transaction_payload)
-    except Exception as exc:  # pylint: disable=broad-except
+        with transaction.atomic():
+            order = create_order_from_checkout(
+                user=request.user,
+                cart=cart,
+                selected_items=selected_items,
+                selected_quantities=selected_quantities,
+                order_number=order_id,
+                subtotal=subtotal,
+                shipping_cost=shipping_cost,
+                total=total,
+                shipping_full_name=shipping_address.full_name,
+                shipping_email=request.user.email,
+                shipping_phone=shipping_address.phone,
+                shipping_address_text=shipping_address.get_full_address(),
+                shipping_city=shipping_address.city,
+                shipping_postal_code=shipping_address.postal_code,
+                courier_service=service_code,
+                district_name=district_name,
+                eta=eta,
+                notes=notes,
+                shipping_address_obj=shipping_address,
+                shipping_service_name=service_label,
+            )
+            snap_response = snap_client.create_transaction(transaction_payload)
+            token = snap_response.get("token")
+            if not token:
+                raise RuntimeError("Token Snap tidak tersedia.")
+    except RuntimeError as exc:  # Token missing or business rule failure
         logger.exception("Failed to create Midtrans Snap transaction: %s", exc)
+        return JsonResponse({"message": str(exc)}, status=500)
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.exception("Failed to create order or Snap transaction: %s", exc)
         return JsonResponse({"message": "Gagal membuat Snap Token."}, status=500)
 
-    token = snap_response.get("token")
-    if not token:
-        logger.error("Midtrans response did not contain token: %s", snap_response)
-        return JsonResponse({"message": "Token Snap tidak tersedia."}, status=500)
+    request.session["midtrans_order_id"] = order.order_number
+    request.session.pop("checkout", None)
+    request.session.pop("discount", None)
+    request.session.modified = True
 
-    return JsonResponse({"token": token, "order_id": order_id})
+    return JsonResponse({"token": token, "order_id": order.order_number})
 
 
 @csrf_exempt
@@ -259,16 +303,28 @@ def payment_finish(request):
         return JsonResponse({"message": "Order ID tidak ditemukan."}, status=400)
 
     order = Order.objects.filter(order_number=order_id).first()
-    if order:
-        if transaction_status in {"capture", "settlement"}:
-            order.status = "processing"
-        elif transaction_status in {"pending"}:
+    if order and transaction_status:
+        success_states = {"capture", "settlement"}
+        pending_states = {"pending"}
+        failure_states = {"deny", "cancel", "expire", "failure"}
+
+        if transaction_status in success_states and order.status != "paid":
+            order.status = "paid"
+            order.save(update_fields=["status"])
+        elif transaction_status in pending_states and order.status != "pending":
             order.status = "pending"
-        elif transaction_status in {"deny", "cancel", "expire", "failure"}:
-            order.status = "cancelled"
-        order.save(update_fields=["status"])
+            order.save(update_fields=["status"])
+        elif transaction_status in failure_states and order.status != "cancelled":
+            with transaction.atomic():
+                restore_order_stock(order)
+                order.status = "cancelled"
+                order.save(update_fields=["status"])
 
     request.session["midtrans_last_result"] = result
     request.session.modified = True
 
-    return JsonResponse({"message": "Status pembayaran diterima.", "order_id": order_id})
+    response_payload = {"message": "Status pembayaran diterima.", "order_id": order_id}
+    if order:
+        response_payload["status"] = order.status
+
+    return JsonResponse(response_payload)

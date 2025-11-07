@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import F, Count
 from django.utils import timezone
 from django.utils.formats import number_format
@@ -26,7 +27,8 @@ from .models import (
 from catalog.models import Product, DiscountCode, Testimonial
 from .forms import CustomUserRegistrationForm, TestimonialForm
 from .utils import send_verification_email, send_welcome_email
-from shipping.models import District, Address, Shipment
+from .services.orders import create_order_from_checkout
+from shipping.models import District, Address
 from shipping.views import calculate_shipping_cost, validate_shipping_data
 from shipping.forms import AddressForm
 
@@ -621,56 +623,32 @@ def place_order(request):
         messages.error(request, f'Terjadi kesalahan dalam perhitungan ongkir: {str(e)}')
         return redirect('core:checkout')
 
-    # Create order
     order_number = f'ORD-{uuid.uuid4().hex[:8].upper()}'
+    total = subtotal + shipping_cost
+    service_label = 'Express' if str(service).upper() == 'EXP' else 'Reguler'
 
-    order = Order.objects.create(
-        user=request.user,
-        order_number=order_number,
-        full_name=request.POST.get('full_name'),
-        email=request.POST.get('email'),
-        phone=request.POST.get('phone'),
-        address=request.POST.get('street'),  # Use 'street' from shipping form
-        city='Makassar',  # Fixed city
-        postal_code=request.POST.get('postal_code'),
-        notes=request.POST.get('notes', ''),
-        subtotal=subtotal,
-        shipping_cost=shipping_cost,
-        total=subtotal + shipping_cost,
-    )
-
-    # Create shipment record (snapshot of shipping data)
-    Shipment.objects.create(
-        order=order,
-        full_name=request.POST.get('full_name'),
-        phone=request.POST.get('phone'),
-        street=request.POST.get('street'),
-        district_name=district_name,
-        postal_code=request.POST.get('postal_code'),
-        service=service,
-        cost=shipping_cost,
-        eta=eta,
-    )
-
-    # Create order items and update stock - only for selected items
-    for item in selected_items:
-        quantity = selected_quantities.get(item.pk, item.quantity)
-        unit_price = item.product.get_display_price()
-        OrderItem.objects.create(
-            order=order,
-            product=item.product,
-            product_name=item.product.name,
-            product_price=unit_price,
-            quantity=quantity,
-            subtotal=unit_price * quantity,
+    with transaction.atomic():
+        order = create_order_from_checkout(
+            user=request.user,
+            cart=cart,
+            selected_items=selected_items,
+            selected_quantities=selected_quantities,
+            order_number=order_number,
+            subtotal=subtotal,
+            shipping_cost=shipping_cost,
+            total=total,
+            shipping_full_name=request.POST.get('full_name', ''),
+            shipping_email=request.POST.get('email', ''),
+            shipping_phone=request.POST.get('phone', ''),
+            shipping_address_text=request.POST.get('street', ''),
+            shipping_city='Makassar',
+            shipping_postal_code=request.POST.get('postal_code', ''),
+            courier_service=service,
+            district_name=district_name,
+            eta=eta,
+            notes=request.POST.get('notes', ''),
+            shipping_service_name=service_label,
         )
-
-        # Update product stock
-        item.product.stock = F('stock') - quantity
-        item.product.save(update_fields=['stock'])
-
-    # Clear only selected items from cart
-    cart.items.filter(is_selected=True).delete()
 
     messages.success(request, f'Pesanan berhasil dibuat! Nomor pesanan: {order_number}')
     return redirect('core:order_detail', order_number=order_number)
@@ -731,58 +709,33 @@ def place_order_from_address(request):
         messages.error(request, f'Terjadi kesalahan: {str(e)}')
         return redirect('core:checkout')
 
-    # Create order
     order_number = f'ORD-{uuid.uuid4().hex[:8].upper()}'
+    total = subtotal + shipping_cost
+    service_label = 'Express' if str(service).upper() == 'EXP' else 'Reguler'
 
-    order = Order.objects.create(
-        user=request.user,
-        order_number=order_number,
-        full_name=address.full_name,
-        email=request.user.email,
-        phone=address.phone,
-        address=address.get_full_address(),
-        city=address.city,
-        postal_code=address.postal_code,
-        shipping_address=address,
-        selected_courier=service,
-        notes=request.POST.get('notes', ''),
-        subtotal=subtotal,
-        shipping_cost=shipping_cost,
-        total=subtotal + shipping_cost,
-    )
-
-    # Create shipment record
-    Shipment.objects.create(
-        order=order,
-        full_name=address.full_name,
-        phone=address.phone,
-        street=address.get_full_address(),
-        district_name=district_name,
-        postal_code=address.postal_code,
-        service=service,
-        cost=shipping_cost,
-        eta=eta,
-    )
-
-    # Create order items and update stock - only for selected items
-    for item in selected_items:
-        quantity = selected_quantities.get(item.pk, item.quantity)
-        unit_price = item.product.get_display_price()
-        OrderItem.objects.create(
-            order=order,
-            product=item.product,
-            product_name=item.product.name,
-            product_price=unit_price,
-            quantity=quantity,
-            subtotal=unit_price * quantity,
+    with transaction.atomic():
+        order = create_order_from_checkout(
+            user=request.user,
+            cart=cart,
+            selected_items=selected_items,
+            selected_quantities=selected_quantities,
+            order_number=order_number,
+            subtotal=subtotal,
+            shipping_cost=shipping_cost,
+            total=total,
+            shipping_full_name=address.full_name,
+            shipping_email=request.user.email,
+            shipping_phone=address.phone,
+            shipping_address_text=address.get_full_address(),
+            shipping_city=address.city,
+            shipping_postal_code=address.postal_code,
+            courier_service=service,
+            district_name=district_name,
+            eta=eta,
+            notes=request.POST.get('notes', ''),
+            shipping_address_obj=address,
+            shipping_service_name=service_label,
         )
-
-        # Update product stock
-        item.product.stock = F('stock') - quantity
-        item.product.save(update_fields=['stock'])
-
-    # Clear only selected items from cart
-    cart.items.filter(is_selected=True).delete()
 
     messages.success(request, f'Pesanan berhasil dibuat! Nomor pesanan: {order_number}')
     return redirect('core:order_detail', order_number=order_number)
