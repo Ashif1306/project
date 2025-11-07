@@ -6,17 +6,15 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
-from django.db.models import F
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from catalog.models import DiscountCode
-from core.models import Order, OrderItem
+from core.models import Order
 from core.views import _get_active_cart, _prepare_selected_cart_items
-from shipping.models import Address, Shipment
+from shipping.models import Address
 
 logger = logging.getLogger(__name__)
 
@@ -181,17 +179,13 @@ def payment_create_snap_token(request):
     if not shipping_address:
         return JsonResponse({"message": "Alamat pengiriman tidak ditemukan."}, status=400)
 
-    shipping_method = str(checkout_data.get("shipping_method", "")).upper()
-    if not shipping_method:
-        return JsonResponse({"message": "Metode pengiriman tidak ditemukan."}, status=400)
-
     shipping_cost = _to_decimal(checkout_data.get("shipping_cost"))
     subtotal = _to_decimal(cart.get_selected_total())
 
     discount_amount, discount_code = _calculate_discount(
         subtotal,
         shipping_cost,
-        shipping_method,
+        checkout_data.get("shipping_method"),
         request.session.get("discount"),
     )
 
@@ -210,74 +204,13 @@ def payment_create_snap_token(request):
                 total,
             )
 
-    selected_items, selected_quantities = _prepare_selected_cart_items(selected_items_qs)
+    selected_items, _ = _prepare_selected_cart_items(selected_items_qs)
     if not selected_items:
         return JsonResponse({"message": "Tidak ada item yang dipilih untuk pembayaran."}, status=400)
-
-    for item in selected_items:
-        quantity = selected_quantities.get(item.pk, item.quantity)
-        if item.product.stock < quantity:
-            return JsonResponse(
-                {"message": f"Stok {item.product.name} tidak mencukupi."},
-                status=400,
-            )
 
     item_details = _build_item_details(selected_items, shipping_cost, discount_amount, discount_code or "")
 
     order_id = f"INV-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
-
-    try:
-        with transaction.atomic():
-            order_defaults = {
-                "user": request.user,
-                "status": "pending",
-                "full_name": shipping_address.full_name,
-                "email": request.user.email,
-                "phone": shipping_address.phone,
-                "address": shipping_address.get_full_address(),
-                "city": shipping_address.city,
-                "postal_code": shipping_address.postal_code,
-                "shipping_address": shipping_address,
-                "selected_courier": shipping_method,
-                "subtotal": subtotal,
-                "shipping_cost": shipping_cost,
-                "total": total,
-            }
-
-            order = Order.objects.create(order_number=order_id, **order_defaults)
-
-            Shipment.objects.create(
-                order=order,
-                full_name=shipping_address.full_name,
-                phone=shipping_address.phone,
-                street=shipping_address.get_full_address(),
-                district_name=shipping_address.district.name,
-                postal_code=shipping_address.postal_code,
-                service=shipping_method or "REG",
-                cost=shipping_cost,
-                eta=checkout_data.get("eta", ""),
-            )
-
-            for item in selected_items:
-                quantity = selected_quantities.get(item.pk, item.quantity)
-                unit_price = item.product.get_display_price()
-                OrderItem.objects.create(
-                    order=order,
-                    product=item.product,
-                    product_name=item.product.name,
-                    product_price=unit_price,
-                    quantity=quantity,
-                    subtotal=unit_price * quantity,
-                )
-
-                item.product.stock = F("stock") - quantity
-                item.product.save(update_fields=["stock"])
-
-            cart.items.filter(pk__in=[item.pk for item in selected_items]).delete()
-    except Exception as exc:  # pylint: disable=broad-except
-        logger.exception("Failed to create order during checkout: %s", exc)
-        return JsonResponse({"message": "Gagal membuat pesanan."}, status=500)
-
     request.session["midtrans_order_id"] = order_id
     request.session.modified = True
 
@@ -328,24 +261,12 @@ def payment_finish(request):
     order = Order.objects.filter(order_number=order_id).first()
     if order:
         if transaction_status in {"capture", "settlement"}:
-            if order.status != "paid":
-                order.status = "paid"
-                order.save(update_fields=["status"])
+            order.status = "processing"
         elif transaction_status in {"pending"}:
-            if order.status != "pending":
-                order.status = "pending"
-                order.save(update_fields=["status"])
+            order.status = "pending"
         elif transaction_status in {"deny", "cancel", "expire", "failure"}:
-            if order.status != "cancelled":
-                with transaction.atomic():
-                    order.status = "cancelled"
-                    order.save(update_fields=["status"])
-
-                    order_items = order.items.select_related("product")
-                    for item in order_items:
-                        if item.product:
-                            item.product.stock = F("stock") + item.quantity
-                            item.product.save(update_fields=["stock"])
+            order.status = "cancelled"
+        order.save(update_fields=["status"])
 
     request.session["midtrans_last_result"] = result
     request.session.modified = True

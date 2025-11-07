@@ -119,7 +119,6 @@ class CartItem(models.Model):
 class Order(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Menunggu Pembayaran'),
-        ('paid', 'Sudah Dibayar'),
         ('processing', 'Diproses'),
         ('shipped', 'Dikirim'),
         ('delivered', 'Selesai'),
@@ -188,7 +187,6 @@ class Order(models.Model):
         """Return CSS class for status badge"""
         status_classes = {
             'pending': 'warning',
-            'paid': 'success',
             'processing': 'info',
             'shipped': 'primary',
             'delivered': 'success',
