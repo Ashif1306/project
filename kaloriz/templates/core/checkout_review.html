@@ -627,5 +627,99 @@
     checkoutBtn.addEventListener('click', handleCheckoutClick);
   });
 </script>
+{% elif is_doku_payment %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const checkoutBtn = document.getElementById('btn-checkout');
+    const summaryData = document.getElementById('checkout-summary-data');
+    const createCheckoutUrl = '{{ payment_create_doku_checkout_url }}';
+    const dokuSlug = '{{ doku_payment_slug|lower }}';
+
+    if (!checkoutBtn) {
+      return;
+    }
+
+    const selectedPaymentSlug = (checkoutBtn.dataset.paymentMethod || '').toLowerCase();
+    if (selectedPaymentSlug !== dokuSlug) {
+      return;
+    }
+
+    function showNotification(message, type = 'success') {
+      if (!message) {
+        return;
+      }
+      if (typeof window.showToast === 'function') {
+        window.showToast(message, type);
+      } else {
+        alert(message);
+      }
+    }
+
+    function toggleLoading(state) {
+      if (!checkoutBtn) {
+        return;
+      }
+      if (state) {
+        checkoutBtn.dataset.originalText = checkoutBtn.textContent;
+        checkoutBtn.textContent = 'Memproses...';
+        checkoutBtn.disabled = true;
+      } else {
+        const originalText = checkoutBtn.dataset.originalText;
+        if (originalText) {
+          checkoutBtn.textContent = originalText;
+        }
+        checkoutBtn.disabled = false;
+      }
+    }
+
+    checkoutBtn.addEventListener('click', async function handleDokuCheckout() {
+      toggleLoading(true);
+
+      const payload = summaryData
+        ? {
+            subtotal: summaryData.dataset.subtotal,
+            shipping_cost: summaryData.dataset.shippingCost,
+            discount: summaryData.dataset.discount,
+            total: summaryData.dataset.total
+          }
+        : {};
+
+      try {
+        const response = await fetch(createCheckoutUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken') || ''
+          },
+          body: JSON.stringify(payload)
+        });
+
+        let data = null;
+        try {
+          data = await response.json();
+        } catch (error) {
+          data = null;
+        }
+
+        if (!response.ok) {
+          const message = data && (data.message || data.error);
+          throw new Error(message || 'Gagal membuat sesi pembayaran DOKU');
+        }
+
+        const paymentUrl = data && (data.payment_url || data.redirect_url || data.checkout_url);
+
+        if (!paymentUrl) {
+          throw new Error('URL pembayaran DOKU tidak ditemukan');
+        }
+
+        window.location.href = paymentUrl;
+      } catch (error) {
+        console.error(error);
+        showNotification(error.message || 'Gagal membuat sesi pembayaran DOKU', 'error');
+        toggleLoading(false);
+      }
+    });
+  });
+</script>
 {% endif %}
 {% endblock %}

@@ -548,6 +548,8 @@ def checkout_review(request):
 
     midtrans_payment_slug = getattr(settings, 'MIDTRANS_PAYMENT_METHOD_SLUG', 'midtrans')
     is_midtrans_payment = payment_method.slug.lower() == (midtrans_payment_slug or '').lower()
+    doku_payment_slug = getattr(settings, 'DOKU_PAYMENT_METHOD_SLUG', 'doku')
+    is_doku_payment = payment_method.slug.lower() == (doku_payment_slug or '').lower()
 
     context = {
         'cart': cart,
@@ -567,6 +569,8 @@ def checkout_review(request):
         'payment_method_additional_info': payment_method.additional_info,
         'is_midtrans_payment': is_midtrans_payment,
         'midtrans_payment_slug': midtrans_payment_slug,
+        'is_doku_payment': is_doku_payment,
+        'doku_payment_slug': doku_payment_slug,
         'shipping_method_label': shipping_method_label,
         'eta': checkout_data.get('eta'),
         'shipping_address': shipping_address,
@@ -578,6 +582,8 @@ def checkout_review(request):
         'MIDTRANS_CLIENT_KEY': settings.MIDTRANS_CLIENT_KEY,
         'payment_create_snap_token_url': reverse('payment:create_snap_token'),
         'payment_finish_url': reverse('payment:finish'),
+        'payment_create_doku_checkout_url': reverse('payment:create_doku_checkout'),
+        'payment_doku_return_url': reverse('payment:doku_return'),
         'order_complete_url': reverse('core:order_list'),
     }
     return render(request, 'core/checkout_review.html', context)
