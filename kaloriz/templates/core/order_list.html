@@ -3,49 +3,123 @@
 {% block title %}Pesanan Saya - Kaloriz{% endblock %}
 
 {% block profile_content %}
-<div class="profile-section">
-  <div class="profile-section-header">
+<div class="profile-section order-history-section">
+  <div class="order-history-header">
     <div>
       <h2>Riwayat Pesanan</h2>
       <p>Pantau status pesanan dan akses detail transaksi Anda.</p>
     </div>
+
+    <div class="order-history-filters">
+      <div class="dropdown">
+        <button class="btn btn-light dropdown-toggle" type="button" id="filterStatus" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Status
+        </button>
+        <div class="dropdown-menu" aria-labelledby="filterStatus">
+          <a class="dropdown-item" href="#">Semua Status</a>
+          <a class="dropdown-item" href="#">Transaksi gagal</a>
+          <a class="dropdown-item" href="#">Menunggu Pembayaran</a>
+          <a class="dropdown-item" href="#">Terbayar</a>
+          <a class="dropdown-item" href="#">Dibatalkan</a>
+          <a class="dropdown-item" href="#">Diproses</a>
+          <a class="dropdown-item" href="#">Dalam proses pengiriman</a>
+          <a class="dropdown-item" href="#">Terkirim</a>
+          <a class="dropdown-item" href="#">Dalam proses pengembalian</a>
+          <a class="dropdown-item" href="#">Dikembalikan</a>
+          <a class="dropdown-item" href="#">Selesai</a>
+        </div>
+      </div>
+
+      <div class="dropdown">
+        <button class="btn btn-light dropdown-toggle" type="button" id="filterDate" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Tanggal Transaksi
+        </button>
+        <div class="dropdown-menu" aria-labelledby="filterDate">
+          <a class="dropdown-item" href="#">30 Hari Terakhir</a>
+          <a class="dropdown-item" href="#">3 Bulan Terakhir</a>
+          <a class="dropdown-item" href="#">6 Bulan Terakhir</a>
+          <a class="dropdown-item" href="#">1 Tahun Terakhir</a>
+          <a class="dropdown-item" href="#">Semua Waktu</a>
+        </div>
+      </div>
+
+      <div class="dropdown">
+        <button class="btn btn-light dropdown-toggle" type="button" id="filterSort" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Urutkan: Terbaru
+        </button>
+        <div class="dropdown-menu" aria-labelledby="filterSort">
+          <a class="dropdown-item" href="#">Terbaru</a>
+          <a class="dropdown-item" href="#">Terlama</a>
+        </div>
+      </div>
+    </div>
   </div>
 
   {% if orders %}
-    <div class="table-responsive profile-table-wrapper">
-      <table class="profile-table">
-        <thead>
-          <tr>
-            <th>No. Pesanan</th>
-            <th>Tanggal</th>
-            <th>Status</th>
-            <th>Total</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for order in orders %}
-          <tr>
-            <td><strong>{{ order.order_number }}</strong></td>
-            <td>{{ order.created_at|date:"d M Y H:i" }}</td>
-            <td>
-              {% with badge=order.get_status_display_class %}
-                <span class="profile-badge {% if badge == 'success' %}success{% elif badge == 'warning' %}warning{% else %}info{% endif %}">
-                  {{ order.get_status_display }}
-                </span>
+    <div class="order-card-list">
+      {% for order in orders %}
+        <article class="order-card">
+          <div class="order-card-header">
+            <div>
+              <div class="order-card-number">#{{ order.order_number }}</div>
+              <div class="order-card-date">{{ order.created_at|date:"d M Y H:i" }}</div>
+            </div>
+            <span class="badge badge-pill badge-{{ order.get_status_display_class }} order-status-badge">{{ order.get_status_display }}</span>
+          </div>
+
+          <div class="order-card-content">
+            <div class="order-card-items">
+              {% for item in order.items.all %}
+                <div class="order-card-item">
+                  <div class="order-card-thumb">
+                    {% if item.product and item.product.image %}
+                      <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+                    {% else %}
+                      <i class="fas fa-box"></i>
+                    {% endif %}
+                  </div>
+                  <div class="order-card-item-details">
+                    <h5 class="order-card-item-name">{{ item.product_name }}</h5>
+                    <div class="order-card-item-meta">
+                      {% with product=item.product %}
+                        <span>Warna: {% if product and product.color %}{{ product.color }}{% else %}-{% endif %}</span>
+                        <span>Ukuran: {% if product and product.size %}{{ product.size }}{% else %}-{% endif %}</span>
+                      {% endwith %}
+                      <span>Jumlah: {{ item.quantity }} item</span>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            <div class="order-card-summary">
+              <span>Total belanja</span>
+              <strong>Rp {{ order.total|floatformat:0 }}</strong>
+            </div>
+          </div>
+
+          <div class="order-card-footer">
+            <div class="order-card-actions">
+              <a href="{% url 'core:order_detail' order.order_number %}" class="btn btn-outline-primary btn-sm">Lihat Detail</a>
+              {% with first_item=order.items.all|first %}
+                {% if first_item and first_item.product %}
+                  <a href="{{ first_item.product.get_absolute_url }}" class="btn btn-primary btn-sm">Beli Lagi</a>
+                {% else %}
+                  <a href="{% url 'catalog:product_list' %}" class="btn btn-primary btn-sm">Beli Lagi</a>
+                {% endif %}
               {% endwith %}
-            </td>
-            <td><strong>Rp {{ order.total|floatformat:0 }}</strong></td>
-            <td>
-              <a href="{% url 'core:order_detail' order.order_number %}" class="btn btn-primary btn-sm">
-                <i class="fas fa-eye"></i> Detail
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
     </div>
+
+    <nav class="order-pagination" aria-label="Navigasi halaman">
+      <ul class="pagination justify-content-center">
+        <li class="page-item disabled"><span class="page-link" aria-hidden="true">&lsaquo;</span></li>
+        <li class="page-item active"><span class="page-link">1</span></li>
+        <li class="page-item disabled"><span class="page-link" aria-hidden="true">&rsaquo;</span></li>
+      </ul>
+    </nav>
   {% else %}
     <div class="profile-empty">
       <i class="fas fa-receipt"></i>
