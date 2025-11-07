@@ -67,11 +67,11 @@ def _compute_doku_signature(
     digest_header_value: str,
 ) -> str:
     lines = [
-        f"Client-Id:{client_id}",
-        f"Request-Id:{request_id}",
-        f"Request-Timestamp:{timestamp}",
-        f"Request-Target:{target}",
-        f"Digest:{digest_header_value}",
+        f"Client-Id: {client_id}",
+        f"Request-Id: {request_id}",
+        f"Request-Timestamp: {timestamp}",
+        f"Request-Target: {target}",
+        f"Digest: {digest_header_value}",
     ]
     string_to_sign = "\n".join(lines)
     signature = base64.b64encode(
