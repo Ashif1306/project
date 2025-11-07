@@ -497,6 +497,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if is_midtrans_payment %}
 <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ MIDTRANS_CLIENT_KEY }}"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
@@ -505,8 +506,14 @@
     const createTokenUrl = '{{ payment_create_snap_token_url }}';
     const finishUrl = '{{ payment_finish_url }}';
     const orderCompleteUrl = '{{ order_complete_url }}';
+    const midtransSlug = '{{ midtrans_payment_slug|lower }}';
 
     if (!checkoutBtn) {
+      return;
+    }
+
+    const selectedPaymentSlug = (checkoutBtn.dataset.paymentMethod || '').toLowerCase();
+    if (selectedPaymentSlug !== midtransSlug) {
       return;
     }
 
@@ -620,4 +627,5 @@
     checkoutBtn.addEventListener('click', handleCheckoutClick);
   });
 </script>
+{% endif %}
 {% endblock %}

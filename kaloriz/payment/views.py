@@ -171,6 +171,17 @@ def payment_create_snap_token(request):
         return JsonResponse({"message": "Tidak ada item yang dipilih untuk pembayaran."}, status=400)
 
     checkout_data = request.session.get("checkout", {})
+    midtrans_slug = getattr(settings, "MIDTRANS_PAYMENT_METHOD_SLUG", "midtrans")
+    selected_payment_slug = (checkout_data.get("payment_method") or "").strip().lower()
+    if selected_payment_slug != (midtrans_slug or "").lower():
+        logger.warning(
+            "Attempt to create Midtrans token with unsupported payment method: %s",
+            selected_payment_slug,
+        )
+        return JsonResponse(
+            {"message": "Metode pembayaran ini tidak menggunakan Midtrans."},
+            status=400,
+        )
     address_id = checkout_data.get("address_id")
     shipping_address = (
         Address.objects.filter(id=address_id, user=request.user, is_deleted=False)
