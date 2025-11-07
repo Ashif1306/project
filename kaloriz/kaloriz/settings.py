@@ -163,6 +163,15 @@ MIDTRANS_SERVER_KEY = os.getenv('MIDTRANS_SERVER_KEY', '')
 MIDTRANS_CLIENT_KEY = os.getenv('MIDTRANS_CLIENT_KEY', '')
 MIDTRANS_PAYMENT_METHOD_SLUG = os.getenv('MIDTRANS_PAYMENT_METHOD_SLUG', 'midtrans').strip().lower()
 
+# DOKU configuration
+DOKU_IS_PRODUCTION = os.getenv('DOKU_IS_PRODUCTION', 'False') == 'True'
+DOKU_CLIENT_ID = os.getenv('DOKU_CLIENT_ID', '')
+DOKU_SECRET_KEY = os.getenv('DOKU_SECRET_KEY', '')
+DOKU_MERCHANT_CODE = os.getenv('DOKU_MERCHANT_CODE', '')
+DOKU_PAYMENT_METHOD_SLUG = os.getenv('DOKU_PAYMENT_METHOD_SLUG', 'doku').strip().lower()
+DOKU_SANDBOX_BASE_URL = os.getenv('DOKU_SANDBOX_BASE_URL', 'https://api-sandbox.doku.com')
+DOKU_PRODUCTION_BASE_URL = os.getenv('DOKU_PRODUCTION_BASE_URL', 'https://api.doku.com')
+
 
 # Jazzmin settings
 JAZZMIN_SETTINGS = {

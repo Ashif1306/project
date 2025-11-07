@@ -1,13 +1,22 @@
-"""Views for handling Midtrans Snap payments."""
+"""Views for handling payment integrations."""
+import base64
 import json
 import logging
 import uuid
+import hashlib
+import hmac
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from urllib import request as urllib_request
+from urllib.error import HTTPError, URLError
+from urllib.parse import urljoin
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 from django.db import transaction
+from django.http import JsonResponse
+from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -24,6 +33,109 @@ try:  # pragma: no cover - defensive import check
     import midtransclient
 except ImportError:  # pragma: no cover - handled at runtime
     midtransclient = None
+
+
+def _get_doku_base_url() -> str:
+    if getattr(settings, "DOKU_IS_PRODUCTION", False):
+        return getattr(settings, "DOKU_PRODUCTION_BASE_URL", "https://api.doku.com")
+    return getattr(settings, "DOKU_SANDBOX_BASE_URL", "https://api-sandbox.doku.com")
+
+
+def _get_doku_config() -> dict:
+    return {
+        "client_id": getattr(settings, "DOKU_CLIENT_ID", ""),
+        "secret_key": getattr(settings, "DOKU_SECRET_KEY", ""),
+        "merchant_code": getattr(settings, "DOKU_MERCHANT_CODE", ""),
+    }
+
+
+def _format_iso_timestamp(dt) -> str:
+    if dt.tzinfo is None:
+        dt = timezone.make_aware(dt, timezone=timezone.utc)
+    dt = dt.astimezone(timezone.utc)
+    timestamp = dt.strftime("%Y-%m-%dT%H:%M:%S%z")
+    if len(timestamp) == 24:  # Format +HHMM -> +HH:MM
+        return f"{timestamp[:-2]}:{timestamp[-2:]}"
+    return timestamp
+
+
+def _compute_doku_signature(target: str, body: str, *, client_id: str, secret_key: str, request_id: str, timestamp: str) -> tuple[str, str]:
+    body_bytes = body.encode("utf-8")
+    digest_raw = hashlib.sha256(body_bytes).digest()
+    digest = base64.b64encode(digest_raw).decode("utf-8")
+    signature_components = "\n".join(
+        [
+            f"Client-Id:{client_id}",
+            f"Request-Id:{request_id}",
+            f"Request-Timestamp:{timestamp}",
+            f"Request-Target:{target}",
+            f"Digest:SHA-256={digest}",
+        ]
+    )
+    signature = base64.b64encode(
+        hmac.new(secret_key.encode("utf-8"), signature_components.encode("utf-8"), hashlib.sha256).digest()
+    ).decode("utf-8")
+    return signature, digest
+
+
+def _call_doku_api(target: str, payload: dict) -> tuple[int, dict, dict]:
+    config = _get_doku_config()
+    client_id = config.get("client_id")
+    secret_key = config.get("secret_key")
+
+    if not client_id or not secret_key:
+        raise RuntimeError("Konfigurasi DOKU belum lengkap.")
+
+    body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+    request_id = str(uuid.uuid4())
+    timestamp = _format_iso_timestamp(timezone.now())
+    signature, digest = _compute_doku_signature(
+        target,
+        body,
+        client_id=client_id,
+        secret_key=secret_key,
+        request_id=request_id,
+        timestamp=timestamp,
+    )
+
+    headers = {
+        "Client-Id": client_id,
+        "Request-Id": request_id,
+        "Request-Timestamp": timestamp,
+        "Signature": signature,
+        "Digest": f"SHA-256={digest}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+    base_url = _get_doku_base_url().rstrip("/") + "/"
+    url = urljoin(base_url, target.lstrip("/"))
+
+    request_obj = urllib_request.Request(url, data=body.encode("utf-8"), headers=headers, method="POST")
+    response_body = ""
+    response_headers = {}
+
+    try:
+        with urllib_request.urlopen(request_obj, timeout=30) as response:
+            response_body = response.read().decode("utf-8")
+            response_status = response.status
+            response_headers = dict(response.headers.items())
+    except HTTPError as exc:  # pragma: no cover - network failures are hard to simulate
+        response_body = exc.read().decode("utf-8", errors="replace")
+        response_status = exc.code
+        response_headers = dict(getattr(exc, "headers", {}) or {})
+    except URLError as exc:  # pragma: no cover - network failures are hard to simulate
+        raise RuntimeError(f"Gagal menghubungi DOKU: {exc.reason}") from exc
+
+    if not response_body:
+        response_data = {}
+    else:
+        try:
+            response_data = json.loads(response_body)
+        except json.JSONDecodeError:
+            response_data = {"raw": response_body}
+
+    return response_status, response_data, response_headers
 
 
 def _to_decimal(value) -> Decimal:
@@ -142,6 +254,43 @@ def _build_customer_details(shipping_address: Address, user) -> dict:
         "billing_address": address_payload,
         "shipping_address": address_payload,
     }
+
+
+def _build_doku_line_items(selected_items, shipping_cost: Decimal, discount_amount: Decimal):
+    has_discount = discount_amount and discount_amount > 0
+    line_items = []
+
+    for item in selected_items:
+        product = getattr(item, "product", None)
+        if product is None:
+            continue
+        quantity = int(getattr(item, "quantity", 0))
+        if quantity <= 0:
+            continue
+        price = _to_int_amount(product.get_display_price())
+        line_items.append(
+            {
+                "name": product.name[:50],
+                "price": price,
+                "quantity": quantity,
+            }
+        )
+
+    if shipping_cost > 0:
+        line_items.append(
+            {
+                "name": "Ongkos Kirim",
+                "price": _to_int_amount(shipping_cost),
+                "quantity": 1,
+            }
+        )
+
+    # DOKU does not accept negative price items. When discounts are applied, omit line items
+    # to avoid mismatched totals between payload and amount.
+    if has_discount:
+        return []
+
+    return line_items
 
 
 @csrf_exempt
@@ -299,6 +448,180 @@ def payment_create_snap_token(request):
 @csrf_exempt
 @login_required
 @require_POST
+def payment_create_doku_checkout(request):
+    """Create a DOKU redirect checkout session."""
+
+    try:
+        client_payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        client_payload = {}
+
+    checkout_data = request.session.get("checkout", {})
+    doku_slug = getattr(settings, "DOKU_PAYMENT_METHOD_SLUG", "doku")
+    selected_payment_slug = (checkout_data.get("payment_method") or "").strip().lower()
+    if selected_payment_slug != (doku_slug or "").lower():
+        return JsonResponse({"message": "Metode pembayaran ini tidak menggunakan DOKU."}, status=400)
+
+    config = _get_doku_config()
+    if not config.get("client_id") or not config.get("secret_key"):
+        return JsonResponse({"message": "Konfigurasi DOKU belum lengkap."}, status=500)
+
+    try:
+        cart = _get_active_cart(request)
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.exception("Cart lookup failed: %s", exc)
+        return JsonResponse({"message": "Keranjang tidak ditemukan."}, status=400)
+
+    selected_items_qs = cart.items.filter(is_selected=True).select_related("product")
+    if not selected_items_qs.exists():
+        return JsonResponse({"message": "Tidak ada item yang dipilih untuk pembayaran."}, status=400)
+
+    address_id = checkout_data.get("address_id")
+    shipping_address = (
+        Address.objects.filter(id=address_id, user=request.user, is_deleted=False)
+        .select_related("district")
+        .first()
+    )
+
+    if not shipping_address:
+        return JsonResponse({"message": "Alamat pengiriman tidak ditemukan."}, status=400)
+
+    shipping_cost = _to_decimal(checkout_data.get("shipping_cost"))
+    subtotal = _to_decimal(cart.get_selected_total())
+
+    discount_amount, discount_code = _calculate_discount(
+        subtotal,
+        shipping_cost,
+        checkout_data.get("shipping_method"),
+        request.session.get("discount"),
+    )
+
+    total = subtotal + shipping_cost - discount_amount
+    if total < 0:
+        total = Decimal("0")
+
+    client_total_value = client_payload.get("total")
+    if client_total_value is not None:
+        client_total = _to_decimal(client_total_value)
+        if client_total != total:
+            logger.warning(
+                "Client total %s does not match server total %s for DOKU.",
+                client_total,
+                total,
+            )
+
+    selected_items, selected_quantities = _prepare_selected_cart_items(selected_items_qs)
+    if not selected_items:
+        return JsonResponse({"message": "Tidak ada item yang dipilih untuk pembayaran."}, status=400)
+
+    for item in selected_items:
+        quantity = selected_quantities.get(item.pk, item.quantity)
+        if item.product.stock < quantity:
+            return JsonResponse(
+                {"message": f"Stok {item.product.name} tidak mencukupi."},
+                status=400,
+            )
+
+    order_id = f"INV-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+    service_code = str(checkout_data.get("shipping_method") or "").upper()
+    service_label = "Express" if service_code == "EXP" else "Reguler"
+    district_name = getattr(getattr(shipping_address, "district", None), "name", "")
+    eta = checkout_data.get("eta")
+    notes = checkout_data.get("notes", "")
+
+    line_items = _build_doku_line_items(selected_items, shipping_cost, discount_amount)
+
+    order_payload = {
+        "amount": f"{_to_decimal(total).quantize(Decimal('0.01'))}",
+        "invoice_number": order_id,
+        "currency": "IDR",
+        "callback_url": request.build_absolute_uri(reverse("payment:doku_notification")),
+        "return_url": request.build_absolute_uri(reverse("payment:doku_return")),
+    }
+    if config.get("merchant_code"):
+        order_payload["merchant_code"] = config["merchant_code"]
+    if line_items:
+        order_payload["line_items"] = line_items
+
+    customer_details = _build_customer_details(shipping_address, request.user)
+    customer_payload = {
+        "name": customer_details.get("first_name", ""),
+        "email": customer_details.get("email", ""),
+        "phone": customer_details.get("phone", ""),
+        "address": shipping_address.get_full_address(),
+    }
+
+    payload = {
+        "order": order_payload,
+        "payment": {"payment_due_date": 60},
+        "customer": customer_payload,
+        "additional_info": {
+            "notes": notes,
+            "shipping_service": service_label,
+            "discount_code": discount_code or "",
+        },
+    }
+
+    order = None
+    try:
+        with transaction.atomic():
+            order = create_order_from_checkout(
+                user=request.user,
+                cart=cart,
+                selected_items=selected_items,
+                selected_quantities=selected_quantities,
+                order_number=order_id,
+                subtotal=subtotal,
+                shipping_cost=shipping_cost,
+                total=total,
+                shipping_full_name=shipping_address.full_name,
+                shipping_email=request.user.email,
+                shipping_phone=shipping_address.phone,
+                shipping_address_text=shipping_address.get_full_address(),
+                shipping_city=shipping_address.city,
+                shipping_postal_code=shipping_address.postal_code,
+                courier_service=service_code,
+                district_name=district_name,
+                eta=eta,
+                notes=notes,
+                shipping_address_obj=shipping_address,
+                shipping_service_name=service_label,
+            )
+
+            status_code, response_data, _ = _call_doku_api("/checkout/v1/payment", payload)
+            if not (200 <= status_code < 300):
+                message = response_data.get("message") or response_data.get("error")
+                raise RuntimeError(message or "Gagal membuat sesi pembayaran DOKU.")
+
+            payment_url = (
+                response_data.get("payment_url")
+                or response_data.get("redirect_url")
+                or response_data.get("checkout_url")
+                or response_data.get("response", {}).get("payment", {}).get("url")
+                or response_data.get("response", {}).get("payment", {}).get("payment_url")
+            )
+
+            if not payment_url:
+                raise RuntimeError("URL pembayaran DOKU tidak tersedia.")
+
+    except RuntimeError as exc:
+        logger.exception("Failed to create DOKU checkout: %s", exc)
+        return JsonResponse({"message": str(exc)}, status=500)
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.exception("Failed to create order or DOKU checkout: %s", exc)
+        return JsonResponse({"message": "Gagal membuat sesi pembayaran DOKU."}, status=500)
+
+    request.session["doku_order_id"] = order.order_number
+    request.session.pop("checkout", None)
+    request.session.pop("discount", None)
+    request.session.modified = True
+
+    return JsonResponse({"payment_url": payment_url, "order_id": order.order_number})
+
+
+@csrf_exempt
+@login_required
+@require_POST
 def payment_finish(request):
     """Receive payment result callbacks from the frontend and update order status."""
     try:
@@ -339,3 +662,94 @@ def payment_finish(request):
         response_payload["status"] = order.status
 
     return JsonResponse(response_payload)
+
+
+@csrf_exempt
+@require_POST
+def doku_notification(request):
+    """Handle asynchronous payment status notifications from DOKU."""
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"message": "Payload tidak valid."}, status=400)
+
+    order_info = payload.get("order") or {}
+    order_id = (
+        order_info.get("invoice_number")
+        or order_info.get("order_id")
+        or payload.get("order_id")
+    )
+    status_info = payload.get("transaction") or payload.get("payment") or {}
+    transaction_status = (
+        status_info.get("status")
+        or status_info.get("transaction_status")
+        or payload.get("transaction_status")
+        or payload.get("status")
+    )
+
+    if not order_id:
+        return JsonResponse({"message": "Order ID tidak ditemukan."}, status=400)
+
+    order = Order.objects.filter(order_number=order_id).first()
+    if order is None:
+        return JsonResponse({"message": "Pesanan tidak ditemukan."}, status=404)
+
+    normalized_status = (transaction_status or "").strip().upper()
+    success_states = {"SUCCESS", "COMPLETED", "PAID"}
+    pending_states = {"PENDING", "WAITING", "IN_PROGRESS"}
+    failure_states = {"FAILED", "CANCELLED", "EXPIRED", "VOID"}
+
+    if normalized_status in success_states and order.status != "paid":
+        order.status = "paid"
+        order.save(update_fields=["status"])
+    elif normalized_status in pending_states and order.status != "pending":
+        order.status = "pending"
+        order.save(update_fields=["status"])
+    elif normalized_status in failure_states and order.status != "cancelled":
+        with transaction.atomic():
+            restore_order_stock(order)
+            order.status = "cancelled"
+            order.save(update_fields=["status"])
+
+    request.session["doku_last_result"] = payload
+    request.session.modified = True
+
+    response_payload = {"message": "Status pembayaran DOKU diterima.", "order_id": order_id}
+    if order:
+        response_payload["status"] = order.status
+
+    return JsonResponse(response_payload)
+
+
+@login_required
+def doku_return(request):
+    """Redirect handler after the customer completes DOKU payment."""
+
+    status_param = (
+        request.GET.get("status")
+        or request.GET.get("transaction_status")
+        or request.GET.get("state")
+        or ""
+    ).strip().upper()
+    order_id = request.GET.get("order_id") or request.GET.get("invoice_number")
+    session_order_id = request.session.pop("doku_order_id", None)
+    order_reference = order_id or session_order_id
+
+    if status_param == "SUCCESS":
+        message = "Pembayaran berhasil diproses."
+        messages.success(request, message)
+    elif status_param == "PENDING":
+        message = "Pembayaran sedang diproses. Silakan selesaikan pembayaran Anda."
+        messages.warning(request, message)
+    elif status_param:
+        message = "Pembayaran tidak berhasil atau dibatalkan."
+        messages.error(request, message)
+    else:
+        messages.info(request, "Status pembayaran DOKU belum diketahui. Periksa riwayat pesanan Anda.")
+
+    if order_reference:
+        request.session["doku_last_order"] = order_reference
+        request.session.modified = True
+
+    return redirect(reverse("core:order_list"))
