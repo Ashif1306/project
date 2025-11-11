@@ -152,26 +152,6 @@
               {{ order.get_status_display }}
             </span>
           </p>
-          {% if shipment %}
-          <p><strong>Metode Pengiriman:</strong><br>{{ shipment.get_service_display }}</p>
-          <p class="mb-1"><strong>Kurir:</strong><br>
-            {% if shipment.courier_name %}
-              {{ shipment.get_courier_name_display }}
-            {% else %}
-              <span class="text-muted">Belum ditentukan</span>
-            {% endif %}
-          </p>
-          {% if available_couriers %}
-          <p class="text-muted small">Pilihan kurir {{ shipment.get_service_display|lower }}: {{ available_couriers|join:', ' }}</p>
-          {% endif %}
-          <p><strong>No. Resi:</strong><br>
-            {% if shipment.tracking_number %}
-              {{ shipment.tracking_number }}
-            {% else %}
-              <span class="text-muted">Belum tersedia</span>
-            {% endif %}
-          </p>
-          {% endif %}
           {% if order.notes %}
           <p><strong>Catatan:</strong><br>{{ order.notes }}</p>
           {% endif %}

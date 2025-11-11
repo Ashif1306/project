@@ -28,7 +28,7 @@ from catalog.models import Product, DiscountCode, Testimonial
 from .forms import CustomUserRegistrationForm, TestimonialForm
 from .utils import send_verification_email, send_welcome_email
 from .services.orders import create_order_from_checkout
-from shipping.models import District, Address, Shipment
+from shipping.models import District, Address
 from shipping.views import calculate_shipping_cost, validate_shipping_data
 from shipping.forms import AddressForm
 
@@ -778,13 +778,6 @@ def order_detail(request, order_number):
     order_items = list(order.items.all())
     product_ids = [item.product_id for item in order_items if item.product_id]
 
-    shipment = getattr(order, 'shipment', None)
-    available_couriers = []
-    if shipment:
-        available_couriers = [
-            label for _, label in Shipment.get_courier_choices_for_service(shipment.service)
-        ]
-
     testimonials = Testimonial.objects.filter(
         user=request.user,
         product_id__in=product_ids,
@@ -799,8 +792,6 @@ def order_detail(request, order_number):
         'order_items': order_items,
         'order_can_review': order.status == 'delivered',
         'testimonial_form': TestimonialForm(),
-        'shipment': shipment,
-        'available_couriers': available_couriers,
     }
     return render(request, 'core/order_detail.html', context)
 

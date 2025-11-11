@@ -103,7 +103,6 @@ class ShipmentAdmin(admin.ModelAdmin):
         'full_name',
         'district_name',
         'service_display',
-        'courier_display',
         'cost_display',
         'eta',
         'tracking_number',
@@ -128,7 +127,7 @@ class ShipmentAdmin(admin.ModelAdmin):
             'fields': ('full_name', 'phone', 'street', 'district_name', 'postal_code')
         }),
         ('Detail Pengiriman', {
-            'fields': ('service', 'courier_name', 'cost', 'eta')
+            'fields': ('service', 'cost', 'eta')
         }),
         ('Tracking', {
             'fields': ('tracking_number',)
@@ -147,10 +146,6 @@ class ShipmentAdmin(admin.ModelAdmin):
     def service_display(self, obj):
         return obj.get_service_display()
     service_display.short_description = 'Layanan'
-
-    def courier_display(self, obj):
-        return obj.get_courier_name_display() if obj.courier_name else '-'
-    courier_display.short_description = 'Kurir'
 
     def cost_display(self, obj):
         return f"Rp {obj.cost:,.0f}"
