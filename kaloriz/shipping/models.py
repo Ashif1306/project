@@ -176,10 +176,31 @@ class Shipment(models.Model):
     """
     Model untuk data pengiriman di setiap order
     """
+
+    SERVICE_REGULAR = 'REG'
+    SERVICE_EXPRESS = 'EXP'
     SERVICE_CHOICES = [
-        ('REG', 'Reguler'),
-        ('EXP', 'Express'),
+        (SERVICE_REGULAR, 'Reguler'),
+        (SERVICE_EXPRESS, 'Express'),
     ]
+
+    REGULAR_COURIERS = [
+        ('JNE', 'JNE'),
+        ('JNT', 'J&T Express'),
+        ('SICEPAT', 'SiCepat Ekspres'),
+        ('POS', 'Pos Indonesia'),
+        ('TIKI', 'TIKI'),
+        ('LION', 'Lion Parcel'),
+        ('ANTERAJA', 'Anteraja'),
+        ('SAPX', 'SAPX Express'),
+    ]
+
+    EXPRESS_COURIERS = [
+        ('GOSEND', 'GoSend'),
+        ('GRAB', 'GrabExpress'),
+    ]
+
+    COURIER_CHOICES = REGULAR_COURIERS + EXPRESS_COURIERS
 
     order = models.OneToOneField(
         'core.Order',  # Relasi ke Order model yang sudah ada
@@ -200,6 +221,13 @@ class Shipment(models.Model):
         max_length=3,
         choices=SERVICE_CHOICES,
         verbose_name="Layanan Pengiriman"
+    )
+    courier_name = models.CharField(
+        max_length=20,
+        choices=COURIER_CHOICES,
+        blank=True,
+        verbose_name="Kurir",
+        help_text="Kurir yang digunakan untuk pengiriman",
     )
     cost = models.DecimalField(
         max_digits=10,
@@ -229,3 +257,17 @@ class Shipment(models.Model):
     def get_service_label(self):
         """Return label untuk display"""
         return self.get_service_display()
+
+    @classmethod
+    def get_courier_choices_for_service(cls, service: str):
+        """Return daftar kurir yang tersedia sesuai layanan pengiriman."""
+        service = (service or '').upper()
+        if service == cls.SERVICE_EXPRESS:
+            return cls.EXPRESS_COURIERS
+        return cls.REGULAR_COURIERS
+
+    @classmethod
+    def get_default_courier_for_service(cls, service: str) -> str:
+        """Ambil kurir default berdasarkan layanan pengiriman."""
+        choices = cls.get_courier_choices_for_service(service)
+        return choices[0][0] if choices else ''

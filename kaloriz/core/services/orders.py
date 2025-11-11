@@ -65,6 +65,7 @@ def create_order_from_checkout(
         district_name=district_name,
         postal_code=shipping_postal_code,
         service=courier_service,
+        courier_name=Shipment.get_default_courier_for_service(courier_service),
         cost=shipping_cost,
         eta=eta or "",
     )
