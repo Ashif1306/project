@@ -65,7 +65,7 @@
             </div>
 
             <!-- Shipping Service Selection -->
-            <div class="form-group" id="shipping-service-group" style="display: none;">
+            <div class="form-group d-none" id="shipping-service-group">
               <label>Layanan Pengiriman *</label>
               <div id="shipping-options">
                 <!-- Will be populated by AJAX -->
@@ -115,7 +115,7 @@
           </div>
 
           <!-- Free Shipping Promo (if applicable) -->
-          <div id="free-shipping-promo" class="alert alert-success p-2 small" style="display: none;">
+          <div id="free-shipping-promo" class="alert alert-success p-2 small d-none">
             <i class="fas fa-gift"></i> Gratis ongkir untuk belanja ≥ Rp 100.000!
           </div>
 
@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const districtId = this.value;
 
     if (!districtId) {
-      shippingServiceGroup.style.display = 'none';
+      shippingServiceGroup.classList.add('d-none');
       shippingDisplay.textContent = 'Pilih kecamatan';
       shippingDisplay.classList.add('text-muted');
       submitBtn.disabled = true;
@@ -181,11 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
           // Check if subtotal qualifies for free shipping promo
           const isFreeShipping = subtotal >= 100000;
-          if (isFreeShipping) {
-            freeShippingPromo.style.display = 'block';
-          } else {
-            freeShippingPromo.style.display = 'none';
-          }
+          freeShippingPromo.classList.toggle('d-none', !isFreeShipping);
 
           // Add radio buttons for each service
           data.quotes.forEach((quote, index) => {
@@ -207,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
           });
 
           // Show shipping service group
-          shippingServiceGroup.style.display = 'block';
+          shippingServiceGroup.classList.remove('d-none');
 
           // Auto-select first option
           const firstRadio = shippingOptions.querySelector('input[type="radio"]');
@@ -270,28 +266,4 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-
-<style>
-.custom-control-label {
-  cursor: pointer;
-}
-#shipping-options .custom-control {
-  padding: 10px;
-  border: 2px solid #e0e0e0;
-  border-radius: 5px;
-  transition: all 0.3s;
-}
-#shipping-options .custom-control:hover {
-  border-color: #17a2b8;
-  background-color: #f8f9fa;
-}
-#shipping-options input[type="radio"]:checked + label {
-  color: #17a2b8;
-  font-weight: 600;
-}
-#shipping-options .custom-control:has(input:checked) {
-  border-color: #17a2b8;
-  background-color: #e7f6f8;
-}
-</style>
 {% endblock %}
