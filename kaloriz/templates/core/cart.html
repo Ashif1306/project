@@ -98,7 +98,7 @@
 
     <!-- ====== RINGKASAN ====== -->
     <div class="col-lg-4">
-      <div class="card shadow-sm sticky-top cart-summary-sticky">
+      <div class="card shadow-sm sticky-top" style="top:20px">
         <div class="card-header bg-primary text-white">
           <h5 class="mb-0">Ringkasan Belanja</h5>
         </div>
@@ -137,6 +137,78 @@
   </div>
   {% endif %}
 </div>
+
+<style>
+  .cart-row.selected { background:#f8f9fa; transition:background .15s }
+  .item-check, #check-all { width:20px; height:20px; cursor:pointer }
+</style>
+<style>
+  .cart-row.selected { background:#f8f9fa; transition:background .15s; }
+  .item-check, #check-all { width:20px; height:20px; cursor:pointer; }
+
+  /* ========== RESPONSIVE PRODUCT CELL ========== */
+  .product-cell {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem; /* Jarak antara gambar dan teks */
+  }
+
+  .product-cell img {
+    width: 70px;
+    height: 70px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .product-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .product-info a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .product-info a:hover {
+    text-decoration: underline;
+  }
+
+  /* Responsif untuk tablet */
+  @media (max-width: 992px) {
+    .product-cell {
+      gap: 0.8rem;
+    }
+    .product-cell img {
+      width: 60px;
+      height: 60px;
+    }
+  }
+
+  /* Responsif untuk mobile */
+  @media (max-width: 576px) {
+    .table {
+      font-size: 14px;
+    }
+    .product-cell {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 0.5rem;
+    }
+    .product-cell img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 0.3rem;
+    }
+    .product-info {
+      align-items: center;
+    }
+  }
+</style>
 
 <script>
 (function(){
