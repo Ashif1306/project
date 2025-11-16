@@ -770,12 +770,12 @@ def order_list(request):
 def order_detail(request, order_number):
     """Order detail page"""
     order = get_object_or_404(
-        Order.objects.prefetch_related('items__product__category'),
+        Order.objects.prefetch_related('items__product'),
         order_number=order_number,
         user=request.user,
     )
 
-    order_items = list(order.items.select_related('product__category'))
+    order_items = list(order.items.all())
     product_ids = [item.product_id for item in order_items if item.product_id]
 
     testimonials = Testimonial.objects.filter(
@@ -785,29 +785,13 @@ def order_detail(request, order_number):
     testimonials_map = {testimonial.product_id: testimonial for testimonial in testimonials}
 
     for item in order_items:
-        product = item.product
-        item.display_name = product.name if product else item.product_name
-        item.display_category = (
-            product.category.name
-            if product and getattr(product, 'category', None)
-            else None
-        )
-        item.display_price = getattr(item, 'product_price', Decimal('0'))
-        item.display_subtotal = getattr(item, 'subtotal', Decimal('0'))
         item.existing_testimonial = testimonials_map.get(item.product_id)
-
-    shipping_method_display = (
-        order.selected_service_name
-        or order.selected_courier
-        or 'Standar'
-    )
 
     context = {
         'order': order,
         'order_items': order_items,
         'order_can_review': order.status == 'delivered',
         'testimonial_form': TestimonialForm(),
-        'shipping_method_display': shipping_method_display,
     }
     return render(request, 'core/order_detail.html', context)
 

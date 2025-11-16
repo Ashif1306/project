@@ -124,15 +124,7 @@ class OrderAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Informasi Pesanan', {
-            'fields': (
-                'order_number',
-                'user',
-                'status',
-                'selected_service_name',
-                'selected_courier',
-                'shipping_provider',
-                'tracking_number',
-            )
+            'fields': ('order_number', 'user', 'status')
         }),
         ('Informasi Pengiriman', {
             'fields': (
@@ -142,6 +134,10 @@ class OrderAdmin(admin.ModelAdmin):
                 'address',
                 'city',
                 'postal_code',
+                'selected_service_name',
+                'selected_courier',
+                'shipping_provider',
+                'tracking_number',
             )
         }),
         ('Total', {
