@@ -20,7 +20,7 @@
   {% block extra_head %}{% endblock %}
 </head>
 
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <!-- Modern Minimalist Navbar -->
   {% block navbar %}
   <nav class="modern-navbar">
@@ -135,6 +135,10 @@
   <style>
   :root {
     --header-h: 72px;
+  }
+
+  body.no-navbar-offset {
+    --header-h: 0px;
   }
 
   main {
