@@ -24,10 +24,10 @@
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-md-8">
+  <div class="row order-main-grid">
+    <div class="col-lg-8">
       <!-- Order Items -->
-      <div class="card shadow mb-4">
+      <div class="card shadow mb-4 order-items-card">
         <div class="card-header bg-primary text-white">
           <h5 class="mb-0">Item Pesanan</h5>
         </div>
@@ -98,25 +98,11 @@
             </div>
           </div>
       </div>
-
-      <!-- Shipping Address -->
-      <div class="card shadow">
-        <div class="card-header bg-info text-white">
-          <h5 class="mb-0">Alamat Pengiriman</h5>
-        </div>
-        <div class="card-body">
-          <p class="mb-1"><strong>{{ order.full_name }}</strong></p>
-          <p class="mb-1">{{ order.address }}</p>
-          <p class="mb-1">{{ order.city }}, {{ order.postal_code }}</p>
-          <p class="mb-1"><i class="fas fa-phone"></i> {{ order.phone }}</p>
-          <p class="mb-0"><i class="fas fa-envelope"></i> {{ order.email }}</p>
-        </div>
-      </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-lg-4 order-info-sidebar">
       <!-- Order Info -->
-      <div class="card shadow mb-4">
+      <div class="card shadow mb-4 order-info-card">
         <div class="card-header bg-secondary text-white">
           <h5 class="mb-0">Informasi Pesanan</h5>
         </div>
@@ -147,6 +133,24 @@
       <a href="{% url 'core:order_list' %}" class="btn btn-outline-primary btn-block">
         <i class="fas fa-arrow-left"></i> Kembali ke Daftar Pesanan
       </a>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-lg-8">
+      <!-- Shipping Address -->
+      <div class="card shadow">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0">Alamat Pengiriman</h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-1"><strong>{{ order.full_name }}</strong></p>
+          <p class="mb-1">{{ order.address }}</p>
+          <p class="mb-1">{{ order.city }}, {{ order.postal_code }}</p>
+          <p class="mb-1"><i class="fas fa-phone"></i> {{ order.phone }}</p>
+          <p class="mb-0"><i class="fas fa-envelope"></i> {{ order.email }}</p>
+        </div>
+      </div>
     </div>
   </div>
 </div>
