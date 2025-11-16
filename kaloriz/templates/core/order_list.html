@@ -65,12 +65,18 @@
         </div>
         <div class="order-card-body">
           <div class="order-card-row">
-            <span class="order-card-label">Tanggal</span>
-            <span>{{ order.created_at|date:"d M Y H:i" }}</span>
+            <div class="order-card-row-label">
+              <i class="fas fa-calendar-alt"></i>
+              <span>Tanggal</span>
+            </div>
+            <span class="order-card-row-value">{{ order.created_at|date:"d M Y H:i" }}</span>
           </div>
           <div class="order-card-row">
-            <span class="order-card-label">Total</span>
-            <strong>Rp {{ order.total|floatformat:0 }}</strong>
+            <div class="order-card-row-label">
+              <i class="fas fa-receipt"></i>
+              <span>Total</span>
+            </div>
+            <span class="order-card-row-value">Rp {{ order.total|floatformat:0 }}</span>
           </div>
         </div>
         <div class="order-card-footer">
