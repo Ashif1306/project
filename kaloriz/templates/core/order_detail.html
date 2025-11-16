@@ -66,69 +66,125 @@
           <h5 class="mb-0">Item Pesanan</h5>
         </div>
         <div class="card-body">
-          <div class="table-responsive d-none d-md-block">
-            <table class="table order-items-table">
-              <thead>
-                <tr>
-                  <th>Produk</th>
-                  <th>Harga</th>
-                  <th>Jumlah</th>
-                  <th>Subtotal</th>
-                  <th>Penilaian</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div class="order-content-grid">
+            <div class="order-items-table-wrapper">
+              <div class="table-responsive d-none d-md-block">
+                <table class="table order-items-table">
+                  <thead>
+                    <tr>
+                      <th>Produk</th>
+                      <th>Harga</th>
+                      <th>Jumlah</th>
+                      <th>Subtotal</th>
+                      <th>Penilaian</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in order_items %}
+                    <tr>
+                      <td class="align-middle" data-label="Produk">
+                        <strong>{{ item.product_name }}</strong>
+                      </td>
+                      <td class="align-middle" data-label="Harga">Rp {{ item.product_price|floatformat:0 }}</td>
+                      <td class="align-middle" data-label="Jumlah">{{ item.quantity }}</td>
+                      <td class="align-middle" data-label="Subtotal"><strong>Rp {{ item.subtotal|floatformat:0 }}</strong></td>
+                      <td class="align-middle" data-label="Penilaian">
+                        {% include 'core/partials/order_item_review.html' with item=item order=order order_can_review=order_can_review testimonial_form=testimonial_form include_modal=True %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="order-items-mobile d-md-none">
                 {% for item in order_items %}
-                <tr>
-                  <td class="align-middle" data-label="Produk">
-                    <strong>{{ item.product_name }}</strong>
-                  </td>
-                  <td class="align-middle" data-label="Harga">Rp {{ item.product_price|floatformat:0 }}</td>
-                  <td class="align-middle" data-label="Jumlah">{{ item.quantity }}</td>
-                  <td class="align-middle" data-label="Subtotal"><strong>Rp {{ item.subtotal|floatformat:0 }}</strong></td>
-                  <td class="align-middle" data-label="Penilaian">
-                    {% include 'core/partials/order_item_review.html' with item=item order=order order_can_review=order_can_review testimonial_form=testimonial_form include_modal=True %}
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="order-items-mobile d-md-none">
-            {% for item in order_items %}
-            <div class="order-item-card">
-              <div class="order-item-card-header">
-                <div>
-                  <p class="order-item-label">Produk</p>
-                  <h5 class="mb-1">{{ item.product_name }}</h5>
+                <div class="order-item-card">
+                  <div class="order-item-card-header">
+                    <div>
+                      <p class="order-item-label">Produk</p>
+                      <h5 class="mb-1">{{ item.product_name }}</h5>
+                    </div>
+                    <div class="order-item-price">Rp {{ item.product_price|floatformat:0 }}</div>
+                  </div>
+                  <div class="order-item-card-body">
+                    <div class="order-item-info"><span class="order-item-label">Jumlah</span><span>{{ item.quantity }}</span></div>
+                    <div class="order-item-info"><span class="order-item-label">Subtotal</span><strong>Rp {{ item.subtotal|floatformat:0 }}</strong></div>
+                  </div>
+                  <div class="order-item-card-footer">
+                    <p class="order-item-label mb-2">Penilaian</p>
+                    {% include 'core/partials/order_item_review.html' with item=item order=order order_can_review=order_can_review testimonial_form=testimonial_form include_modal=False %}
+                  </div>
                 </div>
-                <div class="order-item-price">Rp {{ item.product_price|floatformat:0 }}</div>
+                {% endfor %}
               </div>
-              <div class="order-item-card-body">
-                <div class="order-item-info"><span class="order-item-label">Jumlah</span><span>{{ item.quantity }}</span></div>
-                <div class="order-item-info"><span class="order-item-label">Subtotal</span><strong>Rp {{ item.subtotal|floatformat:0 }}</strong></div>
-              </div>
-              <div class="order-item-card-footer">
-                <p class="order-item-label mb-2">Penilaian</p>
-                {% include 'core/partials/order_item_review.html' with item=item order=order order_can_review=order_can_review testimonial_form=testimonial_form include_modal=False %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
 
-          <div class="order-total-summary">
-            <div class="order-total-row">
-              <span>Subtotal</span>
-              <strong>Rp {{ order.subtotal|floatformat:0 }}</strong>
+              <div class="order-total-summary">
+                <div class="order-total-row">
+                  <span>Subtotal</span>
+                  <strong>Rp {{ order.subtotal|floatformat:0 }}</strong>
+                </div>
+                <div class="order-total-row">
+                  <span>Ongkir</span>
+                  <strong>Rp {{ order.shipping_cost|floatformat:0 }}</strong>
+                </div>
+                <div class="order-total-row grand-total">
+                  <span>Total</span>
+                  <strong>Rp {{ order.total|floatformat:0 }}</strong>
+                </div>
+              </div>
             </div>
-            <div class="order-total-row">
-              <span>Ongkir</span>
-              <strong>Rp {{ order.shipping_cost|floatformat:0 }}</strong>
-            </div>
-            <div class="order-total-row grand-total">
-              <span>Total</span>
-              <strong>Rp {{ order.total|floatformat:0 }}</strong>
+
+            <div class="order-info-panel">
+              <div class="order-info-panel-header">
+                <h5 class="mb-0">Informasi Pesanan</h5>
+              </div>
+              <div class="order-info-panel-body">
+                <table class="table table-borderless order-info-table mb-0">
+                  <tbody>
+                    <tr>
+                      <th>No. Pesanan</th>
+                      <td>#{{ order.order_number }}</td>
+                    </tr>
+                    <tr>
+                      <th>Tanggal Pesanan</th>
+                      <td>{{ order.created_at|date:"d M Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                      <th>Status</th>
+                      <td>
+                        <span class="badge badge-{{ order.get_status_display_class }}">
+                          {{ order.get_status_display }}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Jenis Pengiriman</th>
+                      <td>{{ order.selected_service_name|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                      <th>Kurir</th>
+                      <td>
+                        {% if order.shipping_provider %}
+                          {{ order.get_shipping_provider_display }}
+                        {% else %}
+                          -
+                        {% endif %}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>No. Resi</th>
+                      <td>{{ order.tracking_number|default:"-" }}</td>
+                    </tr>
+                    {% if order.notes %}
+                    <tr>
+                      <th>Catatan</th>
+                      <td>{{ order.notes }}</td>
+                    </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -136,34 +192,6 @@
     </div>
 
     <div class="col-lg-4 order-info-sidebar">
-      <!-- Order Info -->
-      <div class="card shadow mb-4 order-info-card">
-        <div class="card-header bg-secondary text-white">
-          <h5 class="mb-0">Informasi Pesanan</h5>
-        </div>
-        <div class="card-body">
-          <p><strong>No. Pesanan:</strong><br>{{ order.order_number }}</p>
-          <p><strong>Tanggal Pesanan:</strong><br>{{ order.created_at|date:"d M Y H:i" }}</p>
-          <p><strong>Status:</strong><br>
-            <span class="badge badge-{{ order.get_status_display_class }}">
-              {{ order.get_status_display }}
-            </span>
-          </p>
-          <p><strong>Jenis Pengiriman:</strong><br>{{ order.selected_service_name|default:"-" }}</p>
-          <p><strong>Kurir:</strong><br>
-            {% if order.shipping_provider %}
-              {{ order.get_shipping_provider_display }}
-            {% else %}
-              -
-            {% endif %}
-          </p>
-          <p><strong>No. Resi:</strong><br>{{ order.tracking_number|default:"-" }}</p>
-          {% if order.notes %}
-          <p><strong>Catatan:</strong><br>{{ order.notes }}</p>
-          {% endif %}
-        </div>
-      </div>
-
       <!-- Shipping Address -->
       <div class="card shadow mb-4 order-address-card">
         <div class="card-header bg-white border-0 pb-0">

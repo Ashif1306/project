@@ -54,9 +54,73 @@
   gap: 1.5rem;
 }
 
+.order-content-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.order-items-table-wrapper {
+  flex: 1 1 auto;
+}
+
+.order-info-panel {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  background: #f8fafc;
+  padding: 1.25rem;
+  box-shadow: 0 20px 30px -24px rgba(15, 23, 42, 0.35);
+}
+
+.order-info-panel-header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.order-info-panel-header h5 {
+  font-weight: 600;
+  color: #1f2f46;
+}
+
+.order-info-table th {
+  width: 45%;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+}
+
+.order-info-table td {
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.order-info-table .badge {
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+}
+
 @media (min-width: 992px) {
   .order-main-grid {
     align-items: flex-start;
+  }
+
+  .order-content-grid {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .order-items-table-wrapper {
+    flex: 1 1 65%;
+  }
+
+  .order-info-panel {
+    flex: 0 0 35%;
+    max-width: 360px;
+    position: sticky;
+    top: 0;
   }
 
   .order-info-sidebar {
