@@ -1244,6 +1244,7 @@ def notifications_view(request):
 
 
 @login_required
+@require_POST
 def add_to_watchlist(request, product_id):
     """Add product to watchlist"""
     product = get_object_or_404(Product, id=product_id)
@@ -1253,21 +1254,43 @@ def add_to_watchlist(request, product_id):
         product=product
     )
 
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
     if created:
-        messages.success(request, f'{product.name} berhasil ditambahkan ke watchlist.')
+        message_text = f'{product.name} berhasil ditambahkan ke watchlist.'
+        messages.success(request, message_text)
     else:
-        messages.info(request, f'{product.name} sudah ada di watchlist Anda.')
+        message_text = f'{product.name} sudah ada di watchlist Anda.'
+        messages.info(request, message_text)
+
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'action': 'added' if created else 'exists',
+            'message': message_text,
+            'watchlist_id': watchlist_item.id,
+        })
 
     return redirect(request.META.get('HTTP_REFERER', 'catalog:home'))
 
 
 @login_required
+@require_POST
 def remove_from_watchlist(request, watchlist_id):
     """Remove item from watchlist"""
     watchlist_item = get_object_or_404(Watchlist, id=watchlist_id, user=request.user)
     product_name = watchlist_item.product.name
     watchlist_item.delete()
-    messages.success(request, f'{product_name} berhasil dihapus dari watchlist.')
+    message_text = f'{product_name} berhasil dihapus dari watchlist.'
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'action': 'removed',
+            'message': message_text,
+        })
+
+    messages.success(request, message_text)
     return redirect('core:watchlist')
 
 @login_required
