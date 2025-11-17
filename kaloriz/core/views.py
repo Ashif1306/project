@@ -1244,59 +1244,30 @@ def notifications_view(request):
 
 
 @login_required
-@require_POST
 def add_to_watchlist(request, product_id):
-    """Toggle product watchlist status"""
+    """Add product to watchlist"""
     product = get_object_or_404(Product, id=product_id)
 
-    existing_item = Watchlist.objects.filter(user=request.user, product=product).first()
+    watchlist_item, created = Watchlist.objects.get_or_create(
+        user=request.user,
+        product=product
+    )
 
-    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
-
-    if existing_item:
-        existing_item.delete()
-        message_text = f'{product.name} berhasil dihapus dari watchlist.'
-        messages.success(request, message_text)
-        response_data = {
-            'success': True,
-            'action': 'removed',
-            'message': message_text,
-            'watchlist_id': None,
-        }
+    if created:
+        messages.success(request, f'{product.name} berhasil ditambahkan ke watchlist.')
     else:
-        watchlist_item = Watchlist.objects.create(user=request.user, product=product)
-        message_text = f'{product.name} berhasil ditambahkan ke watchlist.'
-        messages.success(request, message_text)
-        response_data = {
-            'success': True,
-            'action': 'added',
-            'message': message_text,
-            'watchlist_id': watchlist_item.id,
-        }
-
-    if is_ajax:
-        return JsonResponse(response_data)
+        messages.info(request, f'{product.name} sudah ada di watchlist Anda.')
 
     return redirect(request.META.get('HTTP_REFERER', 'catalog:home'))
 
 
 @login_required
-@require_POST
 def remove_from_watchlist(request, watchlist_id):
     """Remove item from watchlist"""
     watchlist_item = get_object_or_404(Watchlist, id=watchlist_id, user=request.user)
     product_name = watchlist_item.product.name
     watchlist_item.delete()
-    message_text = f'{product_name} berhasil dihapus dari watchlist.'
-
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({
-            'success': True,
-            'action': 'removed',
-            'message': message_text,
-        })
-
-    messages.success(request, message_text)
+    messages.success(request, f'{product_name} berhasil dihapus dari watchlist.')
     return redirect('core:watchlist')
 
 @login_required
