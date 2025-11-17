@@ -169,21 +169,6 @@ def _to_int_amount(value: Decimal) -> int:
     return int(_to_decimal(value).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
-def _build_midtrans_retry_order_id(order_number: str) -> str:
-    """Append a short suffix so Midtrans accepts duplicate payment attempts.
-
-    Midtrans Snap rejects duplicate ``order_id`` values with an error similar to
-    "order_id has already been used by another transaction". When a customer
-    retries payment from the order detail page we therefore add a deterministic
-    suffix that still lets us recover the original ``order_number`` later.
-    """
-
-    timestamp_fragment = timezone.now().strftime("%Y%m%d%H%M%S")
-    random_fragment = uuid.uuid4().hex[:6].upper()
-    base_number = (order_number or "").strip()
-    return f"{base_number}{MIDTRANS_RETRY_SEPARATOR}{timestamp_fragment}{random_fragment}"
-
-
 def _extract_order_number_from_midtrans(order_id: str | None) -> str:
     if not order_id:
         return ""
@@ -650,19 +635,6 @@ def payment_create_snap_token(request):
     eta = checkout_data.get("eta")
     notes = checkout_data.get("notes", "")
 
-    transaction_payload = {
-        "transaction_details": {
-            "order_id": order_id,
-            "gross_amount": _to_int_amount(total),
-        },
-        "item_details": item_details,
-        "customer_details": _build_customer_details(shipping_address, request.user),
-        "credit_card": {"secure": True},
-        "callbacks": {
-            "finish": request.build_absolute_uri("/payment/finish/"),
-        },
-    }
-
     token = None
     order = None
     try:
@@ -691,6 +663,22 @@ def payment_create_snap_token(request):
                 payment_method_slug=selected_payment_slug,
                 payment_method_display=(payment_method_obj.name if payment_method_obj else selected_payment_slug),
             )
+            midtrans_order_id = order.ensure_midtrans_order_id()
+
+            transaction_payload = {
+                "transaction_details": {
+                    "order_id": midtrans_order_id,
+                    "gross_amount": _to_int_amount(total),
+                },
+                "item_details": item_details,
+                "customer_details": _build_customer_details(shipping_address, request.user),
+                "credit_card": {"secure": True},
+                "callbacks": {
+                    "finish": request.build_absolute_uri("/payment/finish/"),
+                },
+                "custom_field1": order.order_number,
+            }
+
             snap_response = snap_client.create_transaction(transaction_payload)
             token = snap_response.get("token")
             if not token:
@@ -908,7 +896,7 @@ def payment_create_order_snap_token(request, order_number):
     if (order.payment_method or "").lower() != (midtrans_slug or "").lower():
         return JsonResponse({"message": "Metode pembayaran pesanan tidak menggunakan Midtrans."}, status=400)
 
-    midtrans_order_id = _build_midtrans_retry_order_id(order.order_number)
+    midtrans_order_id = order.ensure_midtrans_order_id()
 
     transaction_payload = {
         "transaction_details": {
