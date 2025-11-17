@@ -11,16 +11,15 @@
     <div class="col-lg-8">
       <div class="card shadow-sm">
         <div class="card-body">
-          <div class="table-responsive">
-            <table class="table align-middle">
+          <div class="table-responsive cart-table-wrapper">
+            <table class="table align-middle cart-table">
               <thead>
                 <tr>
                   <th width="36"><input type="checkbox" id="check-all" title="Pilih semua"></th>
-                  <th>Produk</th>
+                  <th class="product-head">Produk</th>
                   <th width="120">Harga</th>
-                  <th width="160">Jumlah</th>
+                  <th width="170">Jumlah</th>
                   <th width="140">Subtotal</th>
-                  <th width="64">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -29,50 +28,52 @@
                     data-item-id="{{ item.id }}"
                     data-price="{{ item.product.get_display_price }}"> {# ANGKA DARI DB #}
 
-                  <td>
+                  <td class="select-col" data-label="Pilih">
                     <input type="checkbox" class="item-check" {% if item.is_selected %}checked{% endif %}>
                   </td>
 
-                  <td>
-                  <div class="product-cell">
-                    {% if item.product.image %}
-                      <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
-                    {% endif %}
-                    <div class="product-info">
-                      <a href="{% url 'catalog:product_detail' item.product.slug %}">
-                        {{ item.product.name }}
-                      </a>
-                      <small class="text-muted">{{ item.product.category.name }}</small>
+                  <td class="product-col" data-label="Produk">
+                    <div class="product-cell">
+                      {% if item.product.image %}
+                        <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+                      {% endif %}
+                      <div class="product-info">
+                        <a href="{% url 'catalog:product_detail' item.product.slug %}">
+                          {{ item.product.name }}
+                        </a>
+                        <small class="text-muted d-block">{{ item.product.category.name }}</small>
+                        <form method="post" action="{% url 'core:remove_from_cart' item.id %}" class="remove-form">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-link btn-sm text-danger p-0" onclick="return confirm('Hapus item ini?')">
+                            <i class="fas fa-trash-alt"></i> <span class="d-none d-sm-inline ms-1">Hapus</span>
+                          </button>
+                        </form>
+                      </div>
                     </div>
-                  </div>
-                </td>
+                  </td>
 
-                  <td class="price-cell">Rp {{ item.product.get_display_price|floatformat:0 }}</td>
+                  <td class="price-cell" data-label="Harga">Rp {{ item.product.get_display_price|floatformat:0 }}</td>
 
-                  <td>
-                    <form method="post" action="{% url 'core:update_cart_item' item.id %}" class="qty-form d-flex">
+                  <td class="qty-col" data-label="Jumlah">
+                    <form method="post" action="{% url 'core:update_cart_item' item.id %}" class="qty-form">
                       {% csrf_token %}
-                      <input type="number" name="quantity" class="form-control form-control-sm qty-input"
-                             min="1" max="{{ item.product.stock }}" value="{{ item.quantity }}">
-                      <button type="submit" class="btn btn-sm btn-primary ms-2" title="Simpan">
-                        <i class="fas fa-check"></i>
-                      </button>
+                      <div class="qty-control">
+                        <button type="button" class="qty-btn" data-step="-1" aria-label="Kurangi jumlah">
+                          <i class="fas fa-minus"></i>
+                        </button>
+                        <input type="number" name="quantity" class="qty-input"
+                               min="1" max="{{ item.product.stock }}" value="{{ item.quantity }}" readonly>
+                        <button type="button" class="qty-btn" data-step="1" aria-label="Tambah jumlah">
+                          <i class="fas fa-plus"></i>
+                        </button>
+                      </div>
                     </form>
                   </td>
 
-                  <td class="line-subtotal">
+                  <td class="line-subtotal" data-label="Subtotal">
                     <strong><span class="line-subtotal-text">Rp {{ item.get_subtotal|floatformat:0 }}</span></strong>
                   </td>
-                  
-                  <td>
-                    <form method="post" action="{% url 'core:remove_from_cart' item.id %}" class="d-inline">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Hapus item ini?')" title="Hapus">
-                        <i class="fas fa-trash"></i>
-                      </button>
-                    </form>
-                  </td>
-                  
+
 
                 </tr>
 
@@ -139,74 +140,159 @@
 </div>
 
 <style>
-  .cart-row.selected { background:#f8f9fa; transition:background .15s }
-  .item-check, #check-all { width:20px; height:20px; cursor:pointer }
-</style>
-<style>
+  :root {
+    --cart-border: #e6e9ef;
+  }
+
+  .cart-table-wrapper {
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+
+  .cart-table {
+    min-width: 100%;
+  }
+
+  .cart-table thead th {
+    background: #f7f8fb;
+    border-bottom: none;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
   .cart-row.selected { background:#f8f9fa; transition:background .15s; }
   .item-check, #check-all { width:20px; height:20px; cursor:pointer; }
 
-  /* ========== RESPONSIVE PRODUCT CELL ========== */
+  .product-col { width:45%; }
+  .product-head { width:45%; }
+  .select-col { width:50px; text-align:center; }
+
   .product-cell {
     display: flex;
     align-items: flex-start;
-    gap: 1rem; /* Jarak antara gambar dan teks */
+    gap: 1rem;
   }
 
   .product-cell img {
-    width: 70px;
-    height: 70px;
-    border-radius: 8px;
+    width: 80px;
+    height: 80px;
+    border-radius: 0.75rem;
     object-fit: cover;
     flex-shrink: 0;
+    background: #f2f4f8;
   }
 
   .product-info {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    gap: .15rem;
   }
 
   .product-info a {
-    color: #007bff;
+    color: #0d6efd;
     text-decoration: none;
     font-weight: 600;
   }
 
-  .product-info a:hover {
-    text-decoration: underline;
+  .product-info a:hover { text-decoration: underline; }
+
+  .remove-form { margin-top: .35rem; }
+
+  .price-cell,
+  .line-subtotal { font-weight: 600; }
+
+  .qty-form { width: 100%; }
+
+  .qty-control {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--cart-border);
+    border-radius: 999px;
+    overflow: hidden;
+    background: #fff;
   }
 
-  /* Responsif untuk tablet */
+  .qty-btn {
+    width: 38px;
+    height: 38px;
+    border: none;
+    background: transparent;
+    color: #0d6efd;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+  }
+
+  .qty-btn:hover { background: rgba(13, 110, 253, 0.08); }
+
+  .qty-input {
+    width: 52px;
+    text-align: center;
+    border: none;
+    font-weight: 600;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .qty-input:focus { outline: none; box-shadow: none; }
+
+  /* ===== Mobile friendly table ===== */
   @media (max-width: 992px) {
-    .product-cell {
-      gap: 0.8rem;
-    }
-    .product-cell img {
-      width: 60px;
-      height: 60px;
-    }
+    .product-col,
+    .product-head { width: 55%; }
   }
 
-  /* Responsif untuk mobile */
-  @media (max-width: 576px) {
-    .table {
-      font-size: 14px;
+  @media (max-width: 768px) {
+    .cart-table thead { display: none; }
+    .cart-table tbody tr {
+      display: block;
+      background: #fff;
+      border: 1px solid var(--cart-border);
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
     }
+    .cart-table tbody td {
+      display: flex;
+      justify-content: space-between;
+      border-top: none;
+      padding: .35rem 0;
+      font-size: .95rem;
+    }
+    .cart-table tbody td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #6c757d;
+      margin-right: 1rem;
+    }
+    .product-col::before { content: none; }
+    .product-cell {
+      flex-direction: row;
+      gap: .75rem;
+    }
+    .product-info { flex: 1; }
+    .qty-col { flex-direction: column; gap: .35rem; }
+  }
+
+  @media (max-width: 576px) {
     .product-cell {
       flex-direction: column;
       align-items: center;
       text-align: center;
-      gap: 0.5rem;
     }
     .product-cell img {
-      width: 80px;
-      height: 80px;
-      margin-bottom: 0.3rem;
+      width: 100%;
+      max-width: 220px;
     }
-    .product-info {
-      align-items: center;
-    }
+    .product-info a { font-size: 1rem; }
+    .cart-table tbody td { flex-direction: column; align-items: center; text-align: center; }
+    .cart-table tbody td::before { margin-bottom: .25rem; }
+    .qty-control { width: 100%; justify-content: center; }
   }
 </style>
 
@@ -262,19 +348,37 @@
     }
   }
 
-  // Qty berubah -> hitung ulang (opsional submit form untuk persist)
-  document.addEventListener('input', e=>{
-    if (!e.target.classList.contains('qty-input')) return;
-    if (+e.target.value < 1) e.target.value = 1;
-    recompute();
-  });
+  function submitQtyForm(form){
+    if (!form || form.dataset.loading === '1') return;
+    form.dataset.loading = '1';
+    const fd = new FormData(form);
+    fetch(form.action, {
+      method:'POST',
+      headers:{'X-CSRFToken':csrf()},
+      body:fd
+    }).finally(()=>{ form.dataset.loading = '0'; });
+  }
 
-  // Enter pada qty -> submit form update qty (server akan validasi stok)
-  document.addEventListener('keydown', e=>{
-    if (e.target.classList.contains('qty-input') && e.key === 'Enter'){
-      e.preventDefault();
-      e.target.closest('.qty-form').submit();
-    }
+  function changeQty(form, delta){
+    const input = form.querySelector('.qty-input');
+    if (!input) return;
+    const max = parseInt(input.getAttribute('max'), 10) || Infinity;
+    let qty = parseInt(input.value, 10) || 1;
+    qty = qty + delta;
+    if (qty < 1) qty = 1;
+    if (qty > max) qty = max;
+    if (qty === parseInt(input.value, 10)) return;
+    input.value = qty;
+    recompute();
+    submitQtyForm(form);
+  }
+
+  document.addEventListener('click', e=>{
+    const btn = e.target.closest('.qty-btn');
+    if (!btn) return;
+    const form = btn.closest('.qty-form');
+    const delta = parseInt(btn.dataset.step, 10) || 0;
+    changeQty(form, delta);
   });
 
   // Centang per-item / pilih semua
