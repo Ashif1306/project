@@ -161,6 +161,13 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', verbose_name="Pengguna")
     order_number = models.CharField(max_length=100, unique=True, verbose_name="Nomor Pesanan")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Status")
+    payment_method = models.CharField(max_length=100, blank=True, verbose_name="Metode Pembayaran")
+    payment_method_display = models.CharField(
+        max_length=150,
+        blank=True,
+        verbose_name="Nama Metode Pembayaran",
+        help_text="Label yang ditampilkan kepada pengguna",
+    )
 
     # Shipping information (legacy fields)
     full_name = models.CharField(max_length=200, verbose_name="Nama Lengkap")
@@ -223,6 +230,12 @@ class Order(models.Model):
         help_text="Masukkan URL pelacakan dari kurir",
     )
 
+    payment_deadline = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Batas Pembayaran",
+        help_text="Waktu terakhir pembayaran sebelum pesanan dibatalkan otomatis",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -231,8 +244,16 @@ class Order(models.Model):
         verbose_name_plural = "Pesanan"
         ordering = ['-created_at']
 
+    PAYMENT_TIMEOUT_HOURS = 1
+
     def __str__(self):
         return f"Pesanan #{self.order_number}"
+
+    def save(self, *args, **kwargs):
+        if self.payment_deadline is None:
+            reference_time = self.created_at or timezone.now()
+            self.payment_deadline = reference_time + timedelta(hours=self.PAYMENT_TIMEOUT_HOURS)
+        super().save(*args, **kwargs)
 
     def get_status_display_class(self):
         """Return CSS class for status badge"""
@@ -245,6 +266,19 @@ class Order(models.Model):
             'cancelled': 'danger',
         }
         return status_classes.get(self.status, 'secondary')
+
+    def get_payment_deadline(self):
+        if self.payment_deadline:
+            return self.payment_deadline
+        if not self.created_at:
+            return None
+        return self.created_at + timedelta(hours=self.PAYMENT_TIMEOUT_HOURS)
+
+    def is_payment_overdue(self):
+        deadline = self.get_payment_deadline()
+        if not deadline:
+            return False
+        return timezone.now() >= deadline
 
 
 class OrderItem(models.Model):

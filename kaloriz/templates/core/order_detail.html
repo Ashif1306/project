@@ -195,6 +195,23 @@
       <span class="badge badge-{{ order.get_status_display_class }} badge-lg p-3">
         {{ order.get_status_display }}
       </span>
+      {% if show_payment_button %}
+      <div class="mt-3">
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          id="order-pay-button"
+          data-payment-method="{{ order.payment_method|lower }}"
+        >
+          <i class="fas fa-wallet mr-1"></i> Bayar di sini
+        </button>
+        {% if order.payment_deadline %}
+        <p class="text-muted small mb-0 mt-2">Batas bayar: {{ order.payment_deadline|date:"d M Y H:i" }}</p>
+        {% endif %}
+      </div>
+      {% elif order.status == 'cancelled' and order.payment_deadline %}
+      <p class="text-muted small mt-3 mb-0">Pesanan dibatalkan pada {{ order.payment_deadline|date:"d M Y H:i" }}.</p>
+      {% endif %}
     </div>
   </div>
 
@@ -301,6 +318,10 @@
             {% endif %}
           </p>
           <p><strong>No. Resi:</strong><br>{{ order.tracking_number|default:"-" }}</p>
+          <p><strong>Metode Pembayaran:</strong><br>{{ order.payment_method_display|default:order.payment_method|default:"-" }}</p>
+          {% if order.payment_deadline %}
+          <p><strong>Batas Pembayaran:</strong><br>{{ order.payment_deadline|date:"d M Y H:i" }}</p>
+          {% endif %}
           <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3">
             <span class="font-weight-bold mb-2 mb-sm-0">Lacak disini</span>
             {% if order.tracking_url %}
@@ -326,4 +347,176 @@
     </div>
   </div>
 </div>
+{% if show_payment_button %}
+<div
+  id="order-payment-config"
+  class="d-none"
+  data-order-number="{{ order.order_number }}"
+  data-payment-method="{{ order.payment_method|lower }}"
+  data-midtrans-slug="{{ midtrans_payment_slug|lower }}"
+  data-doku-slug="{{ doku_payment_slug|lower }}"
+  data-midtrans-url="{{ payment_order_midtrans_token_url }}"
+  data-doku-url="{{ payment_order_doku_checkout_url }}"
+  data-finish-url="{{ payment_finish_url }}"
+  data-order-detail-url="{% url 'core:order_detail' order.order_number %}"
+></div>
+{% if order.payment_method|lower == midtrans_payment_slug|lower %}
+<script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ MIDTRANS_CLIENT_KEY }}"></script>
+{% endif %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const paymentConfig = document.getElementById('order-payment-config');
+    const payButton = document.getElementById('order-pay-button');
+
+    if (!paymentConfig || !payButton) {
+      return;
+    }
+
+    const paymentMethod = (paymentConfig.dataset.paymentMethod || '').toLowerCase();
+    const midtransSlug = (paymentConfig.dataset.midtransSlug || '').toLowerCase();
+    const dokuSlug = (paymentConfig.dataset.dokuSlug || '').toLowerCase();
+    const finishUrl = paymentConfig.dataset.finishUrl || '';
+    const midtransUrl = paymentConfig.dataset.midtransUrl || '';
+    const dokuUrl = paymentConfig.dataset.dokuUrl || '';
+    const orderDetailUrl = paymentConfig.dataset.orderDetailUrl || window.location.href;
+
+    function showNotification(message, type = 'success') {
+      if (!message) {
+        return;
+      }
+      if (typeof window.showToast === 'function') {
+        window.showToast(message, type);
+      } else {
+        alert(message);
+      }
+    }
+
+    function toggleLoading(state) {
+      if (!payButton) {
+        return;
+      }
+      if (state) {
+        payButton.dataset.originalText = payButton.textContent;
+        payButton.textContent = 'Memproses...';
+        payButton.disabled = true;
+      } else {
+        const originalText = payButton.dataset.originalText;
+        if (originalText) {
+          payButton.textContent = originalText;
+        }
+        payButton.disabled = false;
+      }
+    }
+
+    function postFinish(status, result) {
+      if (!finishUrl) {
+        return Promise.resolve();
+      }
+      return fetch(finishUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken') || ''
+        },
+        body: JSON.stringify({ status, result })
+      }).catch((error) => {
+        console.warn('Gagal mengirim status pembayaran', error);
+      });
+    }
+
+    if (paymentMethod === midtransSlug && midtransUrl) {
+      payButton.addEventListener('click', async function handleMidtransPay() {
+        if (!window.snap) {
+          showNotification('Midtrans Snap belum siap. Muat ulang halaman dan coba lagi.', 'error');
+          return;
+        }
+
+        toggleLoading(true);
+        try {
+          const response = await fetch(midtransUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken') || ''
+            }
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Gagal membuat token pembayaran.');
+          }
+
+          const data = await response.json();
+          const token = data && data.token;
+          if (!token) {
+            throw new Error('Token pembayaran tidak tersedia.');
+          }
+
+          toggleLoading(false);
+
+          window.snap.pay(token, {
+            onSuccess(result) {
+              showNotification('Pembayaran berhasil.', 'success');
+              postFinish('success', result).finally(function () {
+                window.location.href = orderDetailUrl;
+              });
+            },
+            onPending(result) {
+              showNotification('Pembayaran sedang diproses.', 'warning');
+              postFinish('pending', result);
+            },
+            onError(result) {
+              showNotification('Terjadi kesalahan dalam pembayaran.', 'error');
+              postFinish('error', result);
+            },
+            onClose() {
+              showNotification('Anda menutup pop-up pembayaran sebelum selesai.', 'warning');
+            }
+          });
+        } catch (error) {
+          console.error(error);
+          showNotification(error.message || 'Gagal membuat token pembayaran.', 'error');
+          toggleLoading(false);
+        }
+      });
+      return;
+    }
+
+    if (paymentMethod === dokuSlug && dokuUrl) {
+      payButton.addEventListener('click', async function handleDokuPay() {
+        toggleLoading(true);
+        try {
+          const response = await fetch(dokuUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken') || ''
+            }
+          });
+
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error((data && data.message) || 'Gagal membuka halaman pembayaran.');
+          }
+
+          const paymentUrl = data.payment_url || data.redirect_url || data.checkout_url;
+          if (!paymentUrl) {
+            throw new Error('URL pembayaran tidak tersedia.');
+          }
+
+          window.location.href = paymentUrl;
+        } catch (error) {
+          console.error(error);
+          showNotification(error.message || 'Gagal membuka halaman pembayaran.', 'error');
+          toggleLoading(false);
+        }
+      });
+      return;
+    }
+
+    payButton.disabled = true;
+    payButton.textContent = 'Metode tidak tersedia';
+  });
+</script>
+{% endif %}
 {% endblock %}
