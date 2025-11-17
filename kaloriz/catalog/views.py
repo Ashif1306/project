@@ -90,10 +90,18 @@ def product_detail(request, slug):
         is_approved=True
     ).select_related('user')[:10]
 
+    watchlist_item_id = None
+    if request.user.is_authenticated:
+        watchlist_item = request.user.watchlists.filter(product=product).first()
+        if watchlist_item:
+            watchlist_item_id = watchlist_item.id
+
     context = {
         'product': product,
         'related_products': related_products,
         'testimonials': testimonials,
+        'is_watchlisted': bool(watchlist_item_id),
+        'watchlist_item_id': watchlist_item_id,
     }
     return render(request, 'catalog/product_detail.html', context)
 

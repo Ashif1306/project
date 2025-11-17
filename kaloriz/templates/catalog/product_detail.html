@@ -35,6 +35,58 @@
     letter-spacing: 0.3px;
   }
 
+  .product-detail-image-card {
+    border-radius: 22px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .product-detail-image-card img {
+    border-radius: 22px;
+    width: 100%;
+  }
+
+  .product-detail-watchlist {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 3;
+  }
+
+  .product-detail-watchlist .wishlist-btn {
+    background: #ffffff;
+    border: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.15);
+    transition: all 0.3s ease;
+  }
+
+  .product-detail-watchlist .wishlist-btn:hover {
+    background: rgba(220, 34, 32, 0.12);
+    transform: scale(1.08);
+  }
+
+  .product-detail-watchlist .wishlist-btn .fa-heart {
+    font-size: 1.2rem;
+    color: #cbd5f5;
+    transition: color 0.3s ease;
+  }
+
+  .product-detail-watchlist .wishlist-btn.is-active {
+    background: rgba(220, 34, 32, 0.12);
+  }
+
+  .product-detail-watchlist .wishlist-btn.is-active .fa-heart,
+  .product-detail-watchlist .wishlist-btn:hover .fa-heart {
+    color: #dc2220;
+  }
+
   .product-description {
     line-height: 1.75;
     color: #475569;
@@ -176,6 +228,13 @@
     }
   }
 
+  @media (max-width: 576px) {
+    .product-detail-watchlist .wishlist-btn {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .info-card,
     .nutrition-item,
@@ -199,7 +258,23 @@
   <div class="row">
     <!-- Product Image -->
     <div class="col-md-5">
-      <div class="card shadow">
+      <div class="card shadow product-detail-image-card">
+        <div class="wishlist-icon product-detail-watchlist">
+          <button
+            type="button"
+            class="wishlist-btn product-watchlist-btn {% if is_watchlisted %}is-active{% endif %}"
+            data-authenticated="{{ user.is_authenticated|yesno:'true,false' }}"
+            data-add-url="{% url 'core:add_to_watchlist' product.id %}"
+            data-remove-url-template="{% url 'core:remove_from_watchlist' 0 %}"
+            data-login-url="{% url 'core:login' %}?next={{ request.get_full_path|urlencode }}"
+            {% if watchlist_item_id %}data-watchlist-id="{{ watchlist_item_id }}"{% endif %}
+            aria-label="{% if is_watchlisted %}Hapus dari Watchlist{% else %}Tambahkan ke Watchlist{% endif %}"
+            aria-pressed="false"
+            title="{% if is_watchlisted %}Hapus dari Watchlist{% else %}Tambahkan ke Watchlist{% endif %}"
+          >
+            <i class="{% if is_watchlisted %}fa-solid{% else %}fa-regular{% endif %} fa-heart"></i>
+          </button>
+        </div>
         {% if product.image %}
           <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
         {% else %}
@@ -754,6 +829,109 @@
 
 {% block extra_js %}
 <script>
+document.addEventListener('DOMContentLoaded', () => {
+  initProductWatchlistToggle();
+});
+
+function initProductWatchlistToggle() {
+  const watchlistButton = document.querySelector('.product-watchlist-btn');
+  if (!watchlistButton) {
+    return;
+  }
+
+  updateWatchlistButtonState(watchlistButton, watchlistButton.classList.contains('is-active'));
+
+  watchlistButton.addEventListener('click', async (event) => {
+    event.preventDefault();
+
+    if (watchlistButton.dataset.authenticated !== 'true') {
+      const loginUrl = watchlistButton.dataset.loginUrl;
+      if (loginUrl) {
+        window.location.href = loginUrl;
+      }
+      return;
+    }
+
+    const isActive = watchlistButton.classList.contains('is-active');
+    const endpoint = isActive
+      ? buildRemoveWatchlistUrl(watchlistButton)
+      : watchlistButton.dataset.addUrl;
+
+    if (!endpoint) {
+      console.error('Watchlist endpoint tidak tersedia.');
+      return;
+    }
+
+    watchlistButton.disabled = true;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Request gagal');
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || 'Gagal memperbarui watchlist.');
+      }
+
+      if (isActive) {
+        watchlistButton.dataset.watchlistId = '';
+        updateWatchlistButtonState(watchlistButton, false);
+      } else {
+        if (data.watchlist_id) {
+          watchlistButton.dataset.watchlistId = data.watchlist_id;
+        }
+        updateWatchlistButtonState(watchlistButton, true);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Gagal memperbarui watchlist. Silakan coba lagi.');
+    } finally {
+      watchlistButton.disabled = false;
+    }
+  });
+}
+
+function buildRemoveWatchlistUrl(button) {
+  const template = button.dataset.removeUrlTemplate;
+  const watchlistId = button.dataset.watchlistId;
+
+  if (!template || !watchlistId) {
+    return null;
+  }
+
+  return template.replace(/\d+\/?$/, `${watchlistId}/`);
+}
+
+function updateWatchlistButtonState(button, isActive) {
+  button.classList.toggle('is-active', isActive);
+  const icon = button.querySelector('i');
+
+  if (icon) {
+    if (isActive) {
+      icon.classList.remove('fa-regular');
+      icon.classList.add('fa-solid');
+    } else {
+      icon.classList.remove('fa-solid');
+      icon.classList.add('fa-regular');
+    }
+  }
+
+  const labelText = isActive ? 'Hapus dari Watchlist' : 'Tambahkan ke Watchlist';
+  button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  button.setAttribute('aria-label', labelText);
+  button.setAttribute('title', labelText);
+}
+
 // Quantity Controls
 function increaseQty(maxStock) {
   const qtyInput = document.getElementById('quantity');
