@@ -22,7 +22,7 @@
   }
 
   .order-items-card .product-col {
-    width: 45%;
+    width: 32%;
     min-width: 220px;
   }
 
@@ -55,13 +55,17 @@
   .order-items-card .qty-col,
   .order-items-card .subtotal-col,
   .order-items-card .rating-col {
-    width: 13.75%;
-    min-width: 90px;
+    width: 17%;
+    min-width: 100px;
   }
 
   .order-items-card .rating-col {
     text-align: center;
-    white-space: nowrap;
+  }
+
+  .order-items-card .rating-text {
+    display: inline-block;
+    line-height: 1.2;
   }
 
   .order-summary {
@@ -142,9 +146,9 @@
             <thead>
               <tr>
                 <th class="product-col">Produk</th>
-                <th class="text-center price-col">Harga</th>
+                <th class="text-center price-col">Harga (Rp)</th>
                 <th class="text-center qty-col">Jumlah</th>
-                <th class="text-center subtotal-col">Subtotal</th>
+                <th class="text-center subtotal-col">Subtotal (Rp)</th>
                 <th class="text-center rating-col">Penilaian</th>
               </tr>
             </thead>
@@ -166,11 +170,11 @@
                     </div>
                   </div>
                 </td>
-                <td class="align-middle text-center price-col">Rp {{ item.product_price|dot_separator }}</td>
+                <td class="align-middle text-center price-col">{{ item.product_price|dot_separator }}</td>
                 <td class="align-middle text-center qty-col">{{ item.quantity }}</td>
-                <td class="align-middle text-center subtotal-col"><strong>Rp {{ item.subtotal|dot_separator }}</strong></td>
+                <td class="align-middle text-center subtotal-col"><strong>{{ item.subtotal|dot_separator }}</strong></td>
                 <td class="align-middle rating-col">
-                  <span class="text-muted d-block">Belum tersedia.</span>
+                  <span class="text-muted d-inline-block rating-text">Belum<br>tersedia.</span>
                 </td>
               </tr>
               {% endfor %}
