@@ -78,5 +78,6 @@ urlpatterns = [
     path('watchlist/', views.watchlist_view, name='watchlist'),
     path('watchlist/add/<int:product_id>/', views.add_to_watchlist, name='add_to_watchlist'),
     path('watchlist/remove/<int:watchlist_id>/', views.remove_from_watchlist, name='remove_from_watchlist'),
+    path('watchlist/toggle/<int:product_id>/', views.toggle_watchlist, name='toggle_watchlist'),
     
 ]
