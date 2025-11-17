@@ -6,6 +6,12 @@
 <style>
   .order-items-card .table {
     margin-bottom: 0;
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .order-items-card .table-responsive {
+    overflow-x: visible;
   }
 
   .order-items-card .table thead th {
@@ -25,15 +31,11 @@
   .order-items-card .subtotal-col,
   .order-items-card .rating-col {
     width: 13.75%;
-    white-space: nowrap;
+    min-width: 90px;
   }
 
   .order-items-card .rating-col {
-    text-align: right;
-  }
-
-  .order-items-card td.rating-col {
-    min-width: 140px;
+    text-align: center;
   }
 
   .order-summary {
@@ -70,9 +72,6 @@
     .order-items-card .subtotal-col,
     .order-items-card .rating-col {
       width: auto;
-    }
-
-    .order-items-card td.rating-col {
       min-width: auto;
     }
 
@@ -115,7 +114,7 @@
                 <th class="text-center price-col">Harga</th>
                 <th class="text-center qty-col">Jumlah</th>
                 <th class="text-center subtotal-col">Subtotal</th>
-                <th class="text-right rating-col">Penilaian</th>
+                <th class="text-center rating-col">Penilaian</th>
               </tr>
             </thead>
             <tbody>
@@ -128,63 +127,7 @@
                 <td class="align-middle text-center qty-col">{{ item.quantity }}</td>
                 <td class="align-middle text-center subtotal-col"><strong>Rp {{ item.subtotal|dot_separator }}</strong></td>
                 <td class="align-middle rating-col">
-                  {% if item.product %}
-                    {% if item.existing_testimonial %}
-                      <span class="badge badge-success mb-2"><i class="fas fa-check"></i> Sudah Dinilai</span>
-                      <div class="mb-1 text-warning font-weight-bold">
-                        <i class="fas fa-star"></i> {{ item.existing_testimonial.rating }} / 5
-                      </div>
-                      <p class="small mb-0 text-muted">"{{ item.existing_testimonial.review }}"</p>
-                    {% elif order_can_review %}
-                      <button class="btn btn-outline-primary btn-sm" type="button" data-toggle="modal" data-target="#reviewModal{{ item.id }}">
-                        <i class="fas fa-star"></i> Beri Penilaian
-                      </button>
-
-                      <div class="modal fade" id="reviewModal{{ item.id }}" tabindex="-1" role="dialog" aria-labelledby="reviewModalLabel{{ item.id }}" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered" role="document">
-                          <div class="modal-content">
-                            <div class="modal-header">
-                              <h5 class="modal-title" id="reviewModalLabel{{ item.id }}">Beri Penilaian - {{ item.product_name }}</h5>
-                              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                              </button>
-                            </div>
-                            <form method="post" action="{% url 'core:submit_testimonial' order.order_number item.id %}" enctype="multipart/form-data">
-                              <div class="modal-body">
-                                {% csrf_token %}
-                                <div class="form-group mb-3">
-                                  <label class="small font-weight-bold" for="rating{{ item.id }}">{{ testimonial_form.fields.rating.label }}</label>
-                                  <select id="rating{{ item.id }}" name="rating" class="custom-select custom-select-sm" required>
-                                    <option value="" disabled selected>Pilih rating</option>
-                                    {% for value, label in testimonial_form.fields.rating.choices %}
-                                    <option value="{{ value }}">{{ label }}</option>
-                                    {% endfor %}
-                                  </select>
-                                </div>
-                                <div class="form-group mb-3">
-                                  <label class="small font-weight-bold" for="review{{ item.id }}">{{ testimonial_form.fields.review.label }}</label>
-                                  <textarea id="review{{ item.id }}" name="review" class="form-control form-control-sm" rows="3" placeholder="{{ testimonial_form.fields.review.widget.attrs.placeholder }}" required></textarea>
-                                </div>
-                                <div class="form-group mb-0">
-                                  <label class="small font-weight-bold" for="photo{{ item.id }}">{{ testimonial_form.fields.photo.label }}</label>
-                                  <input id="photo{{ item.id }}" type="file" name="photo" class="form-control-file" accept="image/*">
-                                  <small class="form-text text-muted">Opsional: unggah foto pendukung (maksimal 1).</small>
-                                </div>
-                              </div>
-                              <div class="modal-footer">
-                                <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Batal</button>
-                                <button type="submit" class="btn btn-success btn-sm">Kirim Penilaian</button>
-                              </div>
-                            </form>
-                          </div>
-                        </div>
-                      </div>
-                    {% else %}
-                      <small class="text-muted">Penilaian tersedia setelah pesanan selesai.</small>
-                    {% endif %}
-                  {% else %}
-                    <small class="text-muted">Produk tidak tersedia.</small>
-                  {% endif %}
+                  <span class="text-muted d-block">Belum tersedia.</span>
                 </td>
               </tr>
               {% endfor %}
