@@ -42,12 +42,6 @@
                           {{ item.product.name }}
                         </a>
                         <small class="text-muted d-block">{{ item.product.category.name }}</small>
-                        <form method="post" action="{% url 'core:remove_from_cart' item.id %}" class="remove-form">
-                          {% csrf_token %}
-                          <button type="submit" class="btn btn-link btn-sm text-danger p-0" onclick="return confirm('Hapus item ini?')">
-                            <i class="fas fa-trash-alt"></i> <span class="d-none d-sm-inline ms-1">Hapus</span>
-                          </button>
-                        </form>
                       </div>
                     </div>
                   </td>
@@ -197,8 +191,6 @@
 
   .product-info a:hover { text-decoration: underline; }
 
-  .remove-form { margin-top: .35rem; }
-
   .price-cell,
   .line-subtotal { font-weight: 600; }
 
@@ -246,53 +238,102 @@
 
   @media (max-width: 768px) {
     .cart-table thead { display: none; }
+    .cart-table { display: block; }
+    .cart-table tbody { display: block; }
     .cart-table tbody tr {
-      display: block;
-      background: #fff;
-      border: 1px solid var(--cart-border);
-      border-radius: 1rem;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-    }
-    .cart-table tbody td {
       display: flex;
-      justify-content: space-between;
-      border-top: none;
-      padding: .35rem 0;
+      flex-wrap: wrap;
+      gap: .5rem 1rem;
+      align-items: center;
+      border-bottom: 1px solid var(--cart-border);
+      padding: 1rem 0;
+      margin: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .cart-table tbody tr:first-child { padding-top: 0; }
+    .cart-table tbody tr:last-child { border-bottom: none; padding-bottom: 0; }
+    .cart-table tbody td {
+      border: none;
+      padding: 0;
+      display: flex;
+      align-items: center;
       font-size: .95rem;
     }
-    .cart-table tbody td::before {
-      content: attr(data-label);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .04em;
-      color: #6c757d;
-      margin-right: 1rem;
+    .cart-table tbody td::before { display: none; }
+
+    .select-col {
+      order: 0;
+      margin-right: .5rem;
+      width: auto;
     }
-    .product-col::before { content: none; }
+
+    .product-col {
+      order: 1;
+      flex: 1 1 calc(100% - 50px);
+    }
+
     .product-cell {
       flex-direction: row;
+      align-items: center;
       gap: .75rem;
     }
-    .product-info { flex: 1; }
-    .qty-col { flex-direction: column; gap: .35rem; }
+
+    .product-cell img {
+      width: 64px;
+      height: 64px;
+      border-radius: .75rem;
+    }
+
+    .product-info {
+      flex: 1;
+      gap: .2rem;
+    }
+
+    .product-info small {
+      font-size: .8rem;
+    }
+
+    .price-cell,
+    .qty-col,
+    .line-subtotal {
+      order: 2;
+      flex: 0 0 auto;
+      font-size: .9rem;
+    }
+
+    .price-cell {
+      margin-right: .5rem;
+      white-space: nowrap;
+      color: #4b5563;
+    }
+
+    .qty-col {
+      order: 3;
+      flex: 1 1 140px;
+    }
+
+    .qty-form { width: 100%; }
+    .qty-control { width: 100%; max-width: 170px; margin-left: auto; margin-right: auto; }
+
+    .line-subtotal {
+      order: 4;
+      margin-left: auto;
+      justify-content: flex-end;
+      text-align: right;
+      font-size: 1rem;
+    }
   }
 
   @media (max-width: 576px) {
-    .product-cell {
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
+    .cart-table tbody tr {
+      gap: .5rem;
     }
-    .product-cell img {
-      width: 100%;
-      max-width: 220px;
-    }
-    .product-info a { font-size: 1rem; }
-    .cart-table tbody td { flex-direction: column; align-items: center; text-align: center; }
-    .cart-table tbody td::before { margin-bottom: .25rem; }
-    .qty-control { width: 100%; justify-content: center; }
+    .product-col { flex-basis: calc(100% - 40px); }
+    .product-cell { align-items: flex-start; }
+    .product-info { text-align: left; }
+    .qty-control { max-width: 140px; }
+    .line-subtotal { width: 100%; justify-content: flex-start; text-align: left; }
   }
 </style>
 
