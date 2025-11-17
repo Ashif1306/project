@@ -26,6 +26,31 @@
     min-width: 220px;
   }
 
+  .order-items-card .product-info {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .order-items-card .product-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 0.5rem;
+    object-fit: cover;
+    flex-shrink: 0;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+  }
+
+  .order-items-card .product-thumb.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    font-size: 1.25rem;
+    border-style: dashed;
+  }
+
   .order-items-card .price-col,
   .order-items-card .qty-col,
   .order-items-card .subtotal-col,
@@ -36,6 +61,7 @@
 
   .order-items-card .rating-col {
     text-align: center;
+    white-space: nowrap;
   }
 
   .order-summary {
@@ -65,6 +91,11 @@
   @media (max-width: 767.98px) {
     .order-items-card .product-col {
       width: 60%;
+    }
+
+    .order-items-card .product-thumb {
+      width: 56px;
+      height: 56px;
     }
 
     .order-items-card .price-col,
@@ -121,7 +152,19 @@
               {% for item in order_items %}
               <tr>
                 <td class="align-middle product-col">
-                  <strong>{{ item.product_name }}</strong>
+                  <div class="product-info">
+                    {% if item.product and item.product.image %}
+                      <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}" class="product-thumb">
+                    {% else %}
+                      <div class="product-thumb placeholder">
+                        <i class="fas fa-image" aria-hidden="true"></i>
+                        <span class="sr-only">Tidak ada gambar produk</span>
+                      </div>
+                    {% endif %}
+                    <div class="product-details">
+                      <strong>{{ item.product_name }}</strong>
+                    </div>
+                  </div>
                 </td>
                 <td class="align-middle text-center price-col">Rp {{ item.product_price|dot_separator }}</td>
                 <td class="align-middle text-center qty-col">{{ item.quantity }}</td>
