@@ -1,4 +1,87 @@
 {% extends 'base.html' %}
+{% load price_filters %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+  .order-items-card .table {
+    margin-bottom: 0;
+  }
+
+  .order-items-card .table thead th {
+    border-top: none;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+  }
+
+  .order-items-card .product-col {
+    width: 45%;
+    min-width: 220px;
+  }
+
+  .order-items-card .price-col,
+  .order-items-card .qty-col,
+  .order-items-card .subtotal-col,
+  .order-items-card .rating-col {
+    width: 13.75%;
+    white-space: nowrap;
+  }
+
+  .order-items-card .rating-col {
+    text-align: right;
+  }
+
+  .order-items-card td.rating-col {
+    min-width: 140px;
+  }
+
+  .order-summary {
+    border-top: 1px solid #e9ecef;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+  }
+
+  .order-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+  }
+
+  .order-summary-row:last-child {
+    margin-bottom: 0;
+    font-size: 1.05rem;
+  }
+
+  .order-summary-row strong {
+    font-weight: 600;
+  }
+
+  @media (max-width: 767.98px) {
+    .order-items-card .product-col {
+      width: 60%;
+    }
+
+    .order-items-card .price-col,
+    .order-items-card .qty-col,
+    .order-items-card .subtotal-col,
+    .order-items-card .rating-col {
+      width: auto;
+    }
+
+    .order-items-card td.rating-col {
+      min-width: auto;
+    }
+
+    .order-summary-row {
+      font-size: 1rem;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block title %}Pesanan {{ order.order_number }} - Kaloriz{% endblock %}
 
@@ -19,31 +102,32 @@
   <div class="row">
     <div class="col-md-8">
       <!-- Order Items -->
-      <div class="card shadow mb-4">
+      <div class="card shadow mb-4 order-items-card">
         <div class="card-header bg-primary text-white">
           <h5 class="mb-0">Item Pesanan</h5>
         </div>
         <div class="card-body">
-          <table class="table">
+          <div class="table-responsive">
+          <table class="table align-middle">
             <thead>
               <tr>
-                <th>Produk</th>
-                <th>Harga</th>
-                <th>Jumlah</th>
-                <th>Subtotal</th>
-                <th>Penilaian</th>
+                <th class="product-col">Produk</th>
+                <th class="text-center price-col">Harga</th>
+                <th class="text-center qty-col">Jumlah</th>
+                <th class="text-center subtotal-col">Subtotal</th>
+                <th class="text-right rating-col">Penilaian</th>
               </tr>
             </thead>
             <tbody>
               {% for item in order_items %}
               <tr>
-                <td class="align-middle">
+                <td class="align-middle product-col">
                   <strong>{{ item.product_name }}</strong>
                 </td>
-                <td class="align-middle">Rp {{ item.product_price|floatformat:0 }}</td>
-                <td class="align-middle">{{ item.quantity }}</td>
-                <td class="align-middle"><strong>Rp {{ item.subtotal|floatformat:0 }}</strong></td>
-                <td class="align-middle">
+                <td class="align-middle text-center price-col">Rp {{ item.product_price|dot_separator }}</td>
+                <td class="align-middle text-center qty-col">{{ item.quantity }}</td>
+                <td class="align-middle text-center subtotal-col"><strong>Rp {{ item.subtotal|dot_separator }}</strong></td>
+                <td class="align-middle rating-col">
                   {% if item.product %}
                     {% if item.existing_testimonial %}
                       <span class="badge badge-success mb-2"><i class="fas fa-check"></i> Sudah Dinilai</span>
@@ -105,21 +189,22 @@
               </tr>
               {% endfor %}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="4" class="text-right"><strong>Subtotal:</strong></td>
-                <td><strong>Rp {{ order.subtotal|floatformat:0 }}</strong></td>
-              </tr>
-              <tr>
-                <td colspan="4" class="text-right"><strong>Ongkir:</strong></td>
-                <td><strong>Rp {{ order.shipping_cost|floatformat:0 }}</strong></td>
-              </tr>
-              <tr class="table-success">
-                <td colspan="4" class="text-right"><strong>Total:</strong></td>
-                <td><strong>Rp {{ order.total|floatformat:0 }}</strong></td>
-              </tr>
-            </tfoot>
           </table>
+          </div>
+          <div class="order-summary">
+            <div class="order-summary-row">
+              <span class="text-muted">Subtotal</span>
+              <strong>Rp {{ order.subtotal|dot_separator }}</strong>
+            </div>
+            <div class="order-summary-row">
+              <span class="text-muted">Ongkir</span>
+              <strong>Rp {{ order.shipping_cost|dot_separator }}</strong>
+            </div>
+            <div class="order-summary-row text-success">
+              <span class="font-weight-bold">Total</span>
+              <strong>Rp {{ order.total|dot_separator }}</strong>
+            </div>
+          </div>
         </div>
       </div>
 
