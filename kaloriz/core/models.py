@@ -217,6 +217,11 @@ class Order(models.Model):
         verbose_name="Nomor Resi",
         help_text="Masukkan nomor resi pengiriman",
     )
+    tracking_url = models.URLField(
+        blank=True,
+        verbose_name="Link Pelacakan",
+        help_text="Masukkan URL pelacakan dari kurir",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

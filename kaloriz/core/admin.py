@@ -139,6 +139,7 @@ class OrderAdmin(admin.ModelAdmin):
                 'selected_courier',
                 'shipping_provider',
                 'tracking_number',
+                'tracking_url',
             )
         }),
         ('Total', {
