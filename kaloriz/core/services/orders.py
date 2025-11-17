@@ -65,6 +65,9 @@ def create_order_from_checkout(
         payment_deadline=timezone.now() + timedelta(hours=Order.PAYMENT_TIMEOUT_HOURS),
     )
 
+    # Pastikan ID Midtrans hanya dibuat satu kali untuk seluruh siklus pesanan
+    order.ensure_midtrans_order_id()
+
     Shipment.objects.create(
         order=order,
         full_name=shipping_full_name,

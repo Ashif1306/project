@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
 from catalog.models import Product
@@ -236,6 +237,13 @@ class Order(models.Model):
         verbose_name="Batas Pembayaran",
         help_text="Waktu terakhir pembayaran sebelum pesanan dibatalkan otomatis",
     )
+    midtrans_order_id = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        verbose_name="Midtrans Order ID",
+        help_text="ID unik yang digunakan untuk transaksi Midtrans",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -245,6 +253,7 @@ class Order(models.Model):
         ordering = ['-created_at']
 
     PAYMENT_TIMEOUT_HOURS = 1
+    MIDTRANS_ORDER_ID_PREFIX = "KALORIZ"
 
     def __str__(self):
         return f"Pesanan #{self.order_number}"
@@ -266,6 +275,34 @@ class Order(models.Model):
             'cancelled': 'danger',
         }
         return status_classes.get(self.status, 'secondary')
+
+    def _build_midtrans_order_id_value(self) -> str:
+        if not self.pk:
+            raise ValueError("Order belum disimpan sehingga tidak memiliki ID Midtrans.")
+
+        prefix = getattr(settings, "MIDTRANS_ORDER_ID_PREFIX", self.MIDTRANS_ORDER_ID_PREFIX)
+        prefix = (prefix or self.MIDTRANS_ORDER_ID_PREFIX or "ORDER").strip()
+        pk_str = str(self.pk)
+        max_length = self._meta.get_field("midtrans_order_id").max_length
+        remaining = max_length - len(pk_str) - 1
+
+        if remaining <= 0:
+            return pk_str[-max_length:]
+
+        trimmed_prefix = prefix[:remaining]
+        candidate = f"{trimmed_prefix}-{pk_str}" if trimmed_prefix else pk_str[-max_length:]
+        return candidate[:max_length]
+
+    def ensure_midtrans_order_id(self) -> str:
+        """Ensure the order has a stable Midtrans order ID."""
+
+        if self.midtrans_order_id:
+            return self.midtrans_order_id
+
+        midtrans_order_id = self._build_midtrans_order_id_value()
+        self.midtrans_order_id = midtrans_order_id
+        self.save(update_fields=["midtrans_order_id"])
+        return midtrans_order_id
 
     def get_payment_deadline(self):
         if self.payment_deadline:
