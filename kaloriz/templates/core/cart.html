@@ -76,7 +76,7 @@
             </table>
           </div>
 
-          <div class="d-flex justify-content-between align-items-center mt-3">
+          <div class="cart-action-row d-flex justify-content-between align-items-center mt-3 flex-wrap">
             <button type="button" id="btn-delete-selected" class="btn btn-outline-danger" disabled>
               <i class="fas fa-trash-alt"></i> Hapus Dipilih
             </button>
@@ -230,6 +230,10 @@
 
   .qty-input:focus { outline: none; box-shadow: none; }
 
+  .cart-action-row {
+    gap: 1rem;
+  }
+
   /* ===== Mobile friendly table ===== */
   @media (max-width: 992px) {
     .product-col,
@@ -306,15 +310,21 @@
       margin-right: .5rem;
       white-space: nowrap;
       color: #4b5563;
+      display: flex;
+      align-items: center;
     }
 
     .qty-col {
-      order: 3;
-      flex: 1 1 140px;
+      order: 2;
+      flex: 0 1 auto;
+      margin-left: auto;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
     }
 
-    .qty-form { width: 100%; }
-    .qty-control { width: 100%; max-width: 170px; margin-left: auto; margin-right: auto; }
+    .qty-form { width: auto; }
+    .qty-control { width: auto; max-width: none; margin-left: 0; margin-right: 0; }
 
     .line-subtotal {
       order: 4;
@@ -322,6 +332,10 @@
       justify-content: flex-end;
       text-align: right;
       font-size: 1rem;
+    }
+
+    .cart-action-row {
+      justify-content: flex-start;
     }
   }
 
@@ -332,8 +346,19 @@
     .product-col { flex-basis: calc(100% - 40px); }
     .product-cell { align-items: flex-start; }
     .product-info { text-align: left; }
-    .qty-control { max-width: 140px; }
+    .price-cell { flex: 1 1 auto; }
+    .qty-col { flex: 0 0 auto; }
     .line-subtotal { width: 100%; justify-content: flex-start; text-align: left; }
+    .cart-action-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: .75rem;
+    }
+    .cart-action-row .btn {
+      width: 100%;
+      font-size: .9rem;
+      padding: .55rem .75rem;
+    }
   }
 </style>
 
