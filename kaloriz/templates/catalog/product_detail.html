@@ -264,10 +264,8 @@
             type="button"
             class="wishlist-btn product-watchlist-btn {% if is_watchlisted %}is-active{% endif %}"
             data-authenticated="{{ user.is_authenticated|yesno:'true,false' }}"
-            data-add-url="{% url 'core:add_to_watchlist' product.id %}"
-            data-remove-url-template="{% url 'core:remove_from_watchlist' 0 %}"
+            data-toggle-url="{% url 'core:add_to_watchlist' product.id %}"
             data-login-url="{% url 'core:login' %}?next={{ request.get_full_path|urlencode }}"
-            {% if watchlist_item_id %}data-watchlist-id="{{ watchlist_item_id }}"{% endif %}
             aria-label="{% if is_watchlisted %}Hapus dari Watchlist{% else %}Tambahkan ke Watchlist{% endif %}"
             aria-pressed="false"
             title="{% if is_watchlisted %}Hapus dari Watchlist{% else %}Tambahkan ke Watchlist{% endif %}"
@@ -839,6 +837,12 @@ function initProductWatchlistToggle() {
     return;
   }
 
+  const toggleUrl = watchlistButton.dataset.toggleUrl;
+  if (!toggleUrl) {
+    console.error('Watchlist endpoint tidak tersedia.');
+    return;
+  }
+
   updateWatchlistButtonState(watchlistButton, watchlistButton.classList.contains('is-active'));
 
   watchlistButton.addEventListener('click', async (event) => {
@@ -852,20 +856,10 @@ function initProductWatchlistToggle() {
       return;
     }
 
-    const isActive = watchlistButton.classList.contains('is-active');
-    const endpoint = isActive
-      ? buildRemoveWatchlistUrl(watchlistButton)
-      : watchlistButton.dataset.addUrl;
-
-    if (!endpoint) {
-      console.error('Watchlist endpoint tidak tersedia.');
-      return;
-    }
-
     watchlistButton.disabled = true;
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch(toggleUrl, {
         method: 'POST',
         headers: {
           'X-CSRFToken': getCookie('csrftoken'),
@@ -883,15 +877,7 @@ function initProductWatchlistToggle() {
         throw new Error(data.message || 'Gagal memperbarui watchlist.');
       }
 
-      if (isActive) {
-        watchlistButton.dataset.watchlistId = '';
-        updateWatchlistButtonState(watchlistButton, false);
-      } else {
-        if (data.watchlist_id) {
-          watchlistButton.dataset.watchlistId = data.watchlist_id;
-        }
-        updateWatchlistButtonState(watchlistButton, true);
-      }
+      updateWatchlistButtonState(watchlistButton, data.action === 'added');
     } catch (error) {
       console.error(error);
       alert('Gagal memperbarui watchlist. Silakan coba lagi.');
@@ -899,17 +885,6 @@ function initProductWatchlistToggle() {
       watchlistButton.disabled = false;
     }
   });
-}
-
-function buildRemoveWatchlistUrl(button) {
-  const template = button.dataset.removeUrlTemplate;
-  const watchlistId = button.dataset.watchlistId;
-
-  if (!template || !watchlistId) {
-    return null;
-  }
-
-  return template.replace(/\d+\/?$/, `${watchlistId}/`);
 }
 
 function updateWatchlistButtonState(button, isActive) {
