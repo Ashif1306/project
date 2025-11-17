@@ -13,9 +13,21 @@ from django.db.models.functions import Coalesce
 class PaymentMethod(models.Model):
     name = models.CharField(max_length=100, verbose_name="Nama Metode")
     slug = models.SlugField(max_length=100, unique=True, verbose_name="Slug")
+    SERVICE_STATUS_CHOICES = [
+        ("available", "Tersedia"),
+        ("disrupted", "Sedang Gangguan"),
+    ]
+
     tagline = models.CharField(max_length=150, blank=True, verbose_name="Tagline")
     description = models.TextField(blank=True, verbose_name="Deskripsi")
     additional_info = models.TextField(blank=True, verbose_name="Informasi Tambahan")
+    service_status = models.CharField(
+        max_length=20,
+        choices=SERVICE_STATUS_CHOICES,
+        default="available",
+        verbose_name="Status Layanan",
+        help_text="Gunakan 'Sedang Gangguan' untuk menampilkan notifikasi masalah di halaman checkout.",
+    )
     button_label = models.CharField(
         max_length=50,
         blank=True,
@@ -54,6 +66,10 @@ class PaymentMethod(models.Model):
     @property
     def checkout_button_label(self):
         return self.button_label or 'Checkout'
+
+    @property
+    def is_available(self):
+        return self.service_status == "available"
 
 
 class Cart(models.Model):
