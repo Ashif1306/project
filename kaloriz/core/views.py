@@ -1246,30 +1246,36 @@ def notifications_view(request):
 @login_required
 @require_POST
 def add_to_watchlist(request, product_id):
-    """Add product to watchlist"""
+    """Toggle product watchlist status"""
     product = get_object_or_404(Product, id=product_id)
 
-    watchlist_item, created = Watchlist.objects.get_or_create(
-        user=request.user,
-        product=product
-    )
+    existing_item = Watchlist.objects.filter(user=request.user, product=product).first()
 
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
-    if created:
+    if existing_item:
+        existing_item.delete()
+        message_text = f'{product.name} berhasil dihapus dari watchlist.'
+        messages.success(request, message_text)
+        response_data = {
+            'success': True,
+            'action': 'removed',
+            'message': message_text,
+            'watchlist_id': None,
+        }
+    else:
+        watchlist_item = Watchlist.objects.create(user=request.user, product=product)
         message_text = f'{product.name} berhasil ditambahkan ke watchlist.'
         messages.success(request, message_text)
-    else:
-        message_text = f'{product.name} sudah ada di watchlist Anda.'
-        messages.info(request, message_text)
-
-    if is_ajax:
-        return JsonResponse({
+        response_data = {
             'success': True,
-            'action': 'added' if created else 'exists',
+            'action': 'added',
             'message': message_text,
             'watchlist_id': watchlist_item.id,
-        })
+        }
+
+    if is_ajax:
+        return JsonResponse(response_data)
 
     return redirect(request.META.get('HTTP_REFERER', 'catalog:home'))
 
