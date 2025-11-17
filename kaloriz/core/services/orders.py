@@ -5,7 +5,10 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Iterable, Mapping
 
+from django.db import transaction
 from django.db.models import F
+from django.utils import timezone
+from datetime import timedelta
 
 from core.models import Order, OrderItem
 from shipping.models import Shipment
@@ -33,6 +36,8 @@ def create_order_from_checkout(
     notes: str = "",
     shipping_address_obj=None,
     shipping_service_name: str = "",
+    payment_method_slug: str | None = None,
+    payment_method_display: str = "",
 ) -> Order:
     """Create an order snapshot from the current checkout selection."""
 
@@ -55,6 +60,9 @@ def create_order_from_checkout(
         shipping_cost=shipping_cost,
         total=total,
         notes=notes,
+        payment_method=payment_method_slug or "",
+        payment_method_display=payment_method_display or (payment_method_slug or ""),
+        payment_deadline=timezone.now() + timedelta(hours=Order.PAYMENT_TIMEOUT_HOURS),
     )
 
     Shipment.objects.create(
@@ -108,3 +116,23 @@ def restore_order_stock(order: Order) -> None:
 
         product.stock = F("stock") + item.quantity
         product.save(update_fields=["stock"])
+
+
+def cancel_order_due_to_timeout(order: Order) -> bool:
+    """Cancel pending orders whose payment deadline has passed."""
+
+    if order.status != "pending":
+        return False
+
+    deadline = order.get_payment_deadline()
+    if deadline is None or timezone.now() < deadline:
+        return False
+
+    with transaction.atomic():
+        restore_order_stock(order)
+        order.status = "cancelled"
+        if order.payment_deadline is None:
+            order.payment_deadline = deadline
+        order.save(update_fields=["status", "payment_deadline"])
+
+    return True
