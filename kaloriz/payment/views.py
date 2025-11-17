@@ -11,8 +11,6 @@ from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 
-MIDTRANS_RETRY_SEPARATOR = "::retry::"
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -28,6 +26,7 @@ from catalog.models import DiscountCode
 from core.models import Order, PaymentMethod
 from core.views import _get_active_cart, _prepare_selected_cart_items
 from core.services.orders import create_order_from_checkout, restore_order_stock, cancel_order_due_to_timeout
+from payment.services import get_or_create_midtrans_snap_token
 from shipping.models import Address
 
 logger = logging.getLogger(__name__)
@@ -172,9 +171,10 @@ def _to_int_amount(value: Decimal) -> int:
 def _extract_order_number_from_midtrans(order_id: str | None) -> str:
     if not order_id:
         return ""
-    if MIDTRANS_RETRY_SEPARATOR not in order_id:
+    separator = getattr(Order, "MIDTRANS_RETRY_SEPARATOR", "::retry::")
+    if separator not in order_id:
         return order_id
-    return order_id.split(MIDTRANS_RETRY_SEPARATOR, 1)[0]
+    return order_id.split(separator, 1)[0]
 
 
 def _extract_midtrans_error(exc: Exception, default_message: str) -> tuple[str, dict | None, int | None]:
@@ -683,6 +683,8 @@ def payment_create_snap_token(request):
             token = snap_response.get("token")
             if not token:
                 raise RuntimeError("Token Snap tidak tersedia.")
+            order.midtrans_token = token
+            order.save(update_fields=["midtrans_token"])
     except RuntimeError as exc:  # Token missing or business rule failure
         logger.exception("Failed to create Midtrans Snap transaction: %s", exc)
         return JsonResponse({"message": str(exc)}, status=500)
@@ -913,11 +915,15 @@ def payment_create_order_snap_token(request, order_number):
     }
 
     try:
-        snap_response = snap_client.create_transaction(transaction_payload)
+        token, reused = get_or_create_midtrans_snap_token(
+            order=order,
+            snap_client=snap_client,
+            transaction_payload=transaction_payload,
+        )
     except Exception as exc:  # pylint: disable=broad-except
         default_message = "Gagal membuat token pembayaran."
         message, response_payload, status_code = _extract_midtrans_error(exc, default_message)
-        log_extra = {"order_number": order.order_number, "midtrans_order_id": midtrans_order_id}
+        log_extra = {"order_number": order.order_number, "midtrans_order_id": order.midtrans_order_id}
         if response_payload:
             log_extra["midtrans_response"] = response_payload
         logger.exception(
@@ -929,11 +935,7 @@ def payment_create_order_snap_token(request, order_number):
         http_status = status_code if isinstance(status_code, int) and 400 <= status_code < 600 else 500
         return JsonResponse({"message": message or default_message}, status=http_status)
 
-    token = snap_response.get("token")
-    if not token:
-        return JsonResponse({"message": "Token Snap tidak tersedia."}, status=500)
-
-    return JsonResponse({"token": token, "order_id": order.order_number})
+    return JsonResponse({"token": token, "order_id": order.order_number, "reused": reused})
 
 
 @login_required
@@ -1045,7 +1047,11 @@ def payment_finish(request):
 
         if transaction_status in success_states and order.status != "paid":
             order.status = "paid"
-            order.save(update_fields=["status"])
+            update_fields = ["status"]
+            if order.midtrans_token:
+                order.midtrans_token = ""
+                update_fields.append("midtrans_token")
+            order.save(update_fields=update_fields)
         elif transaction_status in pending_states and order.status != "pending":
             order.status = "pending"
             order.save(update_fields=["status"])
@@ -1053,7 +1059,11 @@ def payment_finish(request):
             with transaction.atomic():
                 restore_order_stock(order)
                 order.status = "cancelled"
-                order.save(update_fields=["status"])
+                update_fields = ["status"]
+                if order.midtrans_token:
+                    order.midtrans_token = ""
+                    update_fields.append("midtrans_token")
+                order.save(update_fields=update_fields)
 
     request.session["midtrans_last_result"] = result
     request.session.modified = True

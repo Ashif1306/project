@@ -136,6 +136,10 @@ def cancel_order_due_to_timeout(order: Order) -> bool:
         order.status = "cancelled"
         if order.payment_deadline is None:
             order.payment_deadline = deadline
-        order.save(update_fields=["status", "payment_deadline"])
+        update_fields = ["status", "payment_deadline"]
+        if order.midtrans_token:
+            order.midtrans_token = ""
+            update_fields.append("midtrans_token")
+        order.save(update_fields=update_fields)
 
     return True
