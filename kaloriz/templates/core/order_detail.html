@@ -164,11 +164,11 @@
           <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3">
             <span class="font-weight-bold mb-2 mb-sm-0">Lacak disini</span>
             {% if order.tracking_url %}
-              <a href="{{ order.tracking_url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+              <a href="{{ order.tracking_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
                 <i class="fas fa-location-arrow"></i> Lacak Pesanan
               </a>
             {% else %}
-              <button type="button" class="btn btn-secondary btn-sm" disabled>
+              <button type="button" class="btn btn-secondary btn-sm disabled" disabled aria-disabled="true">
                 <i class="fas fa-location-arrow"></i> Lacak Pesanan
               </button>
             {% endif %}
