@@ -1270,6 +1270,40 @@ def remove_from_watchlist(request, watchlist_id):
     messages.success(request, f'{product_name} berhasil dihapus dari watchlist.')
     return redirect('core:watchlist')
 
+
+@login_required
+@require_POST
+def toggle_watchlist(request, product_id):
+    """Toggle the watchlist state for a given product."""
+    product = get_object_or_404(Product, id=product_id)
+    watchlist_item, created = Watchlist.objects.get_or_create(
+        user=request.user,
+        product=product
+    )
+
+    if created:
+        added = True
+        message_text = f'{product.name} berhasil ditambahkan ke watchlist.'
+    else:
+        watchlist_item.delete()
+        added = False
+        message_text = f'{product.name} dihapus dari watchlist.'
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'added': added,
+            'message': message_text,
+        })
+
+    if added:
+        messages.success(request, message_text)
+    else:
+        messages.info(request, message_text)
+
+    return redirect(request.META.get('HTTP_REFERER', product.get_absolute_url()))
+
+
 @login_required
 @require_POST
 def set_shipping_method(request):
