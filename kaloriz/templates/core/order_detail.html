@@ -97,8 +97,57 @@
   }
 
   @media (max-width: 767.98px) {
-    .order-items-card .product-col {
-      width: 60%;
+    .order-items-card .table {
+      table-layout: auto;
+    }
+
+    .order-items-card .table thead {
+      display: none;
+    }
+
+    .order-items-card .table tbody tr {
+      display: block;
+      padding: 1rem 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .order-items-card .table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .order-items-card .table tbody td {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.25rem 0;
+      border-top: none;
+      text-align: right;
+    }
+
+    .order-items-card .table tbody td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      color: #6c757d;
+      text-align: left;
+      flex: 0 0 45%;
+      letter-spacing: 0.02em;
+    }
+
+    .order-items-card .product-col,
+    .order-items-card .price-col,
+    .order-items-card .qty-col,
+    .order-items-card .subtotal-col,
+    .order-items-card .rating-col {
+      width: 100%;
+      min-width: auto;
+    }
+
+    .order-items-card .product-info {
+      flex-direction: row;
+      align-items: flex-start;
     }
 
     .order-items-card .product-thumb {
@@ -106,12 +155,24 @@
       height: 56px;
     }
 
-    .order-items-card .price-col,
-    .order-items-card .qty-col,
-    .order-items-card .subtotal-col,
-    .order-items-card .rating-col {
-      width: auto;
-      min-width: auto;
+    .order-items-card .product-details {
+      text-align: left;
+    }
+
+    .order-items-card .table tbody td.product-col {
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+      gap: 0.5rem;
+    }
+
+    .order-items-card .table tbody td.product-col::before {
+      flex-basis: auto;
+      width: 100%;
+    }
+
+    .order-items-card .rating-text {
+      text-align: right;
     }
 
     .order-summary-row {
@@ -159,7 +220,7 @@
             <tbody>
               {% for item in order_items %}
               <tr>
-                <td class="align-middle product-col">
+                <td class="align-middle product-col" data-label="Produk">
                   <div class="product-info">
                     {% if item.product and item.product.image %}
                       <img src="{{ item.product.image.url }}" alt="{{ item.product_name }}" class="product-thumb">
@@ -174,10 +235,10 @@
                     </div>
                   </div>
                 </td>
-                <td class="align-middle text-center price-col">{{ item.product_price|dot_separator }}</td>
-                <td class="align-middle text-center qty-col">{{ item.quantity }}</td>
-                <td class="align-middle text-center subtotal-col"><strong>{{ item.subtotal|dot_separator }}</strong></td>
-                <td class="align-middle rating-col">
+                <td class="align-middle text-center price-col" data-label="Harga (Rp)">{{ item.product_price|dot_separator }}</td>
+                <td class="align-middle text-center qty-col" data-label="Jumlah">{{ item.quantity }}</td>
+                <td class="align-middle text-center subtotal-col" data-label="Subtotal (Rp)"><strong>{{ item.subtotal|dot_separator }}</strong></td>
+                <td class="align-middle rating-col" data-label="Penilaian">
                   <span class="text-muted d-inline-block rating-text">Belum<br>tersedia.</span>
                 </td>
               </tr>
