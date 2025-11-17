@@ -607,8 +607,9 @@
 
 .profile-watchlist-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 22px;
+  justify-content: center;
 }
 
 .watchlist-card {
@@ -620,6 +621,9 @@
   flex-direction: column;
   min-height: 100%;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
+  max-width: 360px;
+  width: 100%;
+  justify-self: center;
 }
 
 .watchlist-card:hover {
@@ -630,6 +634,7 @@
 .watchlist-card-image {
   position: relative;
   aspect-ratio: 4 / 3;
+  max-height: 260px;
   overflow: hidden;
 }
 
@@ -637,6 +642,20 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+@media (max-width: 576px) {
+  .profile-watchlist-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .watchlist-card {
+    max-width: 100%;
+  }
+
+  .watchlist-card-image {
+    max-height: 220px;
+  }
 }
 
 .watchlist-remove {
