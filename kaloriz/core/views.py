@@ -799,6 +799,7 @@ def order_detail(request, order_number):
         item.existing_testimonial = testimonials_map.get(item.product_id)
 
     payment_is_pending = order.status == 'pending' and bool(order.payment_method)
+    payment_is_active = payment_is_pending and not order.is_payment_overdue()
     midtrans_payment_slug = getattr(settings, 'MIDTRANS_PAYMENT_METHOD_SLUG', 'midtrans')
     doku_payment_slug = getattr(settings, 'DOKU_PAYMENT_METHOD_SLUG', 'doku')
 
@@ -807,7 +808,7 @@ def order_detail(request, order_number):
         'order_items': order_items,
         'order_can_review': order.status == 'delivered',
         'testimonial_form': TestimonialForm(),
-        'show_payment_button': payment_is_pending,
+        'show_payment_button': payment_is_active,
         'midtrans_payment_slug': midtrans_payment_slug,
         'doku_payment_slug': doku_payment_slug,
         'payment_finish_url': reverse('payment:finish'),

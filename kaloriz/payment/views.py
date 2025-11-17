@@ -11,6 +11,8 @@ from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 
+MIDTRANS_RETRY_SEPARATOR = "::retry::"
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -165,6 +167,83 @@ def _to_decimal(value) -> Decimal:
 
 def _to_int_amount(value: Decimal) -> int:
     return int(_to_decimal(value).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def _build_midtrans_retry_order_id(order_number: str) -> str:
+    """Append a short suffix so Midtrans accepts duplicate payment attempts.
+
+    Midtrans Snap rejects duplicate ``order_id`` values with an error similar to
+    "order_id has already been used by another transaction". When a customer
+    retries payment from the order detail page we therefore add a deterministic
+    suffix that still lets us recover the original ``order_number`` later.
+    """
+
+    timestamp_fragment = timezone.now().strftime("%Y%m%d%H%M%S")
+    random_fragment = uuid.uuid4().hex[:6].upper()
+    base_number = (order_number or "").strip()
+    return f"{base_number}{MIDTRANS_RETRY_SEPARATOR}{timestamp_fragment}{random_fragment}"
+
+
+def _extract_order_number_from_midtrans(order_id: str | None) -> str:
+    if not order_id:
+        return ""
+    if MIDTRANS_RETRY_SEPARATOR not in order_id:
+        return order_id
+    return order_id.split(MIDTRANS_RETRY_SEPARATOR, 1)[0]
+
+
+def _extract_midtrans_error(exc: Exception, default_message: str) -> tuple[str, dict | None, int | None]:
+    """Return a friendly error message and the raw payload if available."""
+
+    response_payload = None
+    status_code = None
+    message = default_message
+
+    payload_candidates = []
+    for attr in ("api_response", "response", "body"):
+        value = getattr(exc, attr, None)
+        if value:
+            payload_candidates.append(value)
+
+    for payload in payload_candidates:
+        data = payload
+        if isinstance(data, bytes):
+            try:
+                data = data.decode("utf-8")
+            except Exception:  # pragma: no cover - defensive
+                data = data.decode("latin-1", errors="replace")
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except Exception:  # pragma: no cover - payload may not be JSON
+                data = {"raw": data}
+
+        if isinstance(data, dict):
+            response_payload = data
+            status_code = data.get("status_code") or data.get("status")
+
+            message = (
+                data.get("status_message")
+                or data.get("message")
+                or data.get("error_message")
+                or data.get("error")
+                or default_message
+            )
+
+            validation_messages = data.get("validation_messages")
+            if not message and isinstance(validation_messages, list):
+                message = "; ".join(map(str, validation_messages))
+            break
+
+    if (not response_payload) and hasattr(exc, "message"):
+        maybe_message = getattr(exc, "message")
+        if isinstance(maybe_message, str) and maybe_message.strip():
+            message = maybe_message.strip()
+
+    if (not response_payload) and not message:
+        message = str(exc) or default_message
+
+    return message, response_payload, status_code
 
 
 def _build_midtrans_client():
@@ -620,8 +699,14 @@ def payment_create_snap_token(request):
         logger.exception("Failed to create Midtrans Snap transaction: %s", exc)
         return JsonResponse({"message": str(exc)}, status=500)
     except Exception as exc:  # pylint: disable=broad-except
-        logger.exception("Failed to create order or Snap transaction: %s", exc)
-        return JsonResponse({"message": "Gagal membuat Snap Token."}, status=500)
+        default_message = "Gagal membuat Snap Token."
+        message, response_payload, status_code = _extract_midtrans_error(exc, default_message)
+        log_extra = {"order_number": getattr(order, "order_number", None)}
+        if response_payload:
+            log_extra["midtrans_response"] = response_payload
+        logger.exception("Failed to create order or Snap transaction: %s", exc, extra=log_extra)
+        http_status = status_code if isinstance(status_code, int) and 400 <= status_code < 600 else 500
+        return JsonResponse({"message": message or default_message}, status=http_status)
 
     request.session["midtrans_order_id"] = order.order_number
     request.session.pop("checkout", None)
@@ -823,9 +908,11 @@ def payment_create_order_snap_token(request, order_number):
     if (order.payment_method or "").lower() != (midtrans_slug or "").lower():
         return JsonResponse({"message": "Metode pembayaran pesanan tidak menggunakan Midtrans."}, status=400)
 
+    midtrans_order_id = _build_midtrans_retry_order_id(order.order_number)
+
     transaction_payload = {
         "transaction_details": {
-            "order_id": order.order_number,
+            "order_id": midtrans_order_id,
             "gross_amount": _to_int_amount(order.total),
         },
         "item_details": _build_order_payment_item_details(order),
@@ -834,13 +921,25 @@ def payment_create_order_snap_token(request, order_number):
         "callbacks": {
             "finish": request.build_absolute_uri(reverse("payment:finish")),
         },
+        "custom_field1": order.order_number,
     }
 
     try:
         snap_response = snap_client.create_transaction(transaction_payload)
     except Exception as exc:  # pylint: disable=broad-except
-        logger.exception("Failed to create Midtrans transaction for order %s: %s", order.order_number, exc)
-        return JsonResponse({"message": "Gagal membuat token pembayaran."}, status=500)
+        default_message = "Gagal membuat token pembayaran."
+        message, response_payload, status_code = _extract_midtrans_error(exc, default_message)
+        log_extra = {"order_number": order.order_number, "midtrans_order_id": midtrans_order_id}
+        if response_payload:
+            log_extra["midtrans_response"] = response_payload
+        logger.exception(
+            "Failed to create Midtrans transaction for order %s: %s",
+            order.order_number,
+            exc,
+            extra=log_extra,
+        )
+        http_status = status_code if isinstance(status_code, int) and 400 <= status_code < 600 else 500
+        return JsonResponse({"message": message or default_message}, status=http_status)
 
     token = snap_response.get("token")
     if not token:
@@ -943,7 +1042,8 @@ def payment_finish(request):
         return JsonResponse({"message": "Payload tidak valid."}, status=400)
 
     result = payload.get("result") or payload
-    order_id = result.get("order_id")
+    raw_order_id = result.get("order_id")
+    order_id = _extract_order_number_from_midtrans(raw_order_id)
     transaction_status = result.get("transaction_status") or result.get("status")
 
     if not order_id:
@@ -971,6 +1071,8 @@ def payment_finish(request):
     request.session.modified = True
 
     response_payload = {"message": "Status pembayaran diterima.", "order_id": order_id}
+    if raw_order_id and raw_order_id != order_id:
+        response_payload["gateway_order_id"] = raw_order_id
     if order:
         response_payload["status"] = order.status
 
@@ -988,11 +1090,12 @@ def doku_notification(request):
         return JsonResponse({"message": "Payload tidak valid."}, status=400)
 
     order_info = payload.get("order") or {}
-    order_id = (
+    raw_order_id = (
         order_info.get("invoice_number")
         or order_info.get("order_id")
         or payload.get("order_id")
     )
+    order_id = _extract_order_number_from_midtrans(raw_order_id)
     status_info = payload.get("transaction") or payload.get("payment") or {}
     transaction_status = (
         status_info.get("status")
@@ -1029,6 +1132,8 @@ def doku_notification(request):
     request.session.modified = True
 
     response_payload = {"message": "Status pembayaran DOKU diterima.", "order_id": order_id}
+    if raw_order_id and raw_order_id != order_id:
+        response_payload["gateway_order_id"] = raw_order_id
     if order:
         response_payload["status"] = order.status
 
