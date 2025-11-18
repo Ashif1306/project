@@ -3,9 +3,9 @@ import base64
 import datetime
 import json
 import logging
-import uuid
 import hashlib
 import hmac
+import uuid
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
@@ -531,15 +531,19 @@ def _build_doku_line_items_from_order(order: Order) -> list[dict]:
 
     return line_items
 
+def _generate_unique_checkout_order_number(prefix: str = "INV") -> str:
+    """Generate a timestamp + UUID based order number that fits Midtrans limits."""
+
+    timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+    random_suffix = uuid.uuid4().hex[:8].upper()
+    return f"{prefix}-{timestamp}-{random_suffix}"
+
+
 @csrf_exempt
 @login_required
 @require_POST
 def payment_create_snap_token(request):
     """Create a Midtrans Snap transaction token."""
-    try:
-        client_payload = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
-        client_payload = {}
 
     try:
         snap_client = _build_midtrans_client()
@@ -570,11 +574,6 @@ def payment_create_snap_token(request):
             status=400,
         )
     address_id = checkout_data.get("address_id")
-    payment_method_obj = (
-        PaymentMethod.objects.filter(slug__iexact=selected_payment_slug).first()
-        if selected_payment_slug
-        else None
-    )
     payment_method_obj = (
         PaymentMethod.objects.filter(slug__iexact=selected_payment_slug).first()
         if selected_payment_slug
@@ -618,8 +617,8 @@ def payment_create_snap_token(request):
 
     item_details = _build_item_details(selected_items, shipping_cost, discount_amount, discount_code or "")
 
-    # Generate unique order_id dengan UUID penuh untuk menghindari collision
-    order_id = f"INV-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex.upper()}"
+    # Generate order_id dari server menggunakan kombinasi timestamp + UUID pendek
+    order_id = _generate_unique_checkout_order_number()
     service_code = str(checkout_data.get("shipping_method") or "").upper()
     service_label = "Express" if service_code == "EXP" else "Reguler"
     district_name = getattr(getattr(shipping_address, "district", None), "name", "")
@@ -656,7 +655,14 @@ def payment_create_snap_token(request):
                 payment_method_slug=selected_payment_slug,
                 payment_method_display=(payment_method_obj.name if payment_method_obj else selected_payment_slug),
             )
-            midtrans_order_id = order.ensure_midtrans_order_id()
+            # Pakai order_number yang sudah unik sebagai Midtrans order_id.
+            midtrans_order_id = order.order_number
+            max_midtrans_length = Order._meta.get_field("midtrans_order_id").max_length
+            if len(midtrans_order_id) > max_midtrans_length:
+                midtrans_order_id = order.ensure_midtrans_order_id()
+            elif order.midtrans_order_id != midtrans_order_id:
+                order.midtrans_order_id = midtrans_order_id
+                order.save(update_fields=["midtrans_order_id"])
 
             transaction_payload = {
                 "transaction_details": {
