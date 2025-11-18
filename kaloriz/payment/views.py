@@ -15,7 +15,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -23,7 +23,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from catalog.models import DiscountCode
-from core.models import Order, PaymentMethod
+from core.models import Cart, Order, PaymentMethod
 from core.views import _get_active_cart, _prepare_selected_cart_items
 from core.services.orders import create_order_from_checkout, restore_order_stock, cancel_order_due_to_timeout
 from payment.services import get_or_create_midtrans_snap_token
@@ -314,7 +314,7 @@ def _build_item_details(selected_items, shipping_cost: Decimal, discount_amount:
 
 
 def _build_customer_details(shipping_address: Address, user) -> dict:
-    email = user.email or "customer@example.com"
+    email = _get_customer_email(user)
     first_name = shipping_address.full_name or (user.get_full_name() or user.username)
 
     address_payload = {
@@ -336,6 +336,21 @@ def _build_customer_details(shipping_address: Address, user) -> dict:
         "billing_address": address_payload,
         "shipping_address": address_payload,
     }
+
+
+def _get_customer_email(user) -> str:
+    """Return a non-empty email for Midtrans order snapshots."""
+
+    email = (getattr(user, "email", "") or "").strip()
+    if email:
+        return email
+
+    for setting_name in ("DEFAULT_CUSTOMER_EMAIL", "DEFAULT_FROM_EMAIL", "SERVER_EMAIL"):
+        fallback = getattr(settings, setting_name, "")
+        if fallback:
+            return fallback
+
+    return "customer@example.com"
 
 
 def _build_doku_line_items(
@@ -581,6 +596,16 @@ def payment_create_snap_token(request):
 
     try:
         cart = _get_active_cart(request)
+    except Http404 as exc:
+        if request.user.is_staff:
+            cart, _ = Cart.objects.get_or_create(user=request.user)
+            logger.info(
+                "Staff user missing cart. Generated fallback cart.",
+                extra={**log_context, "cart_id": getattr(cart, "id", None)},
+            )
+        else:
+            logger.exception("Cart lookup failed: %s", exc, extra=log_context)
+            return _json_error("Keranjang tidak ditemukan.", reason="cart_not_found")
     except Exception as exc:  # pylint: disable=broad-except
         logger.exception("Cart lookup failed: %s", exc, extra=log_context)
         return _json_error("Keranjang tidak ditemukan.", reason="cart_not_found")
@@ -699,6 +724,7 @@ def payment_create_snap_token(request):
     )
 
     order = None
+    customer_email = _get_customer_email(request.user)
     token = None
 
     try:
@@ -713,7 +739,7 @@ def payment_create_snap_token(request):
                 shipping_cost=shipping_cost,
                 total=total,
                 shipping_full_name=shipping_address.full_name,
-                shipping_email=request.user.email,
+                shipping_email=customer_email,
                 shipping_phone=shipping_address.phone,
                 shipping_address_text=shipping_address.get_full_address(),
                 shipping_city=shipping_address.city,
@@ -889,6 +915,7 @@ def payment_create_doku_checkout(request):
     }
 
     order = None
+    customer_email = _get_customer_email(request.user)
 
     # Tambahkan try/except untuk mencegah HTTP 500
     try:
@@ -903,7 +930,7 @@ def payment_create_doku_checkout(request):
                 shipping_cost=shipping_cost,
                 total=total,
                 shipping_full_name=shipping_address.full_name,
-                shipping_email=request.user.email,
+                shipping_email=customer_email,
                 shipping_phone=shipping_address.phone,
                 shipping_address_text=shipping_address.get_full_address(),
                 shipping_city=shipping_address.city,
