@@ -599,20 +599,10 @@ def payment_create_snap_token(request):
         request.session.get("discount"),
     )
 
+    # Calculate total di server (JANGAN PERCAYA CLIENT!)
     total = subtotal + shipping_cost - discount_amount
     if total < 0:
         total = Decimal("0")
-
-    # Validate client-provided totals if available
-    client_total_value = client_payload.get("total")
-    if client_total_value is not None:
-        client_total = _to_decimal(client_total_value)
-        if client_total != total:
-            logger.warning(
-                "Client total %s does not match server total %s",
-                client_total,
-                total,
-            )
 
     selected_items, selected_quantities = _prepare_selected_cart_items(selected_items_qs)
     if not selected_items:
@@ -628,7 +618,8 @@ def payment_create_snap_token(request):
 
     item_details = _build_item_details(selected_items, shipping_cost, discount_amount, discount_code or "")
 
-    order_id = f"INV-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+    # Generate unique order_id dengan UUID penuh untuk menghindari collision
+    order_id = f"INV-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex.upper()}"
     service_code = str(checkout_data.get("shipping_method") or "").upper()
     service_label = "Express" if service_code == "EXP" else "Reguler"
     district_name = getattr(getattr(shipping_address, "district", None), "name", "")
@@ -637,6 +628,8 @@ def payment_create_snap_token(request):
 
     token = None
     order = None
+
+    # Tambahkan try/except untuk mencegah HTTP 500
     try:
         with transaction.atomic():
             order = create_order_from_checkout(
@@ -685,17 +678,24 @@ def payment_create_snap_token(request):
                 raise RuntimeError("Token Snap tidak tersedia.")
             order.midtrans_token = token
             order.save(update_fields=["midtrans_token"])
+
     except RuntimeError as exc:  # Token missing or business rule failure
         logger.exception("Failed to create Midtrans Snap transaction: %s", exc)
-        return JsonResponse({"message": str(exc)}, status=500)
+        return JsonResponse({"message": str(exc)}, status=400)
+
     except Exception as exc:  # pylint: disable=broad-except
+        # Extract error message dari Midtrans
         default_message = "Gagal membuat Snap Token."
         message, response_payload, status_code = _extract_midtrans_error(exc, default_message)
+
         log_extra = {"order_number": getattr(order, "order_number", None)}
         if response_payload:
             log_extra["midtrans_response"] = response_payload
+
         logger.exception("Failed to create order or Snap transaction: %s", exc, extra=log_extra)
-        http_status = status_code if isinstance(status_code, int) and 400 <= status_code < 600 else 500
+
+        # Return 400 instead of 500 untuk error yang bisa dipahami user
+        http_status = 400 if status_code and 400 <= status_code < 500 else 400
         return JsonResponse({"message": message or default_message}, status=http_status)
 
     request.session["midtrans_order_id"] = order.order_number
@@ -768,7 +768,8 @@ def payment_create_doku_checkout(request):
                 status=400,
             )
 
-    order_id = f"INV-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+    # Generate unique order_id dengan UUID penuh untuk menghindari collision
+    order_id = f"INV-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex.upper()}"
     service_code = str(checkout_data.get("shipping_method") or "").upper()
     service_label = "Express" if service_code == "EXP" else "Reguler"
     district_name = getattr(getattr(shipping_address, "district", None), "name", "")
@@ -809,6 +810,8 @@ def payment_create_doku_checkout(request):
     }
 
     order = None
+
+    # Tambahkan try/except untuk mencegah HTTP 500
     try:
         with transaction.atomic():
             order = create_order_from_checkout(
@@ -854,10 +857,11 @@ def payment_create_doku_checkout(request):
 
     except RuntimeError as exc:
         logger.exception("Failed to create DOKU checkout: %s", exc)
-        return JsonResponse({"message": str(exc)}, status=500)
+        return JsonResponse({"message": str(exc)}, status=400)
+
     except Exception as exc:  # pylint: disable=broad-except
         logger.exception("Failed to create order or DOKU checkout: %s", exc)
-        return JsonResponse({"message": "Gagal membuat sesi pembayaran DOKU."}, status=500)
+        return JsonResponse({"message": "Gagal membuat sesi pembayaran DOKU."}, status=400)
 
     request.session["doku_order_id"] = order.order_number
     request.session.pop("checkout", None)
