@@ -557,23 +557,60 @@ def payment_create_snap_token(request):
         logger.exception("Cart lookup failed: %s", exc)
         return JsonResponse({"message": "Keranjang tidak ditemukan."}, status=400)
 
+    cart_id = getattr(cart, "id", None)
+
+    def _validation_error(message, *, reason="invalid_request", status=400, extra=None):
+        log_extra = {
+            "reason": reason,
+            "user_id": getattr(request.user, "id", None),
+            "cart_id": cart_id,
+        }
+        if extra:
+            log_extra.update(extra)
+        logger.debug(
+            "payment_create_snap_token validation failed: %s",
+            message,
+            extra=log_extra,
+        )
+        response_payload = {"message": message, "reason": reason}
+        return JsonResponse(response_payload, status=status)
+
     selected_items_qs = cart.items.filter(is_selected=True).select_related("product")
     if not selected_items_qs.exists():
-        return JsonResponse({"message": "Tidak ada item yang dipilih untuk pembayaran."}, status=400)
+        return _validation_error(
+            "Tidak ada item yang dipilih untuk pembayaran.",
+            reason="empty_cart",
+        )
 
-    checkout_data = request.session.get("checkout", {})
+    checkout_data = request.session.get("checkout")
+    if not isinstance(checkout_data, dict) or not checkout_data:
+        return _validation_error(
+            "Data checkout tidak ditemukan. Silakan ulangi proses checkout.",
+            reason="missing_checkout",
+        )
+
     midtrans_slug = getattr(settings, "MIDTRANS_PAYMENT_METHOD_SLUG", "midtrans")
     selected_payment_slug = (checkout_data.get("payment_method") or "").strip().lower()
+    if not selected_payment_slug:
+        return _validation_error(
+            "Metode pembayaran belum dipilih.",
+            reason="missing_payment_method",
+        )
     if selected_payment_slug != (midtrans_slug or "").lower():
         logger.warning(
             "Attempt to create Midtrans token with unsupported payment method: %s",
             selected_payment_slug,
         )
-        return JsonResponse(
-            {"message": "Metode pembayaran ini tidak menggunakan Midtrans."},
-            status=400,
+        return _validation_error(
+            "Metode pembayaran ini tidak menggunakan Midtrans.",
+            reason="unsupported_payment_method",
         )
     address_id = checkout_data.get("address_id")
+    if not address_id:
+        return _validation_error(
+            "Alamat pengiriman belum dipilih.",
+            reason="missing_address",
+        )
     payment_method_obj = (
         PaymentMethod.objects.filter(slug__iexact=selected_payment_slug).first()
         if selected_payment_slug
@@ -586,7 +623,24 @@ def payment_create_snap_token(request):
     )
 
     if not shipping_address:
-        return JsonResponse({"message": "Alamat pengiriman tidak ditemukan."}, status=400)
+        return _validation_error(
+            "Alamat pengiriman tidak ditemukan.",
+            reason="shipping_address_not_found",
+            extra={"address_id": address_id},
+        )
+
+    if checkout_data.get("shipping_cost") in (None, ""):
+        return _validation_error(
+            "Biaya pengiriman belum dihitung.",
+            reason="missing_shipping_cost",
+        )
+
+    shipping_method = checkout_data.get("shipping_method")
+    if not shipping_method:
+        return _validation_error(
+            "Metode pengiriman belum dipilih.",
+            reason="missing_shipping_method",
+        )
 
     shipping_cost = _to_decimal(checkout_data.get("shipping_cost"))
     subtotal = _to_decimal(cart.get_selected_total())
@@ -594,7 +648,7 @@ def payment_create_snap_token(request):
     discount_amount, discount_code = _calculate_discount(
         subtotal,
         shipping_cost,
-        checkout_data.get("shipping_method"),
+        shipping_method,
         request.session.get("discount"),
     )
 
@@ -605,21 +659,25 @@ def payment_create_snap_token(request):
 
     selected_items, selected_quantities = _prepare_selected_cart_items(selected_items_qs)
     if not selected_items:
-        return JsonResponse({"message": "Tidak ada item yang dipilih untuk pembayaran."}, status=400)
+        return _validation_error(
+            "Tidak ada item yang dipilih untuk pembayaran.",
+            reason="no_selected_items",
+        )
 
     for item in selected_items:
         quantity = selected_quantities.get(item.pk, item.quantity)
         if item.product.stock < quantity:
-            return JsonResponse(
-                {"message": f"Stok {item.product.name} tidak mencukupi."},
-                status=400,
+            return _validation_error(
+                f"Stok {item.product.name} tidak mencukupi.",
+                reason="insufficient_stock",
+                extra={"product_id": item.product_id},
             )
 
     item_details = _build_item_details(selected_items, shipping_cost, discount_amount, discount_code or "")
 
     # Generate order_id dari server menggunakan kombinasi timestamp + UUID pendek
     order_id = _generate_unique_checkout_order_number()
-    service_code = str(checkout_data.get("shipping_method") or "").upper()
+    service_code = str(shipping_method or "").upper()
     service_label = "Express" if service_code == "EXP" else "Reguler"
     district_name = getattr(getattr(shipping_address, "district", None), "name", "")
     eta = checkout_data.get("eta")
