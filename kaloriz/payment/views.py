@@ -543,74 +543,93 @@ def _generate_unique_checkout_order_number(prefix: str = "INV") -> str:
 @login_required
 @require_POST
 def payment_create_snap_token(request):
-    """Create a Midtrans Snap transaction token."""
+    """Create a Midtrans Snap transaction token safely.
+
+    Contoh JS fetch di frontend:
+
+    fetch(createTokenUrl, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        credentials: 'same-origin'
+    })
+      .then((res) => res.json())
+      .then((payload) => {
+          if (payload.token) {
+              snap.pay(payload.token);
+          } else {
+              alert(payload.message);
+          }
+      });
+    """
+
+    log_context = {"user_id": getattr(request.user, "id", None)}
+    logger.debug("payment_create_snap_token called", extra=log_context)
+
+    def _json_error(message, *, reason="invalid_request", status=400, extra=None):
+        response_payload = {"message": message, "reason": reason}
+        log_extra = {**log_context, "reason": reason}
+        if extra:
+            log_extra.update(extra)
+        logger.warning("payment_create_snap_token error: %s", message, extra=log_extra)
+        return JsonResponse(response_payload, status=status)
 
     try:
         snap_client = _build_midtrans_client()
     except RuntimeError as exc:
-        logger.exception("Midtrans configuration error: %s", exc)
-        return JsonResponse({"message": str(exc)}, status=500)
+        logger.exception("Midtrans configuration error: %s", exc, extra=log_context)
+        return _json_error(str(exc), reason="midtrans_configuration", status=500)
 
     try:
         cart = _get_active_cart(request)
     except Exception as exc:  # pylint: disable=broad-except
-        logger.exception("Cart lookup failed: %s", exc)
-        return JsonResponse({"message": "Keranjang tidak ditemukan."}, status=400)
+        logger.exception("Cart lookup failed: %s", exc, extra=log_context)
+        return _json_error("Keranjang tidak ditemukan.", reason="cart_not_found")
 
     cart_id = getattr(cart, "id", None)
-
-    def _validation_error(message, *, reason="invalid_request", status=400, extra=None):
-        log_extra = {
-            "reason": reason,
-            "user_id": getattr(request.user, "id", None),
-            "cart_id": cart_id,
-        }
-        if extra:
-            log_extra.update(extra)
-        logger.debug(
-            "payment_create_snap_token validation failed: %s",
-            message,
-            extra=log_extra,
-        )
-        response_payload = {"message": message, "reason": reason}
-        return JsonResponse(response_payload, status=status)
-
     selected_items_qs = cart.items.filter(is_selected=True).select_related("product")
     if not selected_items_qs.exists():
-        return _validation_error(
+        return _json_error(
             "Tidak ada item yang dipilih untuk pembayaran.",
             reason="empty_cart",
+            extra={"cart_id": cart_id},
         )
 
     checkout_data = request.session.get("checkout")
-    if not isinstance(checkout_data, dict) or not checkout_data:
-        return _validation_error(
+    if not isinstance(checkout_data, dict):
+        checkout_data = {}
+    if checkout_data.get("user_id") and checkout_data.get("user_id") != request.user.id:
+        # Checkout milik user sebelumnya. Reset agar tidak ikut ke user baru.
+        logger.info(
+            "Checkout data belongs to different user. Resetting checkout session.",
+            extra={**log_context, "checkout_owner": checkout_data.get("user_id")},
+        )
+        request.session.pop("checkout", None)
+        checkout_data = {}
+
+    if not checkout_data:
+        return _json_error(
             "Data checkout tidak ditemukan. Silakan ulangi proses checkout.",
             reason="missing_checkout",
         )
+    if not checkout_data.get("user_id"):
+        checkout_data["user_id"] = request.user.id
+        request.session["checkout"] = checkout_data
+        request.session.modified = True
 
-    midtrans_slug = getattr(settings, "MIDTRANS_PAYMENT_METHOD_SLUG", "midtrans")
+    midtrans_slug = getattr(settings, "MIDTRANS_PAYMENT_METHOD_SLUG", "midtrans") or ""
     selected_payment_slug = (checkout_data.get("payment_method") or "").strip().lower()
     if not selected_payment_slug:
-        return _validation_error(
-            "Metode pembayaran belum dipilih.",
-            reason="missing_payment_method",
-        )
-    if selected_payment_slug != (midtrans_slug or "").lower():
-        logger.warning(
-            "Attempt to create Midtrans token with unsupported payment method: %s",
-            selected_payment_slug,
-        )
-        return _validation_error(
+        return _json_error("Metode pembayaran belum dipilih.", reason="missing_payment_method")
+    if selected_payment_slug != midtrans_slug.lower():
+        return _json_error(
             "Metode pembayaran ini tidak menggunakan Midtrans.",
             reason="unsupported_payment_method",
         )
+
     address_id = checkout_data.get("address_id")
     if not address_id:
-        return _validation_error(
-            "Alamat pengiriman belum dipilih.",
-            reason="missing_address",
-        )
+        return _json_error("Alamat pengiriman belum dipilih.", reason="missing_address")
+
     payment_method_obj = (
         PaymentMethod.objects.filter(slug__iexact=selected_payment_slug).first()
         if selected_payment_slug
@@ -621,72 +640,67 @@ def payment_create_snap_token(request):
         .select_related("district")
         .first()
     )
-
     if not shipping_address:
-        return _validation_error(
+        return _json_error(
             "Alamat pengiriman tidak ditemukan.",
             reason="shipping_address_not_found",
             extra={"address_id": address_id},
         )
 
-    if checkout_data.get("shipping_cost") in (None, ""):
-        return _validation_error(
-            "Biaya pengiriman belum dihitung.",
-            reason="missing_shipping_cost",
-        )
+    raw_shipping_cost = checkout_data.get("shipping_cost")
+    if raw_shipping_cost in (None, ""):
+        return _json_error("Biaya pengiriman belum dihitung.", reason="missing_shipping_cost")
 
     shipping_method = checkout_data.get("shipping_method")
     if not shipping_method:
-        return _validation_error(
-            "Metode pengiriman belum dipilih.",
-            reason="missing_shipping_method",
-        )
+        return _json_error("Metode pengiriman belum dipilih.", reason="missing_shipping_method")
 
-    shipping_cost = _to_decimal(checkout_data.get("shipping_cost"))
+    shipping_cost = _to_decimal(raw_shipping_cost)
     subtotal = _to_decimal(cart.get_selected_total())
-
     discount_amount, discount_code = _calculate_discount(
         subtotal,
         shipping_cost,
         shipping_method,
         request.session.get("discount"),
     )
-
-    # Calculate total di server (JANGAN PERCAYA CLIENT!)
     total = subtotal + shipping_cost - discount_amount
     if total < 0:
         total = Decimal("0")
 
     selected_items, selected_quantities = _prepare_selected_cart_items(selected_items_qs)
-    if not selected_items:
-        return _validation_error(
-            "Tidak ada item yang dipilih untuk pembayaran.",
-            reason="no_selected_items",
-        )
-
     for item in selected_items:
         quantity = selected_quantities.get(item.pk, item.quantity)
         if item.product.stock < quantity:
-            return _validation_error(
+            return _json_error(
                 f"Stok {item.product.name} tidak mencukupi.",
                 reason="insufficient_stock",
                 extra={"product_id": item.product_id},
             )
 
-    item_details = _build_item_details(selected_items, shipping_cost, discount_amount, discount_code or "")
+    item_details = _build_item_details(
+        selected_items,
+        shipping_cost,
+        discount_amount,
+        discount_code or "",
+    )
 
-    # Generate order_id dari server menggunakan kombinasi timestamp + UUID pendek
-    order_id = _generate_unique_checkout_order_number()
+    order_number = _generate_unique_checkout_order_number()
     service_code = str(shipping_method or "").upper()
     service_label = "Express" if service_code == "EXP" else "Reguler"
     district_name = getattr(getattr(shipping_address, "district", None), "name", "")
     eta = checkout_data.get("eta")
     notes = checkout_data.get("notes", "")
 
-    token = None
-    order = None
+    logger.debug(
+        "Creating order %s with total %s",
+        order_number,
+        total,
+        extra={**log_context, "cart_id": cart_id},
+    )
 
-    # Tambahkan try/except untuk mencegah HTTP 500
+    order = None
+    token = None
+
     try:
         with transaction.atomic():
             order = create_order_from_checkout(
@@ -694,7 +708,7 @@ def payment_create_snap_token(request):
                 cart=cart,
                 selected_items=selected_items,
                 selected_quantities=selected_quantities,
-                order_number=order_id,
+                order_number=order_number,
                 subtotal=subtotal,
                 shipping_cost=shipping_cost,
                 total=total,
@@ -711,9 +725,11 @@ def payment_create_snap_token(request):
                 shipping_address_obj=shipping_address,
                 shipping_service_name=service_label,
                 payment_method_slug=selected_payment_slug,
-                payment_method_display=(payment_method_obj.name if payment_method_obj else selected_payment_slug),
+                payment_method_display=(
+                    payment_method_obj.name if payment_method_obj else selected_payment_slug
+                ),
             )
-            # Pakai order_number yang sudah unik sebagai Midtrans order_id.
+
             midtrans_order_id = order.order_number
             max_midtrans_length = Order._meta.get_field("midtrans_order_id").max_length
             if len(midtrans_order_id) > max_midtrans_length:
@@ -722,7 +738,7 @@ def payment_create_snap_token(request):
                 order.midtrans_order_id = midtrans_order_id
                 order.save(update_fields=["midtrans_order_id"])
 
-            transaction_payload = {
+            payload = {
                 "transaction_details": {
                     "order_id": midtrans_order_id,
                     "gross_amount": _to_int_amount(total),
@@ -730,43 +746,42 @@ def payment_create_snap_token(request):
                 "item_details": item_details,
                 "customer_details": _build_customer_details(shipping_address, request.user),
                 "credit_card": {"secure": True},
-                "callbacks": {
-                    "finish": request.build_absolute_uri("/payment/finish/"),
-                },
+                "callbacks": {"finish": request.build_absolute_uri("/payment/finish/")},
                 "custom_field1": order.order_number,
             }
-
-            snap_response = snap_client.create_transaction(transaction_payload)
+            logger.debug(
+                "Sending payload to Midtrans",
+                extra={**log_context, "order_number": order.order_number, "payload": payload},
+            )
+            snap_response = snap_client.create_transaction(payload)
             token = snap_response.get("token")
             if not token:
                 raise RuntimeError("Token Snap tidak tersedia.")
             order.midtrans_token = token
             order.save(update_fields=["midtrans_token"])
 
-    except RuntimeError as exc:  # Token missing or business rule failure
-        logger.exception("Failed to create Midtrans Snap transaction: %s", exc)
-        return JsonResponse({"message": str(exc)}, status=400)
-
+    except RuntimeError as exc:
+        logger.exception("Failed to create Midtrans Snap transaction: %s", exc, extra=log_context)
+        return _json_error(str(exc), reason="midtrans_token", status=400)
     except Exception as exc:  # pylint: disable=broad-except
-        # Extract error message dari Midtrans
         default_message = "Gagal membuat Snap Token."
         message, response_payload, status_code = _extract_midtrans_error(exc, default_message)
-
-        log_extra = {"order_number": getattr(order, "order_number", None)}
+        log_extra = {**log_context, "order_number": getattr(order, "order_number", None)}
         if response_payload:
             log_extra["midtrans_response"] = response_payload
-
         logger.exception("Failed to create order or Snap transaction: %s", exc, extra=log_extra)
-
-        # Return 400 instead of 500 untuk error yang bisa dipahami user
         http_status = 400 if status_code and 400 <= status_code < 500 else 400
-        return JsonResponse({"message": message or default_message}, status=http_status)
+        return _json_error(message or default_message, status=http_status, extra=log_extra)
 
     request.session["midtrans_order_id"] = order.order_number
     request.session.pop("checkout", None)
     request.session.pop("discount", None)
     request.session.modified = True
 
+    logger.info(
+        "Snap token created successfully",
+        extra={**log_context, "order_number": order.order_number},
+    )
     return JsonResponse({"token": token, "order_id": order.order_number})
 
 
