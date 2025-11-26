@@ -256,7 +256,22 @@
                 <td class="align-middle text-center qty-col" data-label="Jumlah">{{ item.quantity }}</td>
                 <td class="align-middle text-center subtotal-col" data-label="Subtotal (Rp)"><strong>{{ item.subtotal|dot_separator }}</strong></td>
                 <td class="align-middle rating-col" data-label="Penilaian">
-                  <span class="text-muted d-inline-block rating-text">Belum<br>tersedia.</span>
+                  {% if order.status == 'delivered' %}
+                    {% if item.existing_testimonial %}
+                      <span class="text-success d-inline-block rating-text">Sudah<br>dinilai.</span>
+                    {% elif item.product %}
+                      <a
+                        href="{{ item.product.get_absolute_url }}"
+                        class="btn btn-outline-primary btn-sm"
+                      >
+                        Beri Penilaian
+                      </a>
+                    {% else %}
+                      <span class="text-muted d-inline-block rating-text">Produk<br>tidak tersedia.</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted d-inline-block rating-text">Belum<br>tersedia.</span>
+                  {% endif %}
                 </td>
               </tr>
               {% endfor %}
