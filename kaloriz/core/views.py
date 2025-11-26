@@ -792,12 +792,15 @@ def order_detail(request, order_number):
 
     testimonials = Testimonial.objects.filter(
         user=request.user,
+        order=order,
         product_id__in=product_ids,
     )
-    testimonials_map = {testimonial.product_id: testimonial for testimonial in testimonials}
+    testimonials_map = {
+        (testimonial.product_id, testimonial.order_id): testimonial for testimonial in testimonials
+    }
 
     for item in order_items:
-        item.existing_testimonial = testimonials_map.get(item.product_id)
+        item.existing_testimonial = testimonials_map.get((item.product_id, order.id))
 
     payment_is_pending = order.status == 'pending' and bool(order.payment_method)
     payment_is_active = payment_is_pending and not order.is_payment_overdue()
@@ -848,8 +851,12 @@ def create_review(request, order_item_id):
         messages.error(request, 'Produk ini sudah tidak tersedia sehingga tidak dapat dinilai.')
         return redirect('core:order_detail', order_number=order_number)
 
-    if Testimonial.objects.filter(user=request.user, product=order_item.product).exists():
-        messages.info(request, 'Anda sudah memberikan penilaian untuk produk ini.')
+    if Testimonial.objects.filter(
+        user=request.user,
+        order=order_item.order,
+        product=order_item.product,
+    ).exists():
+        messages.info(request, 'Anda sudah memberikan penilaian untuk produk ini pada pesanan ini.')
         return redirect('core:order_detail', order_number=order_number)
 
     form = TestimonialForm(request.POST, request.FILES)
@@ -858,6 +865,7 @@ def create_review(request, order_item_id):
         testimonial = form.save(commit=False)
         testimonial.user = request.user
         testimonial.product = order_item.product
+        testimonial.order = order_item.order
         testimonial.is_approved = True
         testimonial.save()
         messages.success(request, 'Terima kasih! Penilaian Anda telah dikirim dan langsung ditampilkan.')
