@@ -826,22 +826,21 @@ def order_detail(request, order_number):
 
 
 @login_required
-def submit_testimonial(request, order_number, item_id):
+def create_review(request, order_item_id):
     """Allow a customer to submit a testimonial for a purchased product."""
 
-    order = get_object_or_404(
-        Order.objects.prefetch_related('items__product'),
-        order_number=order_number,
-        user=request.user,
+    order_item = get_object_or_404(
+        OrderItem.objects.select_related('order', 'product'),
+        pk=order_item_id,
+        order__user=request.user,
     )
 
-    order_items_qs = order.items.select_related('product')
-    order_item = get_object_or_404(order_items_qs, pk=item_id)
+    order_number = order_item.order.order_number
 
     if request.method != 'POST':
         return redirect('core:order_detail', order_number=order_number)
 
-    if order.status != 'delivered':
+    if order_item.order.status != 'delivered':
         messages.warning(request, 'Penilaian hanya dapat diberikan untuk pesanan yang telah selesai.')
         return redirect('core:order_detail', order_number=order_number)
 
