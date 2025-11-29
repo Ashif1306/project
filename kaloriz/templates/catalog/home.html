@@ -393,8 +393,9 @@
       {% for product in flash_sale_products %}
       <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
         <div class="modern-product-card flash-sale-card" data-end-time="{{ product.flash_sale_end|date:'c' }}">
-          <div class="discount-badge flash-badge">
-            <i class="fas fa-bolt"></i> Flash Sale
+          <div class="countdown-badge" data-countdown>
+            <i class="far fa-clock"></i>
+            <span>--:--:--</span>
           </div>
 
           <div class="product-image-wrapper" onclick="window.location.href='{% url 'catalog:product_detail' product.slug %}'">
@@ -411,17 +412,15 @@
             <div class="product-price flash-price-row">
               <div class="price-stack">
                 <span class="price-original">Rp {{ product.price|dot_separator }}</span>
-                <span class="price-sale price-flash">Rp {{ product.get_display_price|dot_separator }}</span>
+                <div class="price-row">
+                  <span class="price-sale price-flash">Rp {{ product.get_display_price|dot_separator }}</span>
+                  <span class="stylish-discount">-{{ product.get_discount_percentage }}%</span>
+                </div>
               </div>
-              <span class="stylish-discount">-{{ product.get_discount_percentage }}%</span>
             </div>
           </div>
 
           <div class="card-cta-bar" onclick="event.stopPropagation();">
-            <div class="countdown-badge" data-countdown>
-              <i class="far fa-clock"></i>
-              <span>--:--:--</span>
-            </div>
             {% if user.is_authenticated %}
             <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="display: inline;" class="js-add-to-cart-form">
               {% csrf_token %}
@@ -831,16 +830,21 @@
 
 .modern-product-card.flash-sale-card .product-price.flash-price-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .modern-product-card.flash-sale-card .price-stack {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.modern-product-card.flash-sale-card .price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .modern-product-card.flash-sale-card .product-price .price-original {
@@ -864,7 +868,7 @@
   bottom: 12px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -900,6 +904,9 @@
   align-items: center;
   gap: 6px;
   letter-spacing: 0.5px;
+  position: absolute;
+  top: 10px;
+  left: 10px;
 }
 
 .modern-product-card.flash-sale-card.flash-ended {
