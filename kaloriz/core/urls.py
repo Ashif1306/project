@@ -73,6 +73,11 @@ urlpatterns = [
     path('profile/change-password/', views.change_password, name='change_password'),
     path('profile/address/edit/', views.profile_address_edit, name='profile_address_edit'),
     path('profile/notifications/', views.notifications_view, name='notifications'),
+    path(
+        'profile/notifications/<int:notification_id>/read/',
+        views.mark_notification_as_read,
+        name='notification_mark_read',
+    ),
 
     # Watchlist URLs
     path('watchlist/', views.watchlist_view, name='watchlist'),

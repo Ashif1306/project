@@ -17,6 +17,7 @@ from django.urls import reverse
 from .models import (
     Cart,
     CartItem,
+    Notification,
     Order,
     OrderItem,
     PaymentMethod,
@@ -1240,9 +1241,9 @@ def watchlist_view(request):
 
 @login_required
 def notifications_view(request):
-    """Display user notifications placeholder"""
+    """Display user notifications sorted by newest first"""
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    notifications = []
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
 
     context = {
         'profile': profile,
@@ -1250,6 +1251,18 @@ def notifications_view(request):
         'active_tab': 'notifications',
     }
     return render(request, 'core/notifications.html', context)
+
+
+@login_required
+@require_POST
+def mark_notification_as_read(request, notification_id):
+    """Mark a single notification as read for the logged-in user"""
+    notification = get_object_or_404(Notification, pk=notification_id, user=request.user)
+    if not notification.is_read:
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+        messages.success(request, 'Notifikasi ditandai sebagai dibaca.')
+    return redirect('core:notifications')
 
 
 @login_required
