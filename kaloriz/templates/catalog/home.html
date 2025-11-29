@@ -162,7 +162,7 @@
     background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(0,0,0,0.35));
     color: #fff;
     overflow: hidden;
-    padding-bottom: 90px;
+    padding-bottom: 80px;
   }
 
   .flash-sale-card .product-price.flash-price-row {
@@ -173,10 +173,21 @@
     flex-wrap: wrap;
   }
 
+  .flash-sale-card .product-price {
+    margin-bottom: 10px;
+  }
+
   .flash-sale-card .price-stack {
     display: flex;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .flash-sale-card .price-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
   }
 
   .flash-sale-card .product-price .price-original {
@@ -812,7 +823,7 @@
   background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(0,0,0,0.35));
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 90px;
+  padding-bottom: 80px;
   overflow: hidden;
 }
 
@@ -835,6 +846,10 @@
   gap: 8px;
 }
 
+.modern-product-card.flash-sale-card .product-price {
+  margin-bottom: 10px;
+}
+
 .modern-product-card.flash-sale-card .price-stack {
   display: flex;
   flex-direction: column;
@@ -845,6 +860,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .modern-product-card.flash-sale-card .product-price .price-original {
@@ -859,6 +875,7 @@
   border-radius: 999px;
   font-size: 12px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  white-space: nowrap;
 }
 
 .modern-product-card.flash-sale-card .card-cta-bar {
