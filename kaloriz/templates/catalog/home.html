@@ -165,8 +165,23 @@
     padding-bottom: 90px;
   }
 
+  .flash-sale-card .product-price.flash-price-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .flash-sale-card .price-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
   .flash-sale-card .product-price .price-original {
     color: rgba(255, 255, 255, 0.7);
+    display: block;
   }
 
   .flash-sale-card .product-price .price-sale {
@@ -182,24 +197,22 @@
     background: linear-gradient(90deg, #ff5f6d, #ffc371);
     color: #fff;
     font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 8px;
-    font-size: 13px;
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    z-index: 2;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
   }
 
   .flash-sale-card .card-cta-bar {
     position: absolute;
+    left: 12px;
     right: 12px;
     bottom: 12px;
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     z-index: 2;
   }
 
@@ -226,10 +239,10 @@
   }
 
   .flash-sale-card .countdown-badge {
-    background: rgba(0,0,0,0.5);
+    background: #ff4b5c;
     color: #fff;
-    padding: 4px 8px;
-    border-radius: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
     font-size: 12px;
     display: inline-flex;
     align-items: center;
@@ -383,7 +396,6 @@
           <div class="discount-badge flash-badge">
             <i class="fas fa-bolt"></i> Flash Sale
           </div>
-          <div class="stylish-discount">-{{ product.get_discount_percentage }}%</div>
 
           <div class="product-image-wrapper" onclick="window.location.href='{% url 'catalog:product_detail' product.slug %}'">
             {% if product.image %}
@@ -396,13 +408,20 @@
           <div class="product-info" onclick="window.location.href='{% url 'catalog:product_detail' product.slug %}'">
             <h3 class="product-name mb-2">{{ product.name|truncatewords:4 }}</h3>
 
-            <div class="product-price">
-              <span class="price-original">Rp {{ product.price|dot_separator }}</span>
-              <span class="price-sale price-flash">Rp {{ product.get_display_price|dot_separator }}</span>
+            <div class="product-price flash-price-row">
+              <div class="price-stack">
+                <span class="price-original">Rp {{ product.price|dot_separator }}</span>
+                <span class="price-sale price-flash">Rp {{ product.get_display_price|dot_separator }}</span>
+              </div>
+              <span class="stylish-discount">-{{ product.get_discount_percentage }}%</span>
             </div>
           </div>
 
           <div class="card-cta-bar" onclick="event.stopPropagation();">
+            <div class="countdown-badge" data-countdown>
+              <i class="far fa-clock"></i>
+              <span>--:--:--</span>
+            </div>
             {% if user.is_authenticated %}
             <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="display: inline;" class="js-add-to-cart-form">
               {% csrf_token %}
@@ -412,10 +431,6 @@
             {% else %}
             <a href="{% url 'core:login' %}?next={{ request.path }}" class="btn-beli-sekarang">Beli Sekarang</a>
             {% endif %}
-            <div class="countdown-badge" data-countdown>
-              <i class="far fa-clock"></i>
-              <span>--:--:--</span>
-            </div>
           </div>
         </div>
       </div>
@@ -814,27 +829,43 @@
   color: #ff9a3c;
 }
 
+.modern-product-card.flash-sale-card .product-price.flash-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modern-product-card.flash-sale-card .price-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modern-product-card.flash-sale-card .product-price .price-original {
+  display: block;
+}
+
 .modern-product-card.flash-sale-card .stylish-discount {
   background: linear-gradient(90deg, #ff5f6d, #ffc371);
   color: #fff;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 13px;
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
 
 .modern-product-card.flash-sale-card .card-cta-bar {
   position: absolute;
+  left: 12px;
   right: 12px;
   bottom: 12px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .modern-product-card.flash-sale-card .btn-beli-sekarang {
@@ -860,10 +891,10 @@
 }
 
 .modern-product-card.flash-sale-card .countdown-badge {
-  background: rgba(0,0,0,0.5);
+  background: #ff4b5c;
   color: #fff;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
   font-size: 12px;
   display: inline-flex;
   align-items: center;
