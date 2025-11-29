@@ -157,9 +157,12 @@
   }
 
   .flash-sale-card {
+    position: relative;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(0,0,0,0.35));
     color: #fff;
+    overflow: hidden;
+    padding-bottom: 90px;
   }
 
   .flash-sale-card .product-price .price-original {
@@ -168,23 +171,75 @@
 
   .flash-sale-card .product-price .price-sale {
     color: #ff9a3c;
+    font-size: 1.15rem;
   }
 
-  .flash-countdown {
-    margin-top: 8px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.08);
+  .flash-sale-card .product-name {
+    color: #f8fafc;
+  }
+
+  .flash-sale-card .stylish-discount {
+    background: linear-gradient(90deg, #ff5f6d, #ffc371);
+    color: #fff;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 2;
+  }
+
+  .flash-sale-card .card-cta-bar {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    z-index: 2;
+  }
+
+  .flash-sale-card .btn-beli-sekarang {
+    background: linear-gradient(135deg, #7b57ff, #4c8dff);
+    color: white;
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 8px 20px rgba(76, 141, 255, 0.3);
+  }
+
+  .flash-sale-card .btn-beli-sekarang:hover {
+    transform: scale(1.05);
+  }
+
+  .flash-sale-card .btn-beli-sekarang:disabled,
+  .flash-sale-card .btn-beli-sekarang.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .flash-sale-card .countdown-badge {
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    color: #fefefe;
+    gap: 6px;
+    letter-spacing: 0.5px;
   }
 
   .flash-sale-card.flash-ended {
-    opacity: 0.7;
-    filter: grayscale(0.3);
+    opacity: 0.8;
+    filter: grayscale(0.2);
   }
 </style>
 {% endblock %}
@@ -324,10 +379,11 @@
     <div class="row">
       {% for product in flash_sale_products %}
       <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-        <div class="modern-product-card flash-sale-card" data-flash-end="{{ product.flash_sale_end|date:'c' }}">
+        <div class="modern-product-card flash-sale-card" data-end-time="{{ product.flash_sale_end|date:'c' }}">
           <div class="discount-badge flash-badge">
             <i class="fas fa-bolt"></i> Flash Sale
           </div>
+          <div class="stylish-discount">-{{ product.get_discount_percentage }}%</div>
 
           <div class="product-image-wrapper" onclick="window.location.href='{% url 'catalog:product_detail' product.slug %}'">
             {% if product.image %}
@@ -338,35 +394,28 @@
           </div>
 
           <div class="product-info" onclick="window.location.href='{% url 'catalog:product_detail' product.slug %}'">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h3 class="product-name mb-0 text-white">{{ product.name|truncatewords:4 }}</h3>
-              <span class="badge badge-light text-dark">-{{ product.get_discount_percentage }}%</span>
-            </div>
+            <h3 class="product-name mb-2">{{ product.name|truncatewords:4 }}</h3>
 
             <div class="product-price">
               <span class="price-original">Rp {{ product.price|dot_separator }}</span>
               <span class="price-sale price-flash">Rp {{ product.get_display_price|dot_separator }}</span>
             </div>
-
-            <div class="flash-countdown" data-countdown>
-              <i class="far fa-clock"></i> <span>Memuat waktu...</span>
-            </div>
           </div>
 
-          <div class="cart-button-wrapper" onclick="event.stopPropagation();">
+          <div class="card-cta-bar" onclick="event.stopPropagation();">
             {% if user.is_authenticated %}
             <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="display: inline;" class="js-add-to-cart-form">
               {% csrf_token %}
               <input type="hidden" name="quantity" value="1">
-              <button type="submit" class="cart-btn-round">
-                <i class="fas fa-shopping-cart"></i>
-              </button>
+              <button type="submit" class="btn-beli-sekarang">Beli Sekarang</button>
             </form>
             {% else %}
-            <a href="{% url 'core:login' %}?next={{ request.path }}" class="cart-btn-round">
-              <i class="fas fa-sign-in-alt"></i>
-            </a>
+            <a href="{% url 'core:login' %}?next={{ request.path }}" class="btn-beli-sekarang">Beli Sekarang</a>
             {% endif %}
+            <div class="countdown-badge" data-countdown>
+              <i class="far fa-clock"></i>
+              <span>--:--:--</span>
+            </div>
           </div>
         </div>
       </div>
@@ -742,6 +791,89 @@
   background: #ccc;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* Flash Sale Overrides (after base card styles) */
+.modern-product-card.flash-sale-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(0,0,0,0.35));
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 90px;
+  overflow: hidden;
+}
+
+.modern-product-card.flash-sale-card .product-name {
+  color: #f8fafc;
+}
+
+.modern-product-card.flash-sale-card .price-original {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.modern-product-card.flash-sale-card .price-sale {
+  color: #ff9a3c;
+}
+
+.modern-product-card.flash-sale-card .stylish-discount {
+  background: linear-gradient(90deg, #ff5f6d, #ffc371);
+  color: #fff;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.modern-product-card.flash-sale-card .card-cta-bar {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.modern-product-card.flash-sale-card .btn-beli-sekarang {
+  background: linear-gradient(135deg, #7b57ff, #4c8dff);
+  color: white;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  transition: 0.3s;
+  box-shadow: 0 8px 20px rgba(76, 141, 255, 0.3);
+}
+
+.modern-product-card.flash-sale-card .btn-beli-sekarang:hover {
+  transform: scale(1.05);
+}
+
+.modern-product-card.flash-sale-card .btn-beli-sekarang:disabled,
+.modern-product-card.flash-sale-card .btn-beli-sekarang.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modern-product-card.flash-sale-card .countdown-badge {
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.5px;
+}
+
+.modern-product-card.flash-sale-card.flash-ended {
+  opacity: 0.8;
+  filter: grayscale(0.2);
 }
 
 @media (max-width: 768px) {

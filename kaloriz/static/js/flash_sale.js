@@ -1,5 +1,5 @@
 (function () {
-  const cards = document.querySelectorAll('[data-flash-end]');
+  const cards = document.querySelectorAll('[data-end-time]');
   if (!cards.length) return;
 
   function formatTime(diffMs) {
@@ -11,13 +11,13 @@
   }
 
   cards.forEach((card) => {
-    const endIso = card.dataset.flashEnd;
+    const endIso = card.dataset.endTime;
     if (!endIso) return;
 
     const endTime = new Date(endIso);
     const countdownWrapper = card.querySelector('[data-countdown]');
     const countdownText = countdownWrapper ? countdownWrapper.querySelector('span') || countdownWrapper : null;
-    const buyButton = card.querySelector('.cart-btn-round');
+    const buyButton = card.querySelector('.btn-beli-sekarang');
 
     function updateCountdown() {
       const now = new Date();
