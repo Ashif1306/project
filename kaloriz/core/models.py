@@ -495,3 +495,19 @@ class EmailVerification(models.Model):
         """Mark verification code as used"""
         self.is_used = True
         self.save()
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications", verbose_name="Pengguna")
+    title = models.CharField(max_length=255, verbose_name="Judul")
+    message = models.TextField(verbose_name="Pesan")
+    is_read = models.BooleanField(default=False, verbose_name="Sudah dibaca")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Dibuat")
+
+    class Meta:
+        verbose_name = "Notifikasi"
+        verbose_name_plural = "Notifikasi"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} - {self.user.username}"
