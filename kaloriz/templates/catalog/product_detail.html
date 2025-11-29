@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load price_filters nutrition_tags %}
 
 {% block title %}{{ product.name }} - Kaloriz{% endblock %}
@@ -22,6 +23,10 @@
     }
   }
 </script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/flash_sale.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -71,6 +76,17 @@
   .wishlist-btn.is-active .fa-heart,
   .wishlist-btn:hover .fa-heart {
     color: #dc2220;
+  }
+
+  .flash-countdown {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(255, 193, 7, 0.15);
+    color: #b7791f;
+    font-weight: 600;
   }
 
   .info-card {
@@ -295,7 +311,9 @@
     <div class="col-md-7">
       <h1 class="mb-3">{{ product.name }}</h1>
 
-      {% if product.is_on_sale %}
+      {% if product.is_flash_sale_active %}
+        <span class="badge badge-warning badge-lg mb-3"><i class="fas fa-bolt"></i> Flash Sale</span>
+      {% elif product.is_on_sale %}
         <span class="badge badge-danger badge-lg mb-3">Diskon {{ product.get_discount_percentage }}%</span>
       {% endif %}
 
@@ -308,7 +326,14 @@
 
       <!-- Price -->
       <div class="mb-4">
-        {% if product.is_on_sale %}
+        {% if product.is_flash_sale_active %}
+          <h4 class="text-muted"><s>Rp {{ product.price|dot_separator }}</s></h4>
+          <h2 class="text-warning font-weight-bold">Rp {{ product.get_display_price|dot_separator }}</h2>
+          <div class="flash-countdown" data-countdown data-flash-end="{{ product.flash_sale_end|date:'c' }}">
+            <i class="far fa-clock"></i>
+            <span>Memuat waktu...</span>
+          </div>
+        {% elif product.is_on_sale %}
           <h4 class="text-muted"><s>Rp {{ product.price|dot_separator }}</s></h4>
           <h2 class="text-danger font-weight-bold">Rp {{ product.get_display_price|dot_separator }}</h2>
         {% else %}
