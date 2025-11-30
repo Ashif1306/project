@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from decimal import Decimal, InvalidOperation
 
@@ -35,6 +36,9 @@ from shipping.forms import AddressForm
 
 from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_POST
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_active_cart(request):
@@ -155,26 +159,61 @@ def add_to_cart(request, product_id):
 @require_POST
 def flash_sale_buy_now(request, slug):
     """Add a single flash sale product to cart and select only that item."""
-    product = get_object_or_404(Product, slug=slug, available=True)
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    referer = request.META.get('HTTP_REFERER') or reverse('catalog:product_list')
+
+    try:
+        product = Product.objects.get(slug=slug, available=True)
+    except Product.DoesNotExist:
+        message = "Produk flash sale tidak ditemukan atau sudah tidak tersedia."
+        logger.warning("Flash sale product missing", extra={"slug": slug})
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': message}, status=404)
+        messages.error(request, message)
+        return redirect(referer)
+
+    if not product.is_flash_sale_active():
+        message = "Flash sale untuk produk ini sudah berakhir atau belum dimulai."
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': message}, status=400)
+        messages.error(request, message)
+        return redirect(referer)
+
     cart, _ = Cart.objects.get_or_create(user=request.user)
 
-    # Unselect other items while keeping them in cart
-    cart.items.exclude(product=product).update(is_selected=False)
+    try:
+        # Unselect other items while keeping them in cart
+        cart.items.exclude(product=product).update(is_selected=False)
 
-    # Add or update the targeted item
-    cart_item, created = CartItem.objects.get_or_create(
-        cart=cart,
-        product=product,
-        defaults={'quantity': 1}
-    )
+        # Add or update the targeted item
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            product=product,
+            defaults={'quantity': 1}
+        )
 
-    if not created:
-        cart_item.quantity = 1
+        if not created:
+            cart_item.quantity = 1
 
-    cart_item.is_selected = True
-    cart_item.save()
+        cart_item.is_selected = True
+        cart_item.save()
+    except Exception:
+        logger.exception("Failed to process flash sale buy now", extra={"product_id": product.id})
+        message = "Gagal menambahkan produk ke checkout cepat. Silakan coba lagi."
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': message}, status=500)
+        messages.error(request, message)
+        return redirect(referer)
 
-    messages.success(request, f"{product.name} ditambahkan ke keranjang untuk checkout cepat.")
+    success_message = f"{product.name} ditambahkan ke keranjang untuk checkout cepat."
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'message': success_message,
+            'cart_count': cart.items.count(),
+        })
+
+    messages.success(request, success_message)
     return redirect('core:cart')
 
 
