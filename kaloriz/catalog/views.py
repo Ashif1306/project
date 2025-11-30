@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
@@ -10,7 +11,8 @@ from django.utils import timezone
 from django.utils.formats import number_format
 from django.views.decorators.http import require_POST
 
-from core.models import Cart
+from core.models import Cart, Order
+from shipping.models import District
 
 from .models import Product, Category, Testimonial, DiscountCode
 
@@ -178,6 +180,16 @@ def search(request):
 
 def about(request):
     """About us page"""
+    start_date = date(2025, 9, 1)
+    today = timezone.localdate()
+
+    experienced_days = (today - start_date).days
+    happy_customers_count = Testimonial.objects.filter(
+        rating__isnull=False,
+    ).count()
+    successful_orders_count = Order.objects.exclude(status='cancelled').count()
+    district_coverage_count = District.objects.filter(is_active=True).count()
+
     return render(
         request,
         'catalog/about.html',
@@ -185,6 +197,10 @@ def about(request):
             'meta_title': 'Tentang Kaloriz',
             'meta_description': 'Kenali Kaloriz, toko online makanan sehat yang praktis dan bergizi.',
             'meta_url': request.build_absolute_uri(),
+            'experienced_days': experienced_days,
+            'happy_customers_count': happy_customers_count,
+            'successful_orders_count': successful_orders_count,
+            'district_coverage_count': district_coverage_count,
         },
     )
 
