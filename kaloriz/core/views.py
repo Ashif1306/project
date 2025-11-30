@@ -155,12 +155,18 @@ def add_to_cart(request, product_id):
     return redirect('core:cart')
 
 
-@login_required
 @require_POST
 def flash_sale_buy_now(request, slug):
     """Add a single flash sale product to cart and select only that item."""
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
     referer = request.META.get('HTTP_REFERER') or reverse('catalog:product_list')
+
+    if not request.user.is_authenticated:
+        message = "Silakan login terlebih dahulu untuk membeli produk flash sale."
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': message}, status=401)
+        messages.error(request, message)
+        return redirect(f"{reverse('core:login')}?next={request.path}")
 
     try:
         product = Product.objects.get(slug=slug, available=True)
@@ -172,7 +178,7 @@ def flash_sale_buy_now(request, slug):
         messages.error(request, message)
         return redirect(referer)
 
-    if not product.is_flash_sale_active():
+    if not product.is_flash_sale_active:
         message = "Flash sale untuk produk ini sudah berakhir atau belum dimulai."
         if is_ajax:
             return JsonResponse({'success': False, 'message': message}, status=400)
@@ -182,8 +188,8 @@ def flash_sale_buy_now(request, slug):
     cart, _ = Cart.objects.get_or_create(user=request.user)
 
     try:
-        # Unselect other items while keeping them in cart
-        cart.items.exclude(product=product).update(is_selected=False)
+        # Unselect all items before selecting the flash sale product
+        cart.items.update(is_selected=False)
 
         # Add or update the targeted item
         cart_item, created = CartItem.objects.get_or_create(
