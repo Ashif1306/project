@@ -38,11 +38,20 @@ def home(request):
     ).filter(
         Q(flash_sale_end__gte=now) | Q(flash_sale_end__isnull=True, flash_sale_duration_hours__gt=0)
     )[:8]
+    available_products_count = Product.objects.filter(
+        stock__gt=0,
+        available=True,
+    ).count()
+    happy_customers_count = Testimonial.objects.filter(
+        rating__isnull=False,
+    ).count()
     categories = Category.objects.all()[:6]
 
     context = {
         'featured_products': featured_products,
         'flash_sale_products': flash_sale_products,
+        'available_products_count': available_products_count,
+        'happy_customers_count': happy_customers_count,
         'categories': categories,
         'watchlisted_product_ids': _get_watchlisted_product_ids(request),
         'meta_title': 'Kaloriz - Toko Makanan Sehat',
