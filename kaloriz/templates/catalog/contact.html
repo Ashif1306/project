@@ -29,7 +29,17 @@
               Punya pertanyaan atau saran? Isi form di bawah ini dan kami akan segera merespon
             </p>
 
-            <form method="post" id="contactForm">
+            {% if messages %}
+            <div class="mb-4">
+              {% for message in messages %}
+              <div class="alert alert-{{ message.tags|default:'info' }} mb-3" role="alert">
+                {{ message }}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'catalog:contact' %}" id="contactForm">
               {% csrf_token %}
 
               <div class="form-row">
@@ -306,35 +316,4 @@
   }
 </style>
 
-<script>
-  document.getElementById('contactForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    // Get form data
-    const formData = new FormData(this);
-
-    // Send form via AJAX (or you can use regular form submission)
-    fetch("{% url 'catalog:contact' %}", {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken')
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        alert('Pesan Anda berhasil dikirim! Kami akan segera menghubungi Anda.');
-        this.reset();
-      } else {
-        alert('Terjadi kesalahan. Silakan coba lagi.');
-      }
-    })
-    .catch(error => {
-      // For now, just show success message (since backend not fully implemented)
-      alert('Pesan Anda berhasil dikirim! Kami akan segera menghubungi Anda.');
-      this.reset();
-    });
-  });
-</script>
 {% endblock %}
