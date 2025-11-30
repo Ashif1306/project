@@ -167,10 +167,8 @@
 
   .flash-sale-card .product-price.flash-price-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: nowrap;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .flash-sale-card .product-price {
@@ -184,12 +182,11 @@
     flex: 1;
   }
 
-  .flash-sale-card .price-row {
+  .flash-sale-card .flash-price-wrapper {
     display: flex;
-    align-items: baseline;
     justify-content: space-between;
+    align-items: center;
     gap: 8px;
-    flex-wrap: nowrap;
     width: 100%;
   }
 
@@ -198,16 +195,17 @@
     display: block;
   }
 
-  .flash-sale-card .product-price .price-sale {
+  .flash-sale-card .flash-price {
     color: #ff9a3c;
     font-size: 1.15rem;
+    font-weight: 700;
   }
 
   .flash-sale-card .product-name {
     color: #f8fafc;
   }
 
-  .flash-sale-card .stylish-discount {
+  .flash-sale-card .flash-discount-badge {
     background: linear-gradient(90deg, #ff5f6d, #ffc371);
     color: #fff;
     font-weight: 600;
@@ -426,9 +424,9 @@
             <div class="product-price flash-price-row">
               <div class="price-stack">
                 <span class="price-original">Rp {{ product.price|dot_separator }}</span>
-                <div class="price-row">
-                  <span class="price-sale price-flash">Rp {{ product.get_display_price|dot_separator }}</span>
-                  <span class="stylish-discount">-{{ product.get_discount_percentage }}%</span>
+                <div class="flash-price-wrapper">
+                  <span class="flash-price price-sale price-flash">Rp {{ product.get_display_price|dot_separator }}</span>
+                  <span class="flash-discount-badge stylish-discount">-{{ product.get_discount_percentage }}%</span>
                 </div>
               </div>
             </div>
@@ -844,10 +842,8 @@
 
 .modern-product-card.flash-sale-card .product-price.flash-price-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: nowrap;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .modern-product-card.flash-sale-card .product-price {
@@ -861,12 +857,11 @@
   flex: 1;
 }
 
-.modern-product-card.flash-sale-card .price-row {
+.modern-product-card.flash-sale-card .flash-price-wrapper {
   display: flex;
-  align-items: baseline;
   justify-content: space-between;
+  align-items: center;
   gap: 8px;
-  flex-wrap: nowrap;
   width: 100%;
 }
 
@@ -874,7 +869,13 @@
   display: block;
 }
 
-.modern-product-card.flash-sale-card .stylish-discount {
+.modern-product-card.flash-sale-card .flash-price {
+  color: #ff5722;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.modern-product-card.flash-sale-card .flash-discount-badge {
   background: linear-gradient(90deg, #ff5f6d, #ffc371);
   color: #fff;
   font-weight: 600;
