@@ -8,6 +8,7 @@ urlpatterns = [
     # Cart URLs
     path('cart/', views.cart_view, name='cart'),
     path('cart/add/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
+    path('flash-sale/buy/<slug:slug>/', views.flash_sale_buy_now, name='flash_sale_buy_now'),
     path('cart/update/<int:item_id>/', views.update_cart_item, name='update_cart_item'),
     path('cart/remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
     path('cart/clear/', views.clear_cart, name='clear_cart'),
