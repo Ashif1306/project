@@ -25,10 +25,6 @@
 </script>
 {% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/flash_sale.js' %}"></script>
-{% endblock %}
-
 {% block content %}
 <style>
   .product-detail-image-card {
@@ -861,6 +857,8 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
+<script src="{% static 'js/flash_sale.js' %}"></script>
 <script>
 // Quantity Controls
 function increaseQty(maxStock) {
