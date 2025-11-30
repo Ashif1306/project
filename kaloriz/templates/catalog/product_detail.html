@@ -325,9 +325,14 @@
         {% if product.is_flash_sale_active %}
           <h4 class="text-muted"><s>Rp {{ product.price|dot_separator }}</s></h4>
           <h2 class="text-warning font-weight-bold">Rp {{ product.get_display_price|dot_separator }}</h2>
-          <div class="flash-countdown" data-countdown data-flash-end="{{ product.flash_sale_end|date:'c' }}">
+          <div class="flash-countdown">
             <i class="far fa-clock"></i>
-            <span>Memuat waktu...</span>
+            <span
+              id="flash-sale-timer"
+              data-end-time="{{ flash_sale_end|date:'c' }}"
+            >
+              Memuat waktu...
+            </span>
           </div>
         {% elif product.is_on_sale %}
           <h4 class="text-muted"><s>Rp {{ product.price|dot_separator }}</s></h4>
@@ -860,6 +865,45 @@
 {{ block.super }}
 <script src="{% static 'js/flash_sale.js' %}"></script>
 <script>
+(function() {
+  const timerEl = document.getElementById('flash-sale-timer');
+  if (!timerEl) return;
+
+  const endIso = timerEl.dataset.endTime;
+  if (!endIso) return;
+
+  function formatTime(diffMs) {
+    const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
+    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(totalSeconds % 60).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+  }
+
+  const endTime = new Date(endIso);
+
+  function updateTimer() {
+    const now = new Date();
+    const diff = endTime - now;
+
+    if (isNaN(diff)) {
+      timerEl.textContent = 'Tidak valid';
+      return;
+    }
+
+    if (diff <= 0) {
+      timerEl.textContent = 'Flash sale berakhir';
+      clearInterval(intervalId);
+      return;
+    }
+
+    timerEl.textContent = formatTime(diff);
+  }
+
+  updateTimer();
+  const intervalId = setInterval(updateTimer, 1000);
+})();
+
 // Quantity Controls
 function increaseQty(maxStock) {
   const qtyInput = document.getElementById('quantity');

@@ -119,6 +119,7 @@ def product_detail(request, slug):
         'testimonials': testimonials,
         'watchlisted_product_ids': watchlisted_ids,
         'is_product_watchlisted': product.id in watchlisted_ids,
+        'flash_sale_end': product.flash_sale_end,
         'meta_title': f"{product.name} - Kaloriz",
         'meta_description': product.description[:150],
         'meta_image': request.build_absolute_uri(product.image.url) if product.image else request.build_absolute_uri(getattr(settings, "SITE_LOGO", "/static/images/logo.png")),
