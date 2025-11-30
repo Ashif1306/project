@@ -188,7 +188,7 @@ def about(request):
         rating__isnull=False,
     ).count()
     successful_orders_count = Order.objects.exclude(status='cancelled').count()
-    district_coverage_count = District.objects.filter(is_active=True).count()
+    district_coverage_count = District.objects.count()
 
     return render(
         request,
