@@ -434,9 +434,8 @@
 
           <div class="card-cta-bar" onclick="event.stopPropagation();">
             {% if user.is_authenticated %}
-            <form method="post" action="{% url 'core:add_to_cart' product.id %}" style="display: inline;" class="js-add-to-cart-form">
+            <form method="post" action="{% url 'core:flash_sale_buy_now' product.slug %}" style="display: inline;" class="js-add-to-cart-form">
               {% csrf_token %}
-              <input type="hidden" name="quantity" value="1">
               <button type="submit" class="btn-beli-sekarang">Beli Sekarang</button>
             </form>
             {% else %}

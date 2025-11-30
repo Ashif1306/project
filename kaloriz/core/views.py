@@ -152,6 +152,33 @@ def add_to_cart(request, product_id):
 
 
 @login_required
+@require_POST
+def flash_sale_buy_now(request, slug):
+    """Add a single flash sale product to cart and select only that item."""
+    product = get_object_or_404(Product, slug=slug, available=True)
+    cart, _ = Cart.objects.get_or_create(user=request.user)
+
+    # Unselect other items while keeping them in cart
+    cart.items.exclude(product=product).update(is_selected=False)
+
+    # Add or update the targeted item
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart,
+        product=product,
+        defaults={'quantity': 1}
+    )
+
+    if not created:
+        cart_item.quantity = 1
+
+    cart_item.is_selected = True
+    cart_item.save()
+
+    messages.success(request, f"{product.name} ditambahkan ke keranjang untuk checkout cepat.")
+    return redirect('core:cart')
+
+
+@login_required
 def update_cart_item(request, item_id):
     """Update cart item quantity"""
     cart_item = get_object_or_404(CartItem, id=item_id, cart__user=request.user)
