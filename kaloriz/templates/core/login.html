@@ -10,9 +10,9 @@
   :root {
     --brand-start: #38b6ff;
     --brand-end: #1f78ff;
-    --card-radius: 26px;
     --text-dark: #0f172a;
     --text-muted: #6b7280;
+    --card-radius: 28px;
   }
 
   body {
@@ -20,249 +20,68 @@
     padding: 0;
     background: linear-gradient(135deg, #e7f3ff 0%, #f5f8ff 50%, #e7f3ff 100%);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    overflow: hidden;
   }
 
   footer {
     display: none;
   }
 
-  .auth-wrapper {
+  .login-wrapper {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px 16px;
+    padding: 32px 20px;
   }
 
-  .auth-card {
+  .login-card {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1180px;
     background: #ffffff;
     border-radius: var(--card-radius);
+    box-shadow: 0 25px 70px rgba(15, 23, 42, 0.12);
     overflow: hidden;
-    box-shadow: 0 26px 72px rgba(15, 23, 42, 0.14);
-    position: relative;
-  }
-
-  .panel-track {
     display: flex;
-    width: 200%;
-    transition: transform 0.75s ease;
-  }
-
-  .auth-card.show-signup .panel-track {
-    transform: translateX(-50%);
-  }
-
-  .panel-set {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
     min-height: 640px;
   }
 
-  .form-panel {
-    padding: 48px 46px 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #ffffff;
-  }
-
-  .form-shell {
-    width: 100%;
-    max-width: 430px;
-  }
-
-  .form-title {
-    font-size: 32px;
-    font-weight: 800;
-    color: var(--text-dark);
-    margin: 0 0 20px;
-    letter-spacing: -0.02em;
-  }
-
-  .form-subtitle {
-    margin: -8px 0 18px;
-    color: var(--text-muted);
-    font-size: 15px;
-  }
-
-  .auth-form {
-    width: 100%;
-  }
-
-  .auth-message {
-    padding: 12px 16px;
-    border-radius: 12px;
-    margin-bottom: 16px;
-    font-size: 14px;
-    background: #fef2f2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
-  }
-
-  .auth-field {
-    margin-bottom: 14px;
-  }
-
-  .auth-label {
-    display: block;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-dark);
-    margin-bottom: 6px;
-  }
-
-  .auth-form input[type="text"],
-  .auth-form input[type="email"],
-  .auth-form input[type="password"],
-  .auth-form input[type="checkbox"],
-  .auth-form input[type="number"],
-  .auth-form select {
-    width: 100%;
-    padding: 13px 18px;
-    border: 1px solid #e5e7eb;
-    border-radius: 999px;
-    background: #f8fafc;
-    font-size: 15px;
-    transition: all 0.3s ease;
-  }
-
-  .auth-form input:focus,
-  .auth-form select:focus {
-    outline: none;
-    border-color: var(--brand-start);
-    box-shadow: 0 0 0 6px rgba(56, 182, 255, 0.15);
-    background: #ffffff;
-  }
-
-  .auth-password-wrapper {
-    position: relative;
-  }
-
-  .auth-password-toggle {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    color: #9ca3af;
-    font-size: 18px;
-  }
-
-  .auth-action {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    margin: 12px 0 16px;
-  }
-
-  .auth-remember {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--text-muted);
-    font-size: 14px;
-    cursor: pointer;
-  }
-
-  .auth-remember input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--brand-start);
-  }
-
-  .auth-link {
-    color: var(--brand-start);
-    font-weight: 600;
-    text-decoration: none;
-    font-size: 14px;
-  }
-
-  .auth-link:hover {
-    text-decoration: underline;
-  }
-
-  .auth-submit {
-    width: 100%;
-    padding: 15px;
-    border: none;
-    border-radius: 999px;
-    background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
-    color: #ffffff;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 18px 30px rgba(31, 120, 255, 0.26);
-    transition: transform 0.2s ease, box-shadow 0.3s ease;
-  }
-
-  .auth-submit:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 20px 38px rgba(31, 120, 255, 0.33);
-  }
-
-  .auth-submit:active {
-    transform: translateY(0);
-  }
-
-  .auth-meta {
-    margin-top: 14px;
-    color: var(--text-muted);
-    font-size: 14px;
-    text-align: center;
-  }
-
-  .auth-meta a {
-    color: var(--brand-start);
-    font-weight: 700;
-    text-decoration: none;
-  }
-
-  .auth-meta a:hover {
-    text-decoration: underline;
-  }
-
-  .visual-panel {
-    position: relative;
+  .login-left {
+    flex: 1;
     background: linear-gradient(135deg, var(--brand-start) 0%, var(--brand-end) 100%);
     color: #ffffff;
-    padding: 44px 40px;
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 22px;
-    justify-content: center;
+    padding: 48px 44px;
+    gap: 28px;
   }
 
-  .visual-panel::after {
+  .login-left::after {
     content: '';
     position: absolute;
-    inset: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    inset: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 22px;
     pointer-events: none;
   }
 
-  .visual-copy {
+  .left-copy {
     position: relative;
     z-index: 2;
-    max-width: 460px;
+    max-width: 440px;
   }
 
-  .visual-copy h2 {
-    margin: 0 0 10px;
-    font-size: 30px;
+  .left-copy h2 {
+    margin: 0 0 14px;
+    font-size: 34px;
     line-height: 1.25;
-    font-weight: 800;
+    font-weight: 700;
   }
 
-  .visual-copy p {
+  .left-copy p {
     margin: 0;
     color: rgba(255, 255, 255, 0.9);
-    font-size: 15px;
+    font-size: 16px;
     line-height: 1.6;
   }
 
@@ -315,7 +134,7 @@
   .slide-dots {
     display: flex;
     gap: 8px;
-    margin-top: 14px;
+    margin-top: 16px;
     position: relative;
     z-index: 2;
   }
@@ -329,34 +148,197 @@
   }
 
   .slide-dot.active {
-    width: 22px;
+    width: 24px;
     border-radius: 999px;
     background: #ffffff;
   }
 
-  @media (max-width: 1100px) {
-    body {
-      overflow: auto;
-    }
+  .login-right {
+    flex: 1;
+    background: #ffffff;
+    padding: 56px 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-    .auth-card {
-      border-radius: 18px;
-    }
+  .form-wrapper {
+    width: 100%;
+    max-width: 440px;
+  }
 
-    .panel-set {
-      grid-template-columns: 1fr;
+  .form-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin: 0 0 28px;
+  }
+
+  .auth-form {
+    width: 100%;
+  }
+
+  .auth-message {
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    font-size: 14px;
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+
+  .auth-field {
+    margin-bottom: 18px;
+  }
+
+  .auth-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+  }
+
+  .auth-input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    background: #f8fafc;
+    font-size: 15px;
+    transition: all 0.3s ease;
+  }
+
+  .auth-input:focus {
+    outline: none;
+    border-color: var(--brand-start);
+    box-shadow: 0 0 0 6px rgba(56, 182, 255, 0.15);
+    background: #ffffff;
+  }
+
+  .auth-password-wrapper {
+    position: relative;
+  }
+
+  .auth-password-toggle {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 18px;
+  }
+
+  .auth-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 22px;
+  }
+
+  .auth-remember {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .auth-remember input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--brand-start);
+  }
+
+  .auth-link {
+    color: var(--brand-start);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 14px;
+  }
+
+  .auth-link:hover {
+    text-decoration: underline;
+  }
+
+  .auth-submit {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 18px 30px rgba(31, 120, 255, 0.28);
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+  }
+
+  .auth-submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 20px 38px rgba(31, 120, 255, 0.35);
+  }
+
+  .auth-submit:active {
+    transform: translateY(0);
+  }
+
+  .auth-meta {
+    margin-top: 18px;
+    color: var(--text-muted);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .auth-meta a {
+    color: var(--brand-start);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .auth-meta a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 1024px) {
+    .login-card {
+      flex-direction: column;
       min-height: auto;
     }
 
-    .panel-track {
-      width: 100%;
-      transform: none !important;
-      display: block;
+    .login-left {
+      min-height: 360px;
     }
 
-    .form-panel,
-    .visual-panel {
-      min-height: 420px;
+    .login-right {
+      padding: 42px 36px 52px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .login-card {
+      border-radius: 18px;
+    }
+
+    .login-left {
+      padding: 32px 26px;
+    }
+
+    .left-copy h2 {
+      font-size: 28px;
+    }
+
+    .visual-slider {
+      height: 260px;
+    }
+
+    .login-right {
+      padding: 32px 24px 40px;
     }
   }
 </style>
@@ -365,152 +347,86 @@
 {% block navbar %}{% endblock %}
 
 {% block content %}
-<div class="auth-wrapper">
-  <div class="auth-card" id="authCard">
-    <div class="panel-track">
-      <section class="panel-set login-set">
-        <div class="form-panel">
-          <div class="form-shell">
-            <h1 class="form-title">Login</h1>
-            <p class="form-subtitle">Masuk untuk melanjutkan belanja sehatmu.</p>
+<div class="login-wrapper">
+  <div class="login-card">
+    <div class="login-left">
+      <div class="left-copy">
+        <h2>Mulai Hari Sehatmu Bersama Kaloriz</h2>
+        <p>Login untuk menjelajahi berbagai makanan dan minuman sehat yang siap menunjang gaya hidupmu.</p>
+      </div>
 
-            <form method="post" class="auth-form" action="{% url 'core:login' %}">
-              {% csrf_token %}
-
-              {% if form.non_field_errors %}
-                <div class="auth-message">
-                  {{ form.non_field_errors|join:' ' }}
-                </div>
-              {% endif %}
-
-              <div class="auth-field">
-                <label for="username" class="auth-label">Username or email</label>
-                <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  class="auth-input"
-                  value="{{ entered_username }}"
-                  placeholder="Enter your username or email"
-                  required
-                  autofocus>
-              </div>
-
-              <div class="auth-field">
-                <label for="password" class="auth-label">Password</label>
-                <div class="auth-password-wrapper">
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    class="auth-input"
-                    placeholder="Enter your password"
-                    required>
-                  <span class="auth-password-toggle" onclick="togglePassword()">
-                    <i class="far fa-eye" id="toggleIcon"></i>
-                  </span>
-                </div>
-              </div>
-
-              <div class="auth-action">
-                <label class="auth-remember" for="remember_me">
-                  <input type="checkbox" id="remember_me" name="remember_me" {% if remember_me %}checked{% endif %}>
-                  <span>Remember me</span>
-                </label>
-                <a href="{% url 'core:password_reset' %}" class="auth-link">Forgot password?</a>
-              </div>
-
-              <button type="submit" class="auth-submit">Login</button>
-            </form>
-
-            <p class="auth-meta">Don't have an account? <a href="{% url 'core:register' %}" class="auth-link to-signup">Sign up</a></p>
+      <div class="slider-shell">
+        <div class="visual-slider" id="visualSlider">
+          <div class="visual-slide active">
+            <img src="{% static 'images/login-illustration.svg' %}" alt="Ilustrasi login Kaloriz">
+          </div>
+          <div class="visual-slide">
+            <img src="{% static 'images/auth-illustration.svg' %}" alt="Ilustrasi sehat Kaloriz">
           </div>
         </div>
+      </div>
 
-        <div class="visual-panel">
-          <div class="visual-copy">
-            <h2>Mulai Hari Sehatmu Bersama Kaloriz</h2>
-            <p>Login untuk menjelajahi berbagai makanan dan minuman sehat yang siap menunjang gaya hidupmu.</p>
+      <div class="slide-dots" id="slideDots">
+        <span class="slide-dot active"></span>
+        <span class="slide-dot"></span>
+      </div>
+    </div>
+
+    <div class="login-right">
+      <div class="form-wrapper">
+        <h1 class="form-title">Login</h1>
+
+        <form method="post" class="auth-form">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="auth-message">
+              {{ form.non_field_errors|join:' ' }}
+            </div>
+          {% endif %}
+
+          <div class="auth-field">
+            <label for="username" class="auth-label">Username or email</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="auth-input"
+              value="{{ entered_username }}"
+              placeholder="Enter your username or email"
+              required
+              autofocus>
           </div>
 
-          <div class="slider-shell">
-            <div class="visual-slider" id="visualSliderLogin">
-              <div class="visual-slide active">
-                <img src="{% static 'images/login-illustration.svg' %}" alt="Ilustrasi login Kaloriz">
-              </div>
-              <div class="visual-slide">
-                <img src="{% static 'images/auth-illustration.svg' %}" alt="Ilustrasi sehat Kaloriz">
-              </div>
+          <div class="auth-field">
+            <label for="password" class="auth-label">Password</label>
+            <div class="auth-password-wrapper">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                class="auth-input"
+                placeholder="Enter your password"
+                required>
+              <span class="auth-password-toggle" onclick="togglePassword()">
+                <i class="far fa-eye" id="toggleIcon"></i>
+              </span>
             </div>
           </div>
 
-          <div class="slide-dots" id="slideDotsLogin">
-            <span class="slide-dot active"></span>
-            <span class="slide-dot"></span>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel-set signup-set">
-        <div class="visual-panel">
-          <div class="visual-copy">
-            <h2>Bergabung dan Nikmati Pengalaman Belanja Premium</h2>
-            <p>Dapatkan akses ke kurasi produk terbaru, wishlist pribadi, hingga promo eksklusif yang dikirimkan langsung ke inbox Anda.</p>
+          <div class="auth-action">
+            <label class="auth-remember" for="remember_me">
+              <input type="checkbox" id="remember_me" name="remember_me" {% if remember_me %}checked{% endif %}>
+              <span>Remember me</span>
+            </label>
+            <a href="{% url 'core:password_reset' %}" class="auth-link">Forgot password?</a>
           </div>
 
-          <div class="slider-shell">
-            <div class="visual-slider" id="visualSliderSignup">
-              <div class="visual-slide active">
-                <img src="{% static 'images/login-illustration.svg' %}" alt="Ilustrasi login Kaloriz">
-              </div>
-              <div class="visual-slide">
-                <img src="{% static 'images/auth-illustration.svg' %}" alt="Ilustrasi sehat Kaloriz">
-              </div>
-            </div>
-          </div>
+          <button type="submit" class="auth-submit">Login</button>
+        </form>
 
-          <div class="slide-dots" id="slideDotsSignup">
-            <span class="slide-dot active"></span>
-            <span class="slide-dot"></span>
-          </div>
-        </div>
-
-        <div class="form-panel">
-          <div class="form-shell">
-            <h1 class="form-title">Sign Up</h1>
-            <p class="form-subtitle">Buat akun untuk mulai menjelajahi ragam pilihan sehat dari Kaloriz.</p>
-
-            <form method="post" class="auth-form" action="{% url 'core:register' %}">
-              {% csrf_token %}
-
-              <div class="auth-field">
-                <label for="first_name" class="auth-label">Nama Lengkap</label>
-                <input type="text" id="first_name" name="first_name" class="auth-input" placeholder="Nama Lengkap" required>
-              </div>
-
-              <div class="auth-field">
-                <label for="email" class="auth-label">Email</label>
-                <input type="email" id="email" name="email" class="auth-input" placeholder="Email" required>
-              </div>
-
-              <div class="auth-field">
-                <label for="password1" class="auth-label">Password</label>
-                <input type="password" id="password1" name="password1" class="auth-input" placeholder="Password" required>
-                <small class="verification-help d-block mt-1">Gunakan kombinasi huruf, angka, dan simbol untuk keamanan maksimal.</small>
-              </div>
-
-              <div class="auth-field">
-                <label for="password2" class="auth-label">Konfirmasi Password</label>
-                <input type="password" id="password2" name="password2" class="auth-input" placeholder="Konfirmasi Password" required>
-              </div>
-
-              <button type="submit" class="auth-submit">Daftar Sekarang</button>
-            </form>
-
-            <p class="auth-meta">Sudah punya akun? <a href="{% url 'core:login' %}" class="auth-link to-login">Masuk di sini</a></p>
-          </div>
-        </div>
-      </section>
+        <p class="auth-meta">Don't have an account? <a href="{% url 'core:register' %}">Sign up</a></p>
+      </div>
     </div>
   </div>
 </div>
@@ -520,23 +436,20 @@
     const passwordInput = document.getElementById('password');
     const toggleIcon = document.getElementById('toggleIcon');
 
-    if (passwordInput && toggleIcon) {
-      if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        toggleIcon.classList.remove('fa-eye');
-        toggleIcon.classList.add('fa-eye-slash');
-      } else {
-        passwordInput.type = 'password';
-        toggleIcon.classList.remove('fa-eye-slash');
-        toggleIcon.classList.add('fa-eye');
-      }
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      toggleIcon.classList.remove('fa-eye');
+      toggleIcon.classList.add('fa-eye-slash');
+    } else {
+      passwordInput.type = 'password';
+      toggleIcon.classList.remove('fa-eye-slash');
+      toggleIcon.classList.add('fa-eye');
     }
   }
 
-  function initSlider(sliderId, dotsId) {
-    const slides = document.querySelectorAll(`#${sliderId} .visual-slide`);
-    const dots = document.querySelectorAll(`#${dotsId} .slide-dot`);
-    if (!slides.length) return;
+  (function() {
+    const slides = document.querySelectorAll('.visual-slide');
+    const dots = document.querySelectorAll('.slide-dot');
     let currentIndex = 0;
 
     function showSlide(index) {
@@ -552,32 +465,6 @@
       currentIndex = (currentIndex + 1) % slides.length;
       showSlide(currentIndex);
     }, 4000);
-  }
-
-  function initAuthToggle() {
-    const card = document.getElementById('authCard');
-    const toLoginLinks = document.querySelectorAll('.to-login');
-    const toSignupLinks = document.querySelectorAll('.to-signup');
-
-    toLoginLinks.forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        card.classList.remove('show-signup');
-      });
-    });
-
-    toSignupLinks.forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        card.classList.add('show-signup');
-      });
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    initSlider('visualSliderLogin', 'slideDotsLogin');
-    initSlider('visualSliderSignup', 'slideDotsSignup');
-    initAuthToggle();
-  });
+  })();
 </script>
 {% endblock %}
