@@ -43,6 +43,17 @@
     overflow: hidden;
     display: flex;
     min-height: 680px;
+    transition: transform 0.4s ease, opacity 0.4s ease;
+  }
+
+  .slide-out-left {
+    transform: translateX(-40px);
+    opacity: 0;
+  }
+
+  .slide-out-right {
+    transform: translateX(40px);
+    opacity: 0;
   }
 
   .register-left {
@@ -332,7 +343,7 @@
 
 {% block content %}
 <div class="register-wrapper">
-  <div class="register-card">
+  <div class="register-card auth-container">
     <div class="register-left">
       <div class="form-wrapper">
         <h1 class="form-title">Registrasi</h1>
@@ -455,6 +466,21 @@
       currentIndex = (currentIndex + 1) % slides.length;
       showSlide(currentIndex);
     }, 4000);
+  })();
+
+  (function() {
+    const authContainer = document.querySelector('.auth-container');
+    const loginLink = document.querySelector('.auth-meta a[href$="{% url 'core:login' %}"]');
+
+    if (authContainer && loginLink) {
+      loginLink.addEventListener('click', function(event) {
+        event.preventDefault();
+        authContainer.classList.add('slide-out-right');
+        setTimeout(() => {
+          window.location.href = this.href;
+        }, 400);
+      });
+    }
   })();
 </script>
 {% endblock %}
