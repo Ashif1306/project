@@ -87,7 +87,7 @@
   }
 
   .auth-field {
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
 
   .auth-label {
@@ -95,7 +95,7 @@
     font-size: 14px;
     font-weight: 600;
     color: var(--text-dark);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   .auth-form input[type="text"],
@@ -115,6 +115,20 @@
     border-color: var(--brand-start);
     box-shadow: 0 0 0 6px rgba(56, 182, 255, 0.15);
     background: #ffffff;
+  }
+
+  .auth-password-wrapper {
+    position: relative;
+  }
+
+  .auth-password-toggle {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 18px;
   }
 
   .verification-help {
@@ -318,7 +332,6 @@
     <div class="register-left">
       <div class="form-wrapper">
         <h1 class="form-title">Buat Akun</h1>
-        <p class="form-subtitle">Mulai jelajahi berbagai pilihan sehat dan personalisasi pengalamanmu bersama Kaloriz.</p>
 
         <form method="post" class="auth-form">
           {% csrf_token %}
@@ -347,7 +360,12 @@
 
           <div class="auth-field">
             <label for="{{ form.password1.id_for_label }}" class="auth-label">{{ form.password1.label }}</label>
-            {{ form.password1 }}
+            <div class="auth-password-wrapper">
+              {{ form.password1 }}
+              <span class="auth-password-toggle" onclick="togglePassword('{{ form.password1.id_for_label }}', 'toggleIconPassword1')">
+                <i class="far fa-eye" id="toggleIconPassword1"></i>
+              </span>
+            </div>
             <small class="verification-help d-block mt-1">Gunakan kombinasi huruf, angka, dan simbol untuk keamanan maksimal.</small>
             {% if form.password1.errors %}
               <small class="text-danger d-block mt-2">{{ form.password1.errors.0 }}</small>
@@ -356,7 +374,12 @@
 
           <div class="auth-field">
             <label for="{{ form.password2.id_for_label }}" class="auth-label">{{ form.password2.label }}</label>
-            {{ form.password2 }}
+            <div class="auth-password-wrapper">
+              {{ form.password2 }}
+              <span class="auth-password-toggle" onclick="togglePassword('{{ form.password2.id_for_label }}', 'toggleIconPassword2')">
+                <i class="far fa-eye" id="toggleIconPassword2"></i>
+              </span>
+            </div>
             {% if form.password2.errors %}
               <small class="text-danger d-block mt-2">{{ form.password2.errors.0 }}</small>
             {% endif %}
@@ -395,6 +418,21 @@
 </div>
 
 <script>
+  function togglePassword(inputId, iconId) {
+    const passwordInput = document.getElementById(inputId);
+    const toggleIcon = document.getElementById(iconId);
+
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      toggleIcon.classList.remove('fa-eye');
+      toggleIcon.classList.add('fa-eye-slash');
+    } else {
+      passwordInput.type = 'password';
+      toggleIcon.classList.remove('fa-eye-slash');
+      toggleIcon.classList.add('fa-eye');
+    }
+  }
+
   (function() {
     const slides = document.querySelectorAll('.visual-slide');
     const dots = document.querySelectorAll('.slide-dot');
