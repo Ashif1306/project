@@ -8,6 +8,7 @@
   const form = document.getElementById('kaloriz-chat-form');
   const input = document.getElementById('kaloriz-chat-input');
   const quickReplyContainer = document.querySelector('.chat-quick-replies');
+  const orderQuickReplyClass = 'order-quick-reply';
 
   if (!bubble || !widget || !messagesEl || !form || !input) {
     return;
@@ -54,6 +55,43 @@
     }
   }
 
+  function clearOrderButtons() {
+    if (!quickReplyContainer) return;
+    quickReplyContainer
+      .querySelectorAll(`.${orderQuickReplyClass}`)
+      .forEach((btn) => btn.remove());
+  }
+
+  // Render daftar pesanan dari response.orders sebagai quick reply tambahan
+  function renderOrderButtons(orders) {
+    if (!quickReplyContainer || !Array.isArray(orders)) return;
+    clearOrderButtons();
+
+    orders.forEach((order) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `quick-reply ${orderQuickReplyClass}`;
+      btn.dataset.orderCode = order.code;
+      btn.textContent = `${order.code} - ${order.date} - ${order.status}`;
+      quickReplyContainer.appendChild(btn);
+    });
+  }
+
+  function handleBotResponse(data) {
+    if (data && data.reply) {
+      addMessage('bot', data.reply);
+    } else {
+      addMessage('bot', 'Maaf, terjadi kesalahan mengambil balasan.');
+    }
+
+    if (data && Array.isArray(data.orders)) {
+      // Tangani daftar pesanan yang dikirim backend untuk ditampilkan sebagai tombol
+      renderOrderButtons(data.orders);
+    } else {
+      clearOrderButtons();
+    }
+  }
+
   function scrollToBottom() {
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
@@ -89,11 +127,33 @@
 
       const data = await response.json();
       hideTyping();
-      if (data && data.reply) {
-        addMessage('bot', data.reply);
-      } else {
-        addMessage('bot', 'Maaf, terjadi kesalahan mengambil balasan.');
-      }
+      handleBotResponse(data);
+    } catch (error) {
+      hideTyping();
+      addMessage('bot', 'Jaringan bermasalah, silakan coba lagi.');
+    }
+  }
+
+  // Mengirim request action "track_order" saat user klik tombol pesanan
+  async function sendTrackOrder(orderCode, labelText) {
+    if (!orderCode) return;
+
+    const displayText = labelText || orderCode;
+    addMessage('user', displayText);
+    showTyping();
+
+    try {
+      const response = await fetch('/chatbot/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'track_order', order_code: orderCode }),
+      });
+
+      const data = await response.json();
+      hideTyping();
+      handleBotResponse(data);
     } catch (error) {
       hideTyping();
       addMessage('bot', 'Jaringan bermasalah, silakan coba lagi.');
@@ -136,6 +196,11 @@
     quickReplyContainer.addEventListener('click', function (event) {
       const target = event.target;
       if (target && target.classList.contains('quick-reply')) {
+        if (target.classList.contains(orderQuickReplyClass) && target.dataset.orderCode) {
+          const label = target.textContent.trim();
+          sendTrackOrder(target.dataset.orderCode, label);
+          return;
+        }
         const messageText = target.dataset.message || target.textContent;
         input.value = '';
         sendMessage(messageText.trim());
