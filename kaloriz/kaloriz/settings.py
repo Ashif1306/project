@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "catalog",
     "shipping",
     "payment",
+    "ai_chatbot",
     "chatbot",
 ]
 
@@ -169,6 +170,10 @@ SITE_LOGO = os.getenv("SITE_LOGO", "/static/images/logo.png")
 SITE_DOMAIN = os.getenv("SITE_DOMAIN", "www.kaloriz.store")
 SITE_SCHEME = os.getenv("SITE_SCHEME", "https")
 SITE_ID = int(os.getenv("SITE_ID", 1))
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+GEMINI_MODEL_ID = os.getenv("GEMINI_MODEL_ID", "google/gemini-2.0-flash-exp:free")
 
 # =========================
 # EMAIL (SMTP) CONFIG
