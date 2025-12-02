@@ -1,30 +1,38 @@
-"""OpenRouter chat client with automatic model fallbacks."""
+"""OpenRouter client with fallback models for Kaloriz chatbot."""
 
-import logging
 from typing import Any
 
 import requests
 from django.conf import settings
 
+SYSTEM_PROMPT = """
+Kamu adalah Asisten Kaloriz, chatbot resmi e-commerce makanan sehat Kaloriz.
 
-logger = logging.getLogger(__name__)
+ATURAN UTAMA (WAJIB DIPATUHI):
+1. Kamu HANYA boleh menjawab pertanyaan yang berhubungan dengan:
+   - pemesanan
+   - pembayaran & metode bayar
+   - pengiriman & ongkir
+   - produk & menu
+   - promo & diskon
+   - jam operasional
+   - bantuan pelanggan Kaloriz
 
+2. Jika user bertanya di luar topik di atas:
+   - JANGAN menjawab isi pertanyaan.
+   - JANGAN mengarang-jawab.
+   - Kembalikan jawaban templated:
+     “Maaf, aku hanya bisa membantu pertanyaan seputar Kaloriz ya 😊 Misalnya pemesanan, pembayaran, produk, ongkir, promo, atau bantuan pelanggan.”
 
-SYSTEM_PROMPT = (
-    "Kamu adalah Asisten Kaloriz, chatbot resmi e-commerce Kaloriz. "
-    "Gunakan Bahasa Indonesia yang ramah, sopan, ringkas, dan fokus pada topik Kaloriz saja: "
-    "pemesanan, pembayaran, ongkir, produk, promo, jam operasional dan bantuan pelanggan. "
-    "Jangan menjawab hal yang di luar konteks."
-)
+3. Gunakan Bahasa Indonesia yang sopan, ramah, dan ringkas.
+"""
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-
 PRIMARY_MODEL = "google/gemini-2.0-flash-exp:free"
 FALLBACK_MODELS = [
     "gpt-4o-mini:free",
     "gpt-oss-20b:free",
 ]
-
 FINAL_FALLBACK_MESSAGE = "Maaf, server AI sedang penuh. Coba lagi sebentar ya 😊"
 
 
@@ -36,37 +44,33 @@ def _build_payload(model: str, message: str) -> dict[str, Any]:
             {"role": "user", "content": message},
         ],
         "max_tokens": 400,
-        "temperature": 0.5,
+        "temperature": 0.4,
     }
 
 
-def _is_rate_limited_error(data: dict[str, Any]) -> bool:
+def _has_provider_error(data: dict[str, Any]) -> bool:
     error_block = data.get("error") or {}
+    if not error_block:
+        return False
     provider = (error_block.get("metadata") or {}).get("provider", "")
     message = str(error_block.get("message", ""))
-    details = str(error_block) if error_block else ""
-
-    rate_limit_hit = "rate-limited" in message.lower() or "temporarily rate-limited" in message.lower()
-    google_error = "google" in provider.lower() or "gemini" in provider.lower() or "google" in message.lower()
-
-    return rate_limit_hit or google_error or "rate limit" in details.lower()
+    details = str(error_block)
+    error_text = " ".join([provider, message, details]).lower()
+    return "provider" in error_text or "error" in error_text or "rate" in error_text
 
 
 def _extract_content(data: dict[str, Any]) -> str | None:
     try:
         return data.get("choices", [{}])[0].get("message", {}).get("content")
-    except Exception:  # pragma: no cover - defensive guard
+    except Exception:
         return None
 
 
 def ask_ai(message: str) -> str:
-    """Call OpenRouter with fallback models and return the AI response text."""
-
     api_key = getattr(settings, "OPENROUTER_API_KEY", "")
     referer = getattr(settings, "OPENROUTER_REFERRER", "http://localhost")
 
     if not api_key:
-        logger.error("OPENROUTER_API_KEY is missing")
         return FINAL_FALLBACK_MESSAGE
 
     headers = {
@@ -80,34 +84,32 @@ def ask_ai(message: str) -> str:
         payload = _build_payload(model, message)
         try:
             response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=20)
-        except requests.RequestException as exc:  # pragma: no cover - network guard
-            logger.error("OpenRouter request error for %s: %s", model, exc)
-            print(f"OpenRouter request error for {model}: {exc}")
+        except requests.RequestException:
+            print(f"Model {model} mengalami kendala koneksi → fallback")
             continue
 
-        # Fallback on HTTP status errors
-        if response.status_code == 429 or response.status_code >= 500:
-            logger.warning("Model %s hit status %s, falling back", model, response.status_code)
-            print(f"Model {model} hit status {response.status_code}, falling back")
+        if response.status_code == 429:
+            print(f"Model {model} hit 429 → fallback")
+            continue
+
+        if response.status_code >= 500:
+            print(f"Model {model} error {response.status_code} → fallback")
             continue
 
         try:
-            data = response.json()
+            data: dict[str, Any] = response.json()
         except ValueError:
-            logger.error("Invalid JSON response from model %s", model)
-            print(f"Invalid JSON response from model {model}")
+            print(f"Model {model} memberi respons tidak valid → fallback")
             continue
 
-        if _is_rate_limited_error(data):
-            logger.warning("Model %s returned rate-limit/provider error, falling back", model)
-            print(f"Model {model} returned rate-limit/provider error, falling back")
+        if _has_provider_error(data):
+            print(f"Model {model} mengalami error provider → fallback")
             continue
 
         content = _extract_content(data)
         if content:
             return content
 
-        logger.error("Empty content from model %s, falling back", model)
-        print(f"Empty content from model {model}, falling back")
+        print(f"Model {model} tanpa konten → fallback")
 
     return FINAL_FALLBACK_MESSAGE
