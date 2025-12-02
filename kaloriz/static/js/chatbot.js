@@ -7,10 +7,17 @@
   const messagesEl = document.getElementById('kaloriz-chat-messages');
   const form = document.getElementById('kaloriz-chat-form');
   const input = document.getElementById('kaloriz-chat-input');
-  const quickReplyContainer = document.querySelector('.chat-quick-replies');
+  const quickReplyContainer = document.getElementById('quick-replies');
   const orderQuickReplyClass = 'order-quick-reply';
-  const recommendedQuickActionClass = 'recommended-quick-action';
-  const recommendedDefaults = ['Lacak pesanan', 'Hubungi admin', 'Cek metode pembayaran'];
+  const defaultQuickReplies = [
+    'Lacak pesanan',
+    'Hubungi admin',
+    'Cek metode pembayaran',
+    'Cara pemesanan',
+    'Ongkir',
+    'Produk',
+    'Promo',
+  ];
 
   if (!bubble || !widget || !messagesEl || !form || !input) {
     return;
@@ -18,6 +25,7 @@
 
   let initialized = false;
   let typingEl = null;
+  let lastQuickReplySignature = null;
 
   function createBotAvatar() {
     const avatar = document.createElement('div');
@@ -31,6 +39,7 @@
     widget.classList.toggle('open', shouldShow);
     if (shouldShow && !initialized) {
       initialized = true;
+      maybeRenderQuickReplies();
       loadGreeting();
       input.focus();
     }
@@ -91,50 +100,43 @@
     }
   }
 
-  function clearOrderButtons() {
-    if (!quickReplyContainer) return;
-    quickReplyContainer
-      .querySelectorAll(`.${orderQuickReplyClass}`)
-      .forEach((btn) => btn.remove());
-  }
-
-  function renderRecommendedQuickActions(labels) {
+  function renderQuickReplies(labels, signature) {
     if (!quickReplyContainer) return;
 
-    const actions = Array.isArray(labels) && labels.length ? labels : recommendedDefaults;
-    quickReplyContainer
-      .querySelectorAll(`.${recommendedQuickActionClass}`)
-      .forEach((btn) => btn.remove());
-
-    const existingButtons = Array.from(quickReplyContainer.querySelectorAll('.quick-reply'));
-    const firstStaticButton = existingButtons.find((btn) => !btn.classList.contains(orderQuickReplyClass));
+    const actions = Array.isArray(labels) && labels.length ? labels : defaultQuickReplies;
+    quickReplyContainer.innerHTML = '';
+    lastQuickReplySignature = signature || actions.join('|');
 
     actions.forEach((action) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `quick-reply ${recommendedQuickActionClass}`;
-      btn.dataset.message = action;
+      btn.className = 'quick-reply-btn';
       btn.textContent = action;
-
-      if (firstStaticButton) {
-        quickReplyContainer.insertBefore(btn, firstStaticButton);
-      } else {
-        quickReplyContainer.appendChild(btn);
-      }
+      btn.onclick = () => sendQuickReply(action);
+      quickReplyContainer.appendChild(btn);
     });
+  }
+
+  function maybeRenderQuickReplies(labels) {
+    const actions = Array.isArray(labels) && labels.length ? labels : defaultQuickReplies;
+    const signature = actions.join('|');
+    if (signature === lastQuickReplySignature) {
+      return;
+    }
+    renderQuickReplies(actions, signature);
   }
 
   // Render daftar pesanan dari response.orders sebagai quick reply tambahan
   function renderOrderButtons(orders) {
     if (!quickReplyContainer || !Array.isArray(orders)) return;
-    clearOrderButtons();
 
     orders.forEach((order) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `quick-reply ${orderQuickReplyClass}`;
+      btn.className = `quick-reply-btn ${orderQuickReplyClass}`;
       btn.dataset.orderCode = order.code;
       btn.textContent = `${order.code} - ${order.date} - ${order.status}`;
+      btn.onclick = () => sendTrackOrder(order.code, btn.textContent.trim());
       quickReplyContainer.appendChild(btn);
     });
   }
@@ -146,13 +148,13 @@
       addMessage('bot', 'Maaf, terjadi kesalahan mengambil balasan.');
     }
 
-    renderRecommendedQuickActions(data && data.quick_actions);
+    if (data && Object.prototype.hasOwnProperty.call(data, 'quick_actions')) {
+      maybeRenderQuickReplies(data.quick_actions);
+    }
 
     if (data && Array.isArray(data.orders)) {
       // Tangani daftar pesanan yang dikirim backend untuk ditampilkan sebagai tombol
       renderOrderButtons(data.orders);
-    } else {
-      clearOrderButtons();
     }
   }
 
@@ -173,11 +175,20 @@
       if (data && data.reply) {
         addMessage('bot', data.reply);
       }
-      renderRecommendedQuickActions(data && data.quick_actions);
+      if (data && Object.prototype.hasOwnProperty.call(data, 'quick_actions')) {
+        maybeRenderQuickReplies(data.quick_actions);
+      }
     } catch (error) {
       hideTyping();
       addMessage('bot', 'Maaf, terjadi masalah saat memulai percakapan.');
     }
+  }
+
+  function sendQuickReply(text) {
+    const messageText = (text || '').trim();
+    if (!messageText) return;
+    input.value = '';
+    sendMessage(messageText);
   }
 
   async function sendMessage(messageText) {
@@ -261,19 +272,4 @@
     });
   }
 
-  if (quickReplyContainer) {
-    quickReplyContainer.addEventListener('click', function (event) {
-      const target = event.target;
-      if (target && target.classList.contains('quick-reply')) {
-        if (target.classList.contains(orderQuickReplyClass) && target.dataset.orderCode) {
-          const label = target.textContent.trim();
-          sendTrackOrder(target.dataset.orderCode, label);
-          return;
-        }
-        const messageText = target.dataset.message || target.textContent;
-        input.value = '';
-        sendMessage(messageText.trim());
-      }
-    });
-  }
 })();
