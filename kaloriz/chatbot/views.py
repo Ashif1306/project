@@ -2,6 +2,7 @@ import json
 import re
 from collections import Counter
 from datetime import timedelta
+from difflib import SequenceMatcher
 from typing import Optional
 
 from django.contrib.auth.decorators import login_required
@@ -19,60 +20,89 @@ from .models import ChatMessage, ChatSession
 # ===============================
 
 
-INTENT_KEYWORDS = {
-    "batal_pesanan": ["batal pesanan", "batalkan pesanan", "cancel order", "batalkan", "batalin"],
-    "lacak_pesanan": [
-        "lacak",
-        "lacak pesanan",
-        "cek pesanan",
-        "status pesanan",
-        "order saya",
-    ],
-    "promo": ["promo", "diskon", "voucher", "kode promo", "spesial minggu ini"],
-    "cara_pembayaran": [
-        "bayar",
-        "pembayaran",
-        "transfer",
-        "qris",
-        "metode bayar",
-        "cara bayar",
-    ],
-    "pengiriman": [
-        "ongkir",
-        "pengiriman",
-        "kirim",
-        "kurir",
-        "biaya kirim",
-        "kirim ke",
-    ],
-    "rekomendasi_produk": ["rekomendasi", "makanan sehat", "diet", "tinggi protein"],
-    "cara_pemesanan": [
-        "pesan",
-        "order",
-        "beli",
-        "checkout",
-        "cara pesan",
-        "cara pemesanan",
-    ],
-    "info_produk": [
-        "produk",
-        "menu",
-        "kategori",
-        "makanan sehat",
-        "minuman",
-        "camilan",
-    ],
-    "kontak": ["kontak", "wa", "whatsapp", "admin", "cs", "jam buka", "customer service"],
-    "greeting": [
-        "halo",
-        "hai",
-        "hi",
-        "assalamualaikum",
-        "selamat pagi",
-        "selamat siang",
-        "selamat malam",
-    ],
-}
+INTENTS = [
+    {
+        "name": "ORDER_INFO",
+        "keywords": [
+            "cara pesan",
+            "cara pemesanan",
+            "pesan",
+            "order",
+            "checkout",
+            "beli",
+        ],
+        "examples": [
+            "Gimana cara pesen di Kaloriz?",
+            "Aku mau order, caranya gimana?",
+            "Bisa minta step checkoutnya?",
+        ],
+    },
+    {
+        "name": "PAYMENT_INFO",
+        "keywords": [
+            "bayar",
+            "pembayaran",
+            "transfer",
+            "qris",
+            "metode bayar",
+            "cara bayar",
+        ],
+        "examples": [
+            "Pembayarannya bisa lewat apa aja?",
+            "Cara bayarnya gimana nih?",
+            "Ada QRIS atau e-wallet?",
+        ],
+    },
+    {
+        "name": "SHIPPING_INFO",
+        "keywords": [
+            "ongkir",
+            "pengiriman",
+            "kirim",
+            "kurir",
+            "biaya kirim",
+            "kirim ke",
+            "antar",
+        ],
+        "examples": [
+            "Ongkirnya berapa ya?",
+            "Pengiriman pake kurir apa?",
+            "Bisa kirim ke luar kota?",
+        ],
+    },
+    {
+        "name": "OPERATIONAL_HOURS",
+        "keywords": [
+            "jam buka",
+            "jam operasional",
+            "jam kerja",
+            "buka jam berapa",
+            "jam toko",
+        ],
+        "examples": [
+            "Kaloriz buka jam berapa ya?",
+            "Jam operasional toko kapan aja?",
+            "Sampai jam berapa bisa order?",
+        ],
+    },
+    {
+        "name": "CONTACT_ADMIN",
+        "keywords": [
+            "kontak",
+            "wa",
+            "whatsapp",
+            "admin",
+            "cs",
+            "customer service",
+            "hubungi",
+        ],
+        "examples": [
+            "Mau hubungi admin dong",
+            "Ada nomor WA CS?",
+            "Gimana cara chat ke admin?",
+        ],
+    },
+]
 
 REPLIES = {
     "greeting": (
@@ -80,21 +110,29 @@ REPLIES = {
         "pembayaran, ongkir, info produk, promo, atau kontak admin. Coba klik tombol "
         "cepat di bawah atau ketik pertanyaanmu."
     ),
-    "cara_pemesanan": (
-        "Oke, aku bantu cek ya 😄 Cara pesan di Kaloriz: pilih produk → tambah ke keranjang "
-        "→ klik checkout → isi alamat & penerima → pilih metode bayar → konfirmasi. Pesananmu "
-        "langsung kami proses!"
+    "ORDER_INFO": (
+        "Siap, aku bantu jelasin ya 😄 Cara pesan di Kaloriz: pilih produk → tambah ke keranjang "
+        "→ klik checkout → isi alamat & penerima → pilih metode bayar → konfirmasi. Habis itu "
+        "tinggal duduk manis, tim kami langsung proses ✨"
     ),
-    "cara_pembayaran": (
-        "Oke, aku bantu cek ya 😄 Berikut cara pembayaran di Kaloriz:\n"
-        "1) Transfer bank: pilih bank [nama bank] → transfer sesuai total → upload bukti.\n"
-        "2) E-wallet: pilih e-wallet [nama e-wallet] → ikuti instruksi aplikasi → pastikan saldo cukup.\n"
-        "3) QRIS: pilih QRIS → scan kode di layar → konfirmasi setelah berhasil."
+    "PAYMENT_INFO": (
+        "Oke, soal pembayaran gini ya 😉:\n"
+        "• Transfer bank: pilih bank yang tersedia lalu transfer sesuai total dan upload bukti.\n"
+        "• E-wallet/QRIS: pilih QRIS atau e-wallet, scan/konfirmasi di aplikasinya, pastikan saldo cukup.\n"
+        "• COD (jika aktif): pilih saat checkout, siapkan uang pas biar kurir senang."
     ),
-    "pengiriman": (
-        "Aku cekkan info kirimannya ya 😄 Pengiriman Kaloriz bisa pilih kurir reguler/instan. "
+    "SHIPPING_INFO": (
+        "Aku cekkan info kirimannya ya 🚚✨ Pengiriman Kaloriz bisa pilih kurir reguler/instan. "
         "Estimasi tiba 1-3 hari kerja di area utama; luar kota bisa sedikit lebih lama. "
-        "Ongkir bisa dicek saat checkout, ada opsi gratis ongkir di nominal tertentu."
+        "Ongkir keliatan di halaman checkout dan kadang ada promo gratis ongkir juga."
+    ),
+    "OPERATIONAL_HOURS": (
+        "Kaloriz buka setiap hari jam 08.00–21.00 WIB ⏰. Di luar jam itu tetap bisa order, "
+        "nanti diproses pas jam operasional ya!"
+    ),
+    "CONTACT_ADMIN": (
+        "Butuh ngobrol langsung sama manusia? Bisa banget 😄 Chat WA admin di 08xx-xxxx-xxxx "
+        "atau DM Instagram @kaloriz. Mereka standby jam 08.00–21.00 WIB."
     ),
     "info_produk": (
         "Siap, aku bantu rekomendasikan 😄 Kaloriz punya makanan sehat, minuman segar, dan "
@@ -114,13 +152,76 @@ REPLIES = {
         "Ketik ‘lacak pesanan’ untuk pilih pesanan yang ingin dibatalkan."
     ),
     "fallback": (
-        "Hmm, aku belum nangkep pertanyaannya 😅 Coba pakai kata kunci pemesanan, pembayaran, "
-        "ongkir, produk, promo, atau kontak admin. Aku siap bantu!"
+        "Aku belum nangkep pertanyaannya nih 😅 Coba tanya soal cara pesan, bayar, ongkir, jam operasional, "
+        "atau minta dihubungkan ke admin. Aku siap bantu!"
     ),
 }
 
 
 DEFAULT_QUICK_ACTIONS = ["Lacak pesanan", "Hubungi admin", "Cek metode pembayaran"]
+
+
+LEGACY_KEYWORD_INTENTS = {
+    "batal_pesanan": ["batal pesanan", "batalkan pesanan", "cancel order", "batalkan", "batalin"],
+    "lacak_pesanan": [
+        "lacak",
+        "lacak pesanan",
+        "cek pesanan",
+        "status pesanan",
+        "order saya",
+    ],
+    "promo": ["promo", "diskon", "voucher", "kode promo", "spesial minggu ini"],
+    "rekomendasi_produk": ["rekomendasi", "makanan sehat", "diet", "tinggi protein"],
+    "info_produk": [
+        "produk",
+        "menu",
+        "kategori",
+        "makanan sehat",
+        "minuman",
+        "camilan",
+    ],
+    "greeting": [
+        "halo",
+        "hai",
+        "hi",
+        "assalamualaikum",
+        "selamat pagi",
+        "selamat siang",
+        "selamat malam",
+    ],
+}
+
+
+def classify_intent(user_text: str) -> Optional[str]:
+    """Score user text against configured intents using keywords and example similarity."""
+
+    if not user_text:
+        return None
+
+    lowered = user_text.lower()
+    best_intent = None
+    best_score = 0.0
+
+    for intent in INTENTS:
+        keywords = intent.get("keywords", [])
+        keyword_hits = sum(1 for keyword in keywords if keyword in lowered)
+        keyword_score = keyword_hits / max(len(keywords), 1)
+
+        example_scores = [
+            SequenceMatcher(None, lowered, example.lower()).ratio()
+            for example in intent.get("examples", [])
+        ]
+        similarity_score = max(example_scores) if example_scores else 0.0
+
+        score = (keyword_score * 0.6) + (similarity_score * 0.4)
+        if score > best_score:
+            best_score = score
+            best_intent = intent["name"]
+
+    if best_score < 0.5:
+        return None
+
+    return best_intent
 
 
 def detect_intent(message: str) -> str:
@@ -135,10 +236,14 @@ def detect_intent(message: str) -> str:
     if re.search(r"(?:#?klrz)(\d+)", lowered, flags=re.IGNORECASE):
         return "cek_pesanan"
 
-    for intent, keywords in INTENT_KEYWORDS.items():
-        for keyword in keywords:
-            if keyword in lowered:
-                return intent
+    for intent, keywords in LEGACY_KEYWORD_INTENTS.items():
+        if any(keyword in lowered for keyword in keywords):
+            return intent
+
+    classified_intent = classify_intent(message)
+    if classified_intent:
+        return classified_intent
+
     return "fallback"
 
 
@@ -313,6 +418,8 @@ def chatbot_reply(request):
         },
     )
 
+    chat_state = request.session.get("chat_state")
+
     if request.method == "POST":
         try:
             data = json.loads(request.body.decode("utf-8"))
@@ -322,6 +429,26 @@ def chatbot_reply(request):
         action = data.get("action")
         order_code = (data.get("order_code") or "").strip().upper()
         user_message = (data.get("message") or "").strip()
+
+        if chat_state == "AWAITING_ORDER_CHOICE" and user_message:
+            ChatMessage.objects.create(
+                session=session,
+                sender=ChatMessage.USER,
+                message=user_message,
+                intent="state_selection",
+            )
+
+            reply_text = _build_order_reply(user_message)
+            ChatMessage.objects.create(
+                session=session,
+                sender=ChatMessage.BOT,
+                message=reply_text,
+                intent="order_detail_from_state",
+            )
+            request.session.pop("chat_state", None)
+            return JsonResponse(
+                _with_quick_actions({"reply": reply_text, "intent": "order_detail_from_state"})
+            )
 
         # Permintaan detail pesanan dari quick reply/button
         if action == "track_order" and order_code:
@@ -412,6 +539,7 @@ def chatbot_reply(request):
             )
             return JsonResponse(_with_quick_actions({"reply": reply_text, "intent": intent}))
 
+        request.session["chat_state"] = "AWAITING_ORDER_CHOICE"
         order_data = [_order_to_summary(order) for order in orders]
         reply_text = "Oke, aku bantu cek ya 😄 Berikut 5 pesanan terakhirmu. Pilih salah satu untuk lihat detailnya:"
         ChatMessage.objects.create(
