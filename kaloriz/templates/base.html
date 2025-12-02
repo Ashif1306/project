@@ -609,7 +609,10 @@
 
     <form class="chat-footer" id="kaloriz-chat-form">
       <input type="text" id="kaloriz-chat-input" placeholder="Tulis pesan..." aria-label="Tulis pesan ke Asisten Kaloriz" autocomplete="off" />
-      <button type="submit" class="chat-send" aria-label="Kirim pesan">Kirim</button>
+      <button type="submit" class="chat-send" aria-label="Kirim pesan">
+        <span class="sr-only">Kirim</span>
+        <i class="fas fa-paper-plane" aria-hidden="true"></i>
+      </button>
     </form>
   </div>
 

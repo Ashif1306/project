@@ -17,6 +17,13 @@
   let initialized = false;
   let typingEl = null;
 
+  function createBotAvatar() {
+    const avatar = document.createElement('div');
+    avatar.className = 'chat-avatar-message';
+    avatar.innerHTML = '<i class="fas fa-robot" aria-hidden="true"></i>';
+    return avatar;
+  }
+
   function toggleWidget(show) {
     const shouldShow = typeof show === 'boolean' ? show : !widget.classList.contains('open');
     widget.classList.toggle('open', shouldShow);
@@ -28,23 +35,50 @@
   }
 
   function addMessage(sender, text) {
-    const wrapper = document.createElement('div');
-    wrapper.className = `chat-message ${sender}`;
-    wrapper.textContent = text;
-    messagesEl.appendChild(wrapper);
+    const row = document.createElement('div');
+    row.className = `chat-row ${sender}`;
+
+    if (sender === 'bot') {
+      row.appendChild(createBotAvatar());
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = `chat-message ${sender} fade-in`;
+    bubble.textContent = text;
+    row.appendChild(bubble);
+
+    messagesEl.appendChild(row);
     scrollToBottom();
   }
 
   function showTyping() {
     if (typingEl) return;
-    const indicator = document.createElement('div');
-    indicator.className = 'chat-message bot';
+
+    const row = document.createElement('div');
+    row.className = 'chat-row bot typing-row';
+    row.appendChild(createBotAvatar());
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-message bot';
+
+    const typingWrap = document.createElement('div');
+    typingWrap.className = 'typing-indicator';
+
+    const typingText = document.createElement('div');
+    typingText.className = 'typing-text';
+    typingText.textContent = 'Asisten Kaloriz sedang mengetik…';
+
     const dots = document.createElement('div');
-    dots.className = 'typing-indicator';
+    dots.className = 'typing-dots';
     dots.innerHTML = '<span></span><span></span><span></span>';
-    indicator.appendChild(dots);
-    messagesEl.appendChild(indicator);
-    typingEl = indicator;
+
+    typingWrap.appendChild(typingText);
+    typingWrap.appendChild(dots);
+    bubble.appendChild(typingWrap);
+    row.appendChild(bubble);
+
+    messagesEl.appendChild(row);
+    typingEl = row;
     scrollToBottom();
   }
 
@@ -93,7 +127,11 @@
   }
 
   function scrollToBottom() {
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    try {
+      messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+    } catch (err) {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
   }
 
   async function loadGreeting() {
