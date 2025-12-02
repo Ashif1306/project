@@ -1,10 +1,8 @@
 import json
-import re
-from collections import Counter
-from datetime import timedelta
-from difflib import SequenceMatcher
-from typing import Optional
+import os
+from typing import Dict, List, Optional
 
+import requests
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render
@@ -15,403 +13,340 @@ from core.models import Order
 
 from .models import ChatMessage, ChatSession
 
-# ===============================
-# Intent Detection
-# ===============================
+SYSTEM_PROMPT = (
+    "Kamu adalah Asisten Kaloriz, chatbot resmi untuk layanan pelanggan Kaloriz "
+    "(e-commerce makanan sehat). Gunakan Bahasa Indonesia yang ramah, sopan, "
+    "singkat, tetapi jelas. Jawab hanya hal-hal yang berkaitan dengan Kaloriz: "
+    "- cara pemesanan - pembayaran - metode bayar - pengiriman dan ongkir - jam "
+    "operasional - produk dan menu - promo & diskon - bantuan pelanggan. Jangan "
+    "menjawab hal di luar konteks Kaloriz. Jika user bertanya hal di luar Kaloriz, "
+    "jawablah dengan sopan dan kembali ke konteks Kaloriz."
+)
 
+AI_MODEL = "google/gemini-2.0-flash-exp:free"
+DEFAULT_AI_FALLBACK = "Maaf, aku belum paham maksudnya. Bisa jelaskan lagi?"
+AI_TIMEOUT_MESSAGE = (
+    "Maaf, sistem AI sedang sibuk. Coba ulangi sebentar lagi ya, atau tanyakan hal lain."
+)
 
-INTENTS = [
-    {
-        "name": "ORDER_INFO",
-        "keywords": [
-            "cara pesan",
-            "cara pemesanan",
-            "pesan",
-            "order",
-            "checkout",
-            "beli",
-        ],
-        "examples": [
-            "Gimana cara pesen di Kaloriz?",
-            "Aku mau order, caranya gimana?",
-            "Bisa minta step checkoutnya?",
-        ],
-    },
-    {
-        "name": "PAYMENT_INFO",
-        "keywords": [
-            "bayar",
-            "pembayaran",
-            "transfer",
-            "qris",
-            "metode bayar",
-            "cara bayar",
-        ],
-        "examples": [
-            "Pembayarannya bisa lewat apa aja?",
-            "Cara bayarnya gimana nih?",
-            "Ada QRIS atau e-wallet?",
-        ],
-    },
-    {
-        "name": "SHIPPING_INFO",
-        "keywords": [
-            "ongkir",
-            "pengiriman",
-            "kirim",
-            "kurir",
-            "biaya kirim",
-            "kirim ke",
-            "antar",
-        ],
-        "examples": [
-            "Ongkirnya berapa ya?",
-            "Pengiriman pake kurir apa?",
-            "Bisa kirim ke luar kota?",
-        ],
-    },
-    {
-        "name": "OPERATIONAL_HOURS",
-        "keywords": [
-            "jam buka",
-            "jam operasional",
-            "jam kerja",
-            "buka jam berapa",
-            "jam toko",
-        ],
-        "examples": [
-            "Kaloriz buka jam berapa ya?",
-            "Jam operasional toko kapan aja?",
-            "Sampai jam berapa bisa order?",
-        ],
-    },
-    {
-        "name": "CONTACT_ADMIN",
-        "keywords": [
-            "kontak",
-            "wa",
-            "whatsapp",
-            "admin",
-            "cs",
-            "customer service",
-            "hubungi",
-        ],
-        "examples": [
-            "Mau hubungi admin dong",
-            "Ada nomor WA CS?",
-            "Gimana cara chat ke admin?",
-        ],
-    },
-]
+STATE_AWAITING_ORDER_CHOICE = "STATE_AWAITING_ORDER_CHOICE"
+STATE_AWAITING_CANCEL_CONFIRM = "STATE_AWAITING_CANCEL_CONFIRM"
 
-REPLIES = {
-    "greeting": (
-        "Hai, aku Asisten Kaloriz! Oke, aku bantu cek ya 😄 Aku bisa bantu soal pemesanan, "
-        "pembayaran, ongkir, info produk, promo, atau kontak admin. Coba klik tombol "
-        "cepat di bawah atau ketik pertanyaanmu."
+BASIC_RESPONSES = {
+    "ORDERING": (
+        "Untuk pesan di Kaloriz: pilih produk → tambah ke keranjang → checkout → isi alamat "
+        "→ pilih metode bayar → konfirmasi. Tim kami lanjut proses!"
     ),
-    "ORDER_INFO": (
-        "Siap, aku bantu jelasin ya 😄 Cara pesan di Kaloriz: pilih produk → tambah ke keranjang "
-        "→ klik checkout → isi alamat & penerima → pilih metode bayar → konfirmasi. Habis itu "
-        "tinggal duduk manis, tim kami langsung proses ✨"
+    "PAYMENT": (
+        "Metode bayar yang tersedia: transfer bank, e-wallet/QRIS, dan (jika aktif) COD. "
+        "Pilih saat checkout lalu ikuti petunjuk di layar."
     ),
-    "PAYMENT_INFO": (
-        "Oke, soal pembayaran gini ya 😉:\n"
-        "• Transfer bank: pilih bank yang tersedia lalu transfer sesuai total dan upload bukti.\n"
-        "• E-wallet/QRIS: pilih QRIS atau e-wallet, scan/konfirmasi di aplikasinya, pastikan saldo cukup.\n"
-        "• COD (jika aktif): pilih saat checkout, siapkan uang pas biar kurir senang."
+    "SHIPPING": (
+        "Ongkir terlihat di halaman checkout. Pengiriman via kurir reguler/instan, estimasi "
+        "tiba 1-3 hari kerja untuk area utama."
     ),
-    "SHIPPING_INFO": (
-        "Aku cekkan info kirimannya ya 🚚✨ Pengiriman Kaloriz bisa pilih kurir reguler/instan. "
-        "Estimasi tiba 1-3 hari kerja di area utama; luar kota bisa sedikit lebih lama. "
-        "Ongkir keliatan di halaman checkout dan kadang ada promo gratis ongkir juga."
-    ),
-    "OPERATIONAL_HOURS": (
-        "Kaloriz buka setiap hari jam 08.00–21.00 WIB ⏰. Di luar jam itu tetap bisa order, "
-        "nanti diproses pas jam operasional ya!"
-    ),
-    "CONTACT_ADMIN": (
-        "Butuh ngobrol langsung sama manusia? Bisa banget 😄 Chat WA admin di 08xx-xxxx-xxxx "
-        "atau DM Instagram @kaloriz. Mereka standby jam 08.00–21.00 WIB."
-    ),
-    "info_produk": (
-        "Siap, aku bantu rekomendasikan 😄 Kaloriz punya makanan sehat, minuman segar, dan "
-        "camilan rendah kalori. Buka menu Produk untuk lihat detail tiap kategori, atau tulis "
-        "keyword seperti 'tinggi protein' supaya aku carikan."
-    ),
-    "promo": (
-        "Oke, aku cek promo terbaru ya 😄 Saat ini ada promo spesial minggu ini: [ISI PROMO DI SINI]. "
-        "Untuk detail paling update, cek banner halaman utama atau menu Promo."
-    ),
-    "kontak": (
-        "Siap, aku sambungkan ke tim admin ya 😄 Kamu bisa hubungi WA di 08xx-xxxx-xxxx atau "
-        "Instagram @kaloriz (jam operasional 08.00-21.00 WIB)."
-    ),
-    "batal_pesanan": (
-        "Kamu bisa membatalkan pesanan yang sudah dibayar kalau statusnya belum ‘Dikemas’. "
-        "Ketik ‘lacak pesanan’ untuk pilih pesanan yang ingin dibatalkan."
-    ),
-    "fallback": (
-        "Aku belum nangkep pertanyaannya nih 😅 Coba tanya soal cara pesan, bayar, ongkir, jam operasional, "
-        "atau minta dihubungkan ke admin. Aku siap bantu!"
-    ),
+    "OPERATING_HOURS": "Kaloriz beroperasi tiap hari pukul 08.00–21.00 WIB."
 }
 
-
-DEFAULT_QUICK_ACTIONS = ["Lacak pesanan", "Hubungi admin", "Cek metode pembayaran"]
-
-
-LEGACY_KEYWORD_INTENTS = {
-    "batal_pesanan": ["batal pesanan", "batalkan pesanan", "cancel order", "batalkan", "batalin"],
-    "lacak_pesanan": [
-        "lacak",
-        "lacak pesanan",
-        "cek pesanan",
-        "status pesanan",
-        "order saya",
-    ],
-    "promo": ["promo", "diskon", "voucher", "kode promo", "spesial minggu ini"],
-    "rekomendasi_produk": ["rekomendasi", "makanan sehat", "diet", "tinggi protein"],
-    "info_produk": [
-        "produk",
-        "menu",
-        "kategori",
-        "makanan sehat",
-        "minuman",
-        "camilan",
-    ],
-    "greeting": [
-        "halo",
-        "hai",
-        "hi",
-        "assalamualaikum",
-        "selamat pagi",
-        "selamat siang",
-        "selamat malam",
-    ],
+INTENT_KEYWORDS = {
+    "TRACK_ORDER": ["lacak", "lacak pesanan", "cek pesanan", "status pesanan", "order saya"],
+    "CANCEL_ORDER": ["batal pesanan", "batalkan pesanan", "cancel order", "batalin"],
+    "ORDERING": ["cara pesan", "cara pemesanan", "pesan", "order", "checkout", "beli"],
+    "PAYMENT": ["bayar", "pembayaran", "transfer", "qris", "metode bayar", "cara bayar"],
+    "SHIPPING": ["ongkir", "pengiriman", "kirim", "kurir", "biaya kirim", "antar"],
+    "OPERATING_HOURS": ["jam buka", "jam operasional", "jam kerja", "buka jam berapa", "jam toko"],
 }
 
-
-def classify_intent(user_text: str) -> Optional[str]:
-    """Score user text against configured intents using keywords and example similarity."""
-
-    if not user_text:
-        return None
-
-    lowered = user_text.lower()
-    best_intent = None
-    best_score = 0.0
-
-    for intent in INTENTS:
-        keywords = intent.get("keywords", [])
-        keyword_hits = sum(1 for keyword in keywords if keyword in lowered)
-        keyword_score = keyword_hits / max(len(keywords), 1)
-
-        example_scores = [
-            SequenceMatcher(None, lowered, example.lower()).ratio()
-            for example in intent.get("examples", [])
-        ]
-        similarity_score = max(example_scores) if example_scores else 0.0
-
-        score = (keyword_score * 0.6) + (similarity_score * 0.4)
-        if score > best_score:
-            best_score = score
-            best_intent = intent["name"]
-
-    if best_score < 0.5:
-        return None
-
-    return best_intent
+PACKED_OR_COMPLETED_STATUSES = {"processing", "shipped", "delivered", "cancelled"}
 
 
-def detect_intent(message: str) -> str:
-    """Return detected intent based on simple keyword matching and regex."""
+def ask_ai(message: str) -> str:
+    """Send the message to OpenRouter Gemini 2.0 Flash model and return the reply."""
+
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        return DEFAULT_AI_FALLBACK
+
+    payload = {
+        "model": AI_MODEL,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": message},
+        ],
+        "temperature": 0.4,
+    }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            json=payload,
+            headers=headers,
+            timeout=12,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data["choices"][0]["message"]["content"].strip()
+    except requests.Timeout:
+        return AI_TIMEOUT_MESSAGE
+    except Exception:
+        return DEFAULT_AI_FALLBACK
+
+
+def classify_intent(message: str) -> str:
+    """Lightweight intent classification using keyword presence."""
 
     if not message:
-        return "greeting"
+        return "GREETING"
 
     lowered = message.lower()
-
-    # Deteksi kode pesanan seperti KLRZ123 atau #KLRZ123
-    if re.search(r"(?:#?klrz)(\d+)", lowered, flags=re.IGNORECASE):
-        return "cek_pesanan"
-
-    for intent, keywords in LEGACY_KEYWORD_INTENTS.items():
+    for intent, keywords in INTENT_KEYWORDS.items():
         if any(keyword in lowered for keyword in keywords):
             return intent
 
-    classified_intent = classify_intent(message)
-    if classified_intent:
-        return classified_intent
-
-    return "fallback"
-
-
-def _build_order_reply(message: str) -> str:
-    """Cari kode pesanan di pesan lalu kembalikan status atau info tidak ditemukan."""
-
-    match = re.search(r"(?:#?KLRZ)(\d+)", message, flags=re.IGNORECASE)
-    if not match:
-        return (
-            "Oke, aku bantu cek ya 😄 Tapi aku belum nemu kodenya. Pastikan formatnya benar ya "
-            "(contoh: KLRZ123)."
-        )
-
-    order_code = f"KLRZ{match.group(1)}".upper()
-    order = Order.objects.filter(order_number__iexact=order_code).first()
-
-    if not order:
-        return (
-            "Oke, aku bantu cek ya 😄 Tapi aku belum nemu kodenya. Pastikan formatnya benar ya "
-            "(contoh: KLRZ123)."
-        )
-
-    status_text = _format_order_status(getattr(order, "status", ""), order)
-    return f"Status pesanan {order.order_number}: {status_text}."
-
-
-def _build_recommendation_reply(message: str) -> str:
-    """Beri rekomendasi produk berdasarkan kata kunci sederhana."""
-
-    from catalog.models import Product
-
-    lowered = message.lower()
-    queryset = Product.objects.filter(available=True)
-
-    if "tinggi protein" in lowered:
-        queryset = queryset.filter(protein__isnull=False).order_by("-protein")
-    elif "diet" in lowered:
-        queryset = queryset.filter(calories__isnull=False).order_by("calories")
-    else:
-        queryset = queryset.order_by("-is_featured", "-created_at")
-
-    products = list(queryset[:3])
-
-    if not products:
-        return (
-            "Aku belum nemu rekomendasi yang pas untuk keyword itu. Coba buka menu Produk atau "
-            "kasih keyword lain ya 😊."
-        )
-
-    lines = ["Berikut beberapa rekomendasi produk untukmu:"]
-    for idx, product in enumerate(products, start=1):
-        price = product.discount_price or product.price
-        lines.append(
-            f"{idx}. {product.name} - Rp{price:,.0f} - {product.get_absolute_url()}"
-        )
-
-    return "\n".join(lines)
+    return "OTHER"
 
 
 def _format_order_status(status: str, order: Optional[Order] = None) -> str:
-    """Map status internal Order ke teks manusia. Sesuaikan dengan model Order di project."""
-
-    status_mapping = {
+    mapping = {
         "pending": "Menunggu pembayaran",
-        "paid": "Pembayaran berhasil, menunggu diproses",
-        "processing": "Sedang diproses",
+        "paid": "Pembayaran diterima",
+        "processing": "Sedang diproses/dikemas",
         "shipped": "Sedang dikirim",
         "delivered": "Pesanan selesai",
         "cancelled": "Pesanan dibatalkan",
     }
-    status_text = status_mapping.get(status)
-    if not status_text and order and hasattr(order, "get_status_display"):
-        status_text = order.get_status_display()
-    return status_text or status
+    if order and hasattr(order, "get_status_display"):
+        return mapping.get(status) or order.get_status_display()
+    return mapping.get(status, status)
 
 
-def _order_to_summary(order: Order) -> dict:
-    """Kembalikan data ringkas pesanan untuk daftar. Sesuaikan field kode/tanggal jika perlu."""
-
+def _order_to_summary(order: Order) -> Dict[str, str]:
     created_at = timezone.localtime(order.created_at)
     return {
-        # Sesuaikan `order_number` dengan field kode pesanan di model Order jika berbeda.
-        "code": getattr(order, "order_number", getattr(order, "code", "")).upper(),
+        "id": order.id,
+        "code": getattr(order, "order_number", "").upper(),
         "date": created_at.strftime("%d %b %Y"),
-        "status": _format_order_status(getattr(order, "status", ""), order),
+        "status": _format_order_status(order.status, order),
     }
 
 
 def _build_order_detail_reply(order: Order) -> str:
-    """Bangun teks detail pesanan untuk balasan chatbot."""
-
     created_at = timezone.localtime(order.created_at)
-    status_text = _format_order_status(getattr(order, "status", ""), order)
-
-    # Ambil total. Sesuaikan nama field total_amount/total sesuai model Order di project.
-    total_amount = getattr(order, "total_amount", None)
+    total_amount = getattr(order, "total", None)
     if total_amount is None:
-        total_amount = getattr(order, "total", 0)
+        total_amount = getattr(order, "total_amount", 0)
 
     items = getattr(order, "items", None)
-    item_list = []
+    item_list: List[str] = []
     if items:
         for item in items.all():
             name = getattr(item, "product_name", getattr(item.product, "name", "Item"))
             qty = getattr(item, "quantity", 0)
             item_list.append(f"{qty}x {name}")
-    item_summary = ", ".join(item_list) if item_list else "(Detail item tidak tersedia)"
+    item_summary = ", ".join(item_list) if item_list else "(detail item tidak tersedia)"
 
-    # Ambil alamat pengiriman. Sesuaikan jika field menggunakan TextField langsung.
     address_text = ""
     if getattr(order, "shipping_address", None):
         address_text = str(order.shipping_address)
     elif getattr(order, "address", None):
-        address_text = order.address
-
-    tracking_number = getattr(order, "tracking_number", "")
+        address_text = str(order.address)
 
     lines = [
         "Oke, aku bantu cek ya 😄 Berikut detailnya:",
-        f"Pesanan: {getattr(order, 'order_number', getattr(order, 'code', '')).upper()}",
+        f"Pesanan: {getattr(order, 'order_number', '').upper()}",
         f"Tanggal: {created_at.strftime('%d %b %Y')}",
-        f"Status: {status_text}",
+        f"Status: {_format_order_status(order.status, order)}",
         f"Item: {item_summary}",
         f"Total: Rp{total_amount:,.0f}",
     ]
 
-    if address_text:
-        lines.append(f"Alamat: {address_text}")
+    tracking_number = getattr(order, "tracking_number", "")
     if tracking_number:
         lines.append(f"No. Resi: {tracking_number}")
+    if address_text:
+        lines.append(f"Alamat: {address_text}")
 
     return "\n".join(lines)
 
 
-def _with_quick_actions(payload: dict) -> dict:
-    """Tambahkan quick action default agar front-end selalu menampilkan tombol rekomendasi."""
-
-    payload = dict(payload)
-    payload.setdefault("quick_actions", DEFAULT_QUICK_ACTIONS)
-    return payload
+def _recent_orders_for_user(user, limit: int = 5) -> List[Order]:
+    return list(Order.objects.filter(user=user).order_by("-created_at")[:limit])
 
 
-def get_bot_reply(intent: str, message: str) -> str:
-    """Bangun balasan berdasarkan intent, termasuk logika dinamis."""
-
-    if intent == "cek_pesanan":
-        return _build_order_reply(message)
-    if intent == "rekomendasi_produk":
-        return _build_recommendation_reply(message)
-
-    return REPLIES.get(intent, REPLIES["fallback"])
+def _json_reply(reply: str, **extra) -> JsonResponse:
+    payload = {"reply": reply}
+    payload.update(extra)
+    return JsonResponse(payload)
 
 
-# ===============================
-# Chatbot Views
-# ===============================
+def _start_tracking_flow(request, chat_session: ChatSession) -> JsonResponse:
+    if not request.user.is_authenticated:
+        reply_text = "Untuk melacak pesanan, silakan login dulu ke akun Kaloriz ya."
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    orders = _recent_orders_for_user(request.user)
+    if not orders:
+        reply_text = "Sepertinya kamu belum punya pesanan di Kaloriz. Yuk coba pesan dulu!"
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    request.session["chat_state"] = STATE_AWAITING_ORDER_CHOICE
+    request.session["order_context"] = {
+        "action": "track",
+        "order_ids": [order.id for order in orders],
+    }
+    request.session.save()
+
+    reply_text = (
+        "Oke, aku bantu cek ya. Berikut 5 pesanan terakhirmu, pilih salah satu dengan mengetikkan kode pesanan:"
+    )
+    order_data = [_order_to_summary(order) for order in orders]
+    ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+    return _json_reply(reply_text, orders=order_data)
 
 
-@csrf_exempt  # Untuk produksi, sebaiknya gunakan token CSRF dan proteksi tambahan.
+def _start_cancel_flow(request, chat_session: ChatSession) -> JsonResponse:
+    if not request.user.is_authenticated:
+        reply_text = "Untuk membatalkan pesanan, silakan login dulu ke akun Kaloriz ya."
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    candidate_orders = _recent_orders_for_user(request.user)
+    orders = [order for order in candidate_orders if order.status not in PACKED_OR_COMPLETED_STATUSES]
+    if not orders:
+        reply_text = "Aku tidak menemukan pesanan yang bisa dibatalkan saat ini."
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    request.session["chat_state"] = STATE_AWAITING_ORDER_CHOICE
+    request.session["order_context"] = {
+        "action": "cancel",
+        "order_ids": [order.id for order in orders],
+    }
+    request.session.save()
+
+    reply_text = (
+        "Sebutkan kode pesanan yang ingin dibatalkan. Hanya pesanan yang belum dikemas yang bisa dibatalkan."
+    )
+    order_data = [_order_to_summary(order) for order in orders]
+    ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+    return _json_reply(reply_text, orders=order_data)
+
+
+def _handle_order_choice(request, chat_session: ChatSession, user_message: str) -> JsonResponse:
+    if user_message:
+        ChatMessage.objects.create(
+            session=chat_session,
+            sender=ChatMessage.USER,
+            message=user_message,
+            intent="ORDER_SELECTION",
+        )
+
+    order_context = request.session.get("order_context") or {}
+    action = order_context.get("action")
+    order_ids = order_context.get("order_ids", [])
+
+    if not action or not order_ids:
+        request.session.pop("chat_state", None)
+        request.session.pop("order_context", None)
+        return _json_reply(DEFAULT_AI_FALLBACK)
+
+    order_code = (user_message or "").strip().upper()
+    order = (
+        Order.objects.filter(user=request.user, id__in=order_ids, order_number__iexact=order_code)
+        .order_by("-created_at")
+        .first()
+    )
+    if not order:
+        reply_text = "Kode pesanan belum cocok. Coba ketik ulang sesuai daftar di atas ya."
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    if action == "track":
+        reply_text = _build_order_detail_reply(order)
+        request.session.pop("chat_state", None)
+        request.session.pop("order_context", None)
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    if action == "cancel":
+        if order.status in PACKED_OR_COMPLETED_STATUSES:
+            reply_text = "Pesanan ini sudah dikemas atau selesai, jadi tidak bisa dibatalkan."
+            request.session.pop("chat_state", None)
+            request.session.pop("order_context", None)
+            ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+            return _json_reply(reply_text)
+
+        request.session["chat_state"] = STATE_AWAITING_CANCEL_CONFIRM
+        request.session["order_context"] = {"action": "cancel_confirm", "selected_order": order.id}
+        request.session.save()
+        reply_text = (
+            f"Kamu yakin mau membatalkan pesanan {order.order_number}? Jawab 'ya' untuk lanjut atau 'tidak' untuk batal."
+        )
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    request.session.pop("chat_state", None)
+    request.session.pop("order_context", None)
+    return _json_reply(DEFAULT_AI_FALLBACK)
+
+
+def _handle_cancel_confirmation(request, chat_session: ChatSession, user_message: str) -> JsonResponse:
+    decision = (user_message or "").strip().lower()
+    if user_message:
+        ChatMessage.objects.create(
+            session=chat_session,
+            sender=ChatMessage.USER,
+            message=user_message,
+            intent="CANCEL_CONFIRMATION",
+        )
+    order_id = (request.session.get("order_context") or {}).get("selected_order")
+    order = Order.objects.filter(user=request.user, id=order_id).first()
+
+    if decision not in {"ya", "y", "yes", "iya", "ok"}:
+        reply_text = "Baik, pembatalan dibatalkan. Ada yang lain bisa aku bantu?"
+        request.session.pop("chat_state", None)
+        request.session.pop("order_context", None)
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    if not order:
+        reply_text = "Pesanan tidak ditemukan. Coba ulangi proses pembatalan ya."
+        request.session.pop("chat_state", None)
+        request.session.pop("order_context", None)
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    if order.status in PACKED_OR_COMPLETED_STATUSES:
+        reply_text = "Pesanan sudah dikemas atau selesai sehingga tidak bisa dibatalkan."
+        request.session.pop("chat_state", None)
+        request.session.pop("order_context", None)
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    order.status = "cancelled"
+    order.save(update_fields=["status"])
+
+    reply_text = f"Pesanan {order.order_number} berhasil dibatalkan. Ada yang lain bisa aku bantu?"
+    request.session.pop("chat_state", None)
+    request.session.pop("order_context", None)
+    ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+    return _json_reply(reply_text)
+
+
+@csrf_exempt
 def chatbot_reply(request):
-    """Basic endpoint to store chat history and return rule-based replies."""
-
     if not request.session.session_key:
         request.session.save()
 
-    session_key = request.session.session_key
-    session, _ = ChatSession.objects.get_or_create(
-        session_key=session_key,
+    chat_session, _ = ChatSession.objects.get_or_create(
+        session_key=request.session.session_key,
         defaults={
             "user_agent": request.META.get("HTTP_USER_AGENT", "")[:255],
             "ip_address": request.META.get("REMOTE_ADDR", ""),
@@ -420,182 +355,73 @@ def chatbot_reply(request):
 
     chat_state = request.session.get("chat_state")
 
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode("utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return HttpResponseBadRequest("Payload tidak valid")
+    if request.method != "POST":
+        reply_text = (
+            "Hai, aku Asisten Kaloriz! Aku bisa bantu soal pesanan, pembayaran, ongkir, atau info toko."
+        )
+        return _json_reply(reply_text)
 
-        action = data.get("action")
-        order_code = (data.get("order_code") or "").strip().upper()
-        user_message = (data.get("message") or "").strip()
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return HttpResponseBadRequest("Payload tidak valid")
 
-        if chat_state == "AWAITING_ORDER_CHOICE" and user_message:
-            ChatMessage.objects.create(
-                session=session,
-                sender=ChatMessage.USER,
-                message=user_message,
-                intent="state_selection",
-            )
+    user_message = (data.get("message") or "").strip()
 
-            reply_text = _build_order_reply(user_message)
-            ChatMessage.objects.create(
-                session=session,
-                sender=ChatMessage.BOT,
-                message=reply_text,
-                intent="order_detail_from_state",
-            )
-            request.session.pop("chat_state", None)
-            return JsonResponse(
-                _with_quick_actions({"reply": reply_text, "intent": "order_detail_from_state"})
-            )
+    if chat_state == STATE_AWAITING_ORDER_CHOICE:
+        return _handle_order_choice(request, chat_session, user_message)
 
-        # Permintaan detail pesanan dari quick reply/button
-        if action == "track_order" and order_code:
-            ChatMessage.objects.create(
-                session=session,
-                sender=ChatMessage.USER,
-                message=order_code,
-                intent="lacak_pesanan",
-            )
+    if chat_state == STATE_AWAITING_CANCEL_CONFIRM:
+        return _handle_cancel_confirmation(request, chat_session, user_message)
 
-            if not request.user.is_authenticated:
-                reply_text = (
-                    "Oke, aku bantu cek ya 😄 Untuk melacak pesanan, silakan login dulu ke akun Kaloriz ya."
-                )
-                ChatMessage.objects.create(
-                    session=session,
-                    sender=ChatMessage.BOT,
-                    message=reply_text,
-                    intent="lacak_pesanan_detail",
-                )
-                return JsonResponse(
-                    _with_quick_actions(
-                        {"reply": reply_text, "intent": "lacak_pesanan_detail"}
-                    )
-                )
+    intent = classify_intent(user_message)
 
-            # Sesuaikan pencarian `order_number`/`code` dengan field kode pesanan di model Order.
-            order = (
-                Order.objects.filter(user=request.user, order_number__iexact=order_code)
-                .order_by("-created_at")
-                .first()
-            )
-            if not order:
-                reply_text = (
-                    "Pesanan dengan kode tersebut tidak ditemukan. Pastikan kamu memilih kode yang benar ya 😊"
-                )
-            else:
-                reply_text = _build_order_detail_reply(order)
-
-            ChatMessage.objects.create(
-                session=session,
-                sender=ChatMessage.BOT,
-                message=reply_text,
-                intent="lacak_pesanan_detail",
-            )
-            return JsonResponse(
-                _with_quick_actions(
-                    {"reply": reply_text, "intent": "lacak_pesanan_detail"}
-                )
-            )
-
-        intent = detect_intent(user_message)
-        if user_message:
-            ChatMessage.objects.create(
-                session=session,
-                sender=ChatMessage.USER,
-                message=user_message,
-                intent=intent,
-            )
-    else:  # GET request returns greeting to initialize widget
-        user_message = ""
-        intent = "greeting"
-
-    # Intent baru: lacak pesanan tanpa kode spesifik
-    if intent == "lacak_pesanan":
-        if not request.user.is_authenticated:
-            reply_text = (
-                "Oke, aku bantu cek ya 😄 Untuk melacak pesanan, silakan login dulu ke akun Kaloriz ya."
-            )
-            ChatMessage.objects.create(
-                session=session,
-                sender=ChatMessage.BOT,
-                message=reply_text,
-                intent=intent,
-            )
-            return JsonResponse(_with_quick_actions({"reply": reply_text, "intent": intent}))
-
-        orders = list(Order.objects.filter(user=request.user).order_by("-created_at")[:5])
-        if not orders:
-            reply_text = (
-                "Oke, aku cek ya 😄 Sepertinya kamu belum punya pesanan di Kaloriz. Coba lakukan pemesanan dulu ya."
-            )
-            ChatMessage.objects.create(
-                session=session,
-                sender=ChatMessage.BOT,
-                message=reply_text,
-                intent=intent,
-            )
-            return JsonResponse(_with_quick_actions({"reply": reply_text, "intent": intent}))
-
-        request.session["chat_state"] = "AWAITING_ORDER_CHOICE"
-        order_data = [_order_to_summary(order) for order in orders]
-        reply_text = "Oke, aku bantu cek ya 😄 Berikut 5 pesanan terakhirmu. Pilih salah satu untuk lihat detailnya:"
+    if user_message:
         ChatMessage.objects.create(
-            session=session,
-            sender=ChatMessage.BOT,
-            message=reply_text,
+            session=chat_session,
+            sender=ChatMessage.USER,
+            message=user_message,
             intent=intent,
         )
-        return JsonResponse(
-            _with_quick_actions({"reply": reply_text, "intent": intent, "orders": order_data})
-        )
 
-    reply_text = get_bot_reply(intent, user_message)
-    ChatMessage.objects.create(
-        session=session,
-        sender=ChatMessage.BOT,
-        message=reply_text,
-        intent=intent,
-    )
+    if intent == "TRACK_ORDER":
+        return _start_tracking_flow(request, chat_session)
 
-    return JsonResponse(_with_quick_actions({"reply": reply_text, "intent": intent}))
+    if intent == "CANCEL_ORDER":
+        return _start_cancel_flow(request, chat_session)
+
+    if intent in BASIC_RESPONSES:
+        reply_text = BASIC_RESPONSES[intent]
+        ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=reply_text)
+        return _json_reply(reply_text)
+
+    ai_reply = ask_ai(user_message)
+    if not ai_reply:
+        ai_reply = DEFAULT_AI_FALLBACK
+
+    ChatMessage.objects.create(session=chat_session, sender=ChatMessage.BOT, message=ai_reply)
+    return _json_reply(ai_reply)
 
 
 @login_required
 def chatbot_dashboard(request):
-    """Simple analytics dashboard for chatbot usage."""
-
     if not request.user.is_staff:
         return HttpResponseForbidden("Hanya staff yang dapat mengakses dashboard chatbot.")
 
     total_sessions = ChatSession.objects.count()
     total_messages = ChatMessage.objects.count()
 
-    intents = (
-        ChatMessage.objects.filter(sender=ChatMessage.BOT)
-        .values_list("intent", flat=True)
-    )
-    intent_counts = Counter(filter(None, intents))
-
-    today = timezone.now().date()
-    start_date = today - timedelta(days=6)
-
-    sessions_last_7_days = (
-        ChatSession.objects.filter(created_at__date__gte=start_date)
-        .order_by("-created_at")
-    )
-    messages_last_7_days = ChatMessage.objects.filter(created_at__date__gte=start_date)
+    intents = ChatMessage.objects.filter(sender=ChatMessage.BOT).values_list("intent", flat=True)
+    intent_counts = {}
+    for intent in intents:
+        if not intent:
+            continue
+        intent_counts[intent] = intent_counts.get(intent, 0) + 1
 
     context = {
         "total_sessions": total_sessions,
         "total_messages": total_messages,
         "intent_counts": intent_counts,
-        "sessions_last_7_days": sessions_last_7_days,
-        "messages_last_7_days": messages_last_7_days,
-        "start_date": start_date,
-        "end_date": today,
     }
 
     return render(request, "chatbot/dashboard.html", context)
