@@ -9,6 +9,8 @@
   const input = document.getElementById('kaloriz-chat-input');
   const quickReplyContainer = document.querySelector('.chat-quick-replies');
   const orderQuickReplyClass = 'order-quick-reply';
+  const recommendedQuickActionClass = 'recommended-quick-action';
+  const recommendedDefaults = ['Lacak pesanan', 'Hubungi admin', 'Cek metode pembayaran'];
 
   if (!bubble || !widget || !messagesEl || !form || !input) {
     return;
@@ -96,6 +98,32 @@
       .forEach((btn) => btn.remove());
   }
 
+  function renderRecommendedQuickActions(labels) {
+    if (!quickReplyContainer) return;
+
+    const actions = Array.isArray(labels) && labels.length ? labels : recommendedDefaults;
+    quickReplyContainer
+      .querySelectorAll(`.${recommendedQuickActionClass}`)
+      .forEach((btn) => btn.remove());
+
+    const existingButtons = Array.from(quickReplyContainer.querySelectorAll('.quick-reply'));
+    const firstStaticButton = existingButtons.find((btn) => !btn.classList.contains(orderQuickReplyClass));
+
+    actions.forEach((action) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `quick-reply ${recommendedQuickActionClass}`;
+      btn.dataset.message = action;
+      btn.textContent = action;
+
+      if (firstStaticButton) {
+        quickReplyContainer.insertBefore(btn, firstStaticButton);
+      } else {
+        quickReplyContainer.appendChild(btn);
+      }
+    });
+  }
+
   // Render daftar pesanan dari response.orders sebagai quick reply tambahan
   function renderOrderButtons(orders) {
     if (!quickReplyContainer || !Array.isArray(orders)) return;
@@ -117,6 +145,8 @@
     } else {
       addMessage('bot', 'Maaf, terjadi kesalahan mengambil balasan.');
     }
+
+    renderRecommendedQuickActions(data && data.quick_actions);
 
     if (data && Array.isArray(data.orders)) {
       // Tangani daftar pesanan yang dikirim backend untuk ditampilkan sebagai tombol
@@ -143,6 +173,7 @@
       if (data && data.reply) {
         addMessage('bot', data.reply);
       }
+      renderRecommendedQuickActions(data && data.quick_actions);
     } catch (error) {
       hideTyping();
       addMessage('bot', 'Maaf, terjadi masalah saat memulai percakapan.');

@@ -20,6 +20,7 @@ from .models import ChatMessage, ChatSession
 
 
 INTENT_KEYWORDS = {
+    "batal_pesanan": ["batal pesanan", "batalkan pesanan", "cancel order", "batalkan", "batalin"],
     "lacak_pesanan": [
         "lacak",
         "lacak pesanan",
@@ -75,45 +76,51 @@ INTENT_KEYWORDS = {
 
 REPLIES = {
     "greeting": (
-        "Hai! Saya Asisten Kaloriz. Saya bisa bantu soal pemesanan, pembayaran, "
-        "ongkir, info produk, promo, atau kontak admin. Silakan pilih tombol cepat "
-        "atau ketik pertanyaan Anda."
+        "Hai, aku Asisten Kaloriz! Oke, aku bantu cek ya 😄 Aku bisa bantu soal pemesanan, "
+        "pembayaran, ongkir, info produk, promo, atau kontak admin. Coba klik tombol "
+        "cepat di bawah atau ketik pertanyaanmu."
     ),
     "cara_pemesanan": (
-        "Untuk pesan di Kaloriz: pilih produk → tambah ke keranjang → klik checkout "
-        "→ isi alamat & data penerima → pilih metode bayar → konfirmasi. Pesanan Anda "
-        "akan segera diproses!"
+        "Oke, aku bantu cek ya 😄 Cara pesan di Kaloriz: pilih produk → tambah ke keranjang "
+        "→ klik checkout → isi alamat & penerima → pilih metode bayar → konfirmasi. Pesananmu "
+        "langsung kami proses!"
     ),
     "cara_pembayaran": (
-        "Berikut cara pembayaran di Kaloriz:\n"
+        "Oke, aku bantu cek ya 😄 Berikut cara pembayaran di Kaloriz:\n"
         "1) Transfer bank: pilih bank [nama bank] → transfer sesuai total → upload bukti.\n"
         "2) E-wallet: pilih e-wallet [nama e-wallet] → ikuti instruksi aplikasi → pastikan saldo cukup.\n"
         "3) QRIS: pilih QRIS → scan kode di layar → konfirmasi setelah berhasil."
     ),
     "pengiriman": (
-        "Pengiriman Kaloriz menggunakan kurir reguler/instan yang dapat Anda pilih. "
-        "Estimasi tiba 1-3 hari kerja untuk area utama; luar kota bisa lebih lama. "
-        "Cek ongkir saat checkout, tersedia opsi free ongkir di nominal tertentu "
-        "(silakan sesuaikan sesuai kebijakan)."
+        "Aku cekkan info kirimannya ya 😄 Pengiriman Kaloriz bisa pilih kurir reguler/instan. "
+        "Estimasi tiba 1-3 hari kerja di area utama; luar kota bisa sedikit lebih lama. "
+        "Ongkir bisa dicek saat checkout, ada opsi gratis ongkir di nominal tertentu."
     ),
     "info_produk": (
-        "Kaloriz punya pilihan: makanan sehat, minuman segar, dan camilan rendah kalori. "
-        "Buka menu Produk untuk lihat detail lengkap tiap kategori."
+        "Siap, aku bantu rekomendasikan 😄 Kaloriz punya makanan sehat, minuman segar, dan "
+        "camilan rendah kalori. Buka menu Produk untuk lihat detail tiap kategori, atau tulis "
+        "keyword seperti 'tinggi protein' supaya aku carikan."
     ),
     "promo": (
-        "Saat ini Kaloriz punya promo spesial minggu ini: [ISI PROMO DI SINI]. Untuk "
-        "detail promo terbaru, cek banner di halaman utama atau menu Promo."
+        "Oke, aku cek promo terbaru ya 😄 Saat ini ada promo spesial minggu ini: [ISI PROMO DI SINI]. "
+        "Untuk detail paling update, cek banner halaman utama atau menu Promo."
     ),
     "kontak": (
-        "Butuh bantuan admin? Hubungi WhatsApp/WA di 08xx-xxxx-xxxx, Instagram "
-        "@kaloriz, jam operasional 08.00-21.00 WIB. (Silakan ganti dengan kontak resmi "
-        "Anda.)"
+        "Siap, aku sambungkan ke tim admin ya 😄 Kamu bisa hubungi WA di 08xx-xxxx-xxxx atau "
+        "Instagram @kaloriz (jam operasional 08.00-21.00 WIB)."
+    ),
+    "batal_pesanan": (
+        "Kamu bisa membatalkan pesanan yang sudah dibayar kalau statusnya belum ‘Dikemas’. "
+        "Ketik ‘lacak pesanan’ untuk pilih pesanan yang ingin dibatalkan."
     ),
     "fallback": (
-        "Maaf, Kaloriz belum paham pertanyaan itu 😅 Coba gunakan kata kunci: pemesanan, "
-        "pembayaran, ongkir, produk, promo, atau kontak admin."
+        "Hmm, aku belum nangkep pertanyaannya 😅 Coba pakai kata kunci pemesanan, pembayaran, "
+        "ongkir, produk, promo, atau kontak admin. Aku siap bantu!"
     ),
 }
+
+
+DEFAULT_QUICK_ACTIONS = ["Lacak pesanan", "Hubungi admin", "Cek metode pembayaran"]
 
 
 def detect_intent(message: str) -> str:
@@ -140,13 +147,19 @@ def _build_order_reply(message: str) -> str:
 
     match = re.search(r"(?:#?KLRZ)(\d+)", message, flags=re.IGNORECASE)
     if not match:
-        return "Kode pesanan tidak ditemukan, pastikan penulisannya benar ya 😊 (contoh: KLRZ123)."
+        return (
+            "Oke, aku bantu cek ya 😄 Tapi aku belum nemu kodenya. Pastikan formatnya benar ya "
+            "(contoh: KLRZ123)."
+        )
 
     order_code = f"KLRZ{match.group(1)}".upper()
     order = Order.objects.filter(order_number__iexact=order_code).first()
 
     if not order:
-        return "Kode pesanan tidak ditemukan, pastikan penulisannya benar ya 😊 (contoh: KLRZ123)."
+        return (
+            "Oke, aku bantu cek ya 😄 Tapi aku belum nemu kodenya. Pastikan formatnya benar ya "
+            "(contoh: KLRZ123)."
+        )
 
     status_text = _format_order_status(getattr(order, "status", ""), order)
     return f"Status pesanan {order.order_number}: {status_text}."
@@ -171,8 +184,8 @@ def _build_recommendation_reply(message: str) -> str:
 
     if not products:
         return (
-            "Saat ini belum ada rekomendasi yang cocok untuk kata kunci tersebut. "
-            "Coba lihat langsung di menu Produk ya 😊."
+            "Aku belum nemu rekomendasi yang pas untuk keyword itu. Coba buka menu Produk atau "
+            "kasih keyword lain ya 😊."
         )
 
     lines = ["Berikut beberapa rekomendasi produk untukmu:"]
@@ -244,7 +257,8 @@ def _build_order_detail_reply(order: Order) -> str:
     tracking_number = getattr(order, "tracking_number", "")
 
     lines = [
-        f"Detail pesanan {getattr(order, 'order_number', getattr(order, 'code', '')).upper()}:",
+        "Oke, aku bantu cek ya 😄 Berikut detailnya:",
+        f"Pesanan: {getattr(order, 'order_number', getattr(order, 'code', '')).upper()}",
         f"Tanggal: {created_at.strftime('%d %b %Y')}",
         f"Status: {status_text}",
         f"Item: {item_summary}",
@@ -257,6 +271,14 @@ def _build_order_detail_reply(order: Order) -> str:
         lines.append(f"No. Resi: {tracking_number}")
 
     return "\n".join(lines)
+
+
+def _with_quick_actions(payload: dict) -> dict:
+    """Tambahkan quick action default agar front-end selalu menampilkan tombol rekomendasi."""
+
+    payload = dict(payload)
+    payload.setdefault("quick_actions", DEFAULT_QUICK_ACTIONS)
+    return payload
 
 
 def get_bot_reply(intent: str, message: str) -> str:
@@ -312,7 +334,7 @@ def chatbot_reply(request):
 
             if not request.user.is_authenticated:
                 reply_text = (
-                    "Untuk melacak pesanan, silakan login terlebih dahulu ke akun Kaloriz ya 😊"
+                    "Oke, aku bantu cek ya 😄 Untuk melacak pesanan, silakan login dulu ke akun Kaloriz ya."
                 )
                 ChatMessage.objects.create(
                     session=session,
@@ -320,7 +342,11 @@ def chatbot_reply(request):
                     message=reply_text,
                     intent="lacak_pesanan_detail",
                 )
-                return JsonResponse({"reply": reply_text, "intent": "lacak_pesanan_detail"})
+                return JsonResponse(
+                    _with_quick_actions(
+                        {"reply": reply_text, "intent": "lacak_pesanan_detail"}
+                    )
+                )
 
             # Sesuaikan pencarian `order_number`/`code` dengan field kode pesanan di model Order.
             order = (
@@ -341,7 +367,11 @@ def chatbot_reply(request):
                 message=reply_text,
                 intent="lacak_pesanan_detail",
             )
-            return JsonResponse({"reply": reply_text, "intent": "lacak_pesanan_detail"})
+            return JsonResponse(
+                _with_quick_actions(
+                    {"reply": reply_text, "intent": "lacak_pesanan_detail"}
+                )
+            )
 
         intent = detect_intent(user_message)
         if user_message:
@@ -359,7 +389,7 @@ def chatbot_reply(request):
     if intent == "lacak_pesanan":
         if not request.user.is_authenticated:
             reply_text = (
-                "Untuk melacak pesanan, silakan login terlebih dahulu ke akun Kaloriz ya 😊"
+                "Oke, aku bantu cek ya 😄 Untuk melacak pesanan, silakan login dulu ke akun Kaloriz ya."
             )
             ChatMessage.objects.create(
                 session=session,
@@ -367,12 +397,12 @@ def chatbot_reply(request):
                 message=reply_text,
                 intent=intent,
             )
-            return JsonResponse({"reply": reply_text, "intent": intent})
+            return JsonResponse(_with_quick_actions({"reply": reply_text, "intent": intent}))
 
         orders = list(Order.objects.filter(user=request.user).order_by("-created_at")[:5])
         if not orders:
             reply_text = (
-                "Kamu belum punya pesanan di Kaloriz. Silakan lakukan pemesanan dulu ya 😊"
+                "Oke, aku cek ya 😄 Sepertinya kamu belum punya pesanan di Kaloriz. Coba lakukan pemesanan dulu ya."
             )
             ChatMessage.objects.create(
                 session=session,
@@ -380,17 +410,19 @@ def chatbot_reply(request):
                 message=reply_text,
                 intent=intent,
             )
-            return JsonResponse({"reply": reply_text, "intent": intent})
+            return JsonResponse(_with_quick_actions({"reply": reply_text, "intent": intent}))
 
         order_data = [_order_to_summary(order) for order in orders]
-        reply_text = "Berikut 5 pesanan terakhirmu. Pilih salah satu untuk melihat detailnya:"
+        reply_text = "Oke, aku bantu cek ya 😄 Berikut 5 pesanan terakhirmu. Pilih salah satu untuk lihat detailnya:"
         ChatMessage.objects.create(
             session=session,
             sender=ChatMessage.BOT,
             message=reply_text,
             intent=intent,
         )
-        return JsonResponse({"reply": reply_text, "intent": intent, "orders": order_data})
+        return JsonResponse(
+            _with_quick_actions({"reply": reply_text, "intent": intent, "orders": order_data})
+        )
 
     reply_text = get_bot_reply(intent, user_message)
     ChatMessage.objects.create(
@@ -400,7 +432,7 @@ def chatbot_reply(request):
         intent=intent,
     )
 
-    return JsonResponse({"reply": reply_text, "intent": intent})
+    return JsonResponse(_with_quick_actions({"reply": reply_text, "intent": intent}))
 
 
 @login_required
