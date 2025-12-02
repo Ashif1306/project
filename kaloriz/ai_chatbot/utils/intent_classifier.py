@@ -4,12 +4,11 @@ from difflib import SequenceMatcher
 from typing import Optional
 
 INTENTS = {
-    "TRACK_ORDER": ["lacak pesanan", "cek pesanan", "tracking", "order saya", "lacak order"],
-    "CANCEL_ORDER_INFO": ["batalkan pesanan", "refund", "batal", "cara membatalkan"],
-    "PAYMENT_INFO": ["cara bayar", "pembayaran", "metode bayar", "bayar pakai apa"],
-    "SHIPPING_INFO": ["ongkir", "pengiriman", "kirim ke", "kurir"],
-    "OPERATIONAL_HOURS": ["jam operasional", "jam buka", "jam kerja", "buka sampai jam berapa"],
-    "CONTACT_ADMIN": ["hubungi admin", "kontak admin", "whatsapp admin", "chat admin"],
+    "TRACK_ORDER": ["lacak pesanan", "cek pesanan", "tracking", "order saya", "lacak order", "status pesanan"],
+    "PEMBAYARAN": ["cara bayar", "pembayaran", "metode bayar", "bayar pakai apa", "transfer", "ewallet"],
+    "PENGIRIMAN_ONGKIR": ["ongkir", "pengiriman", "kirim ke", "kurir", "estimasi tiba", "kirim kapan"],
+    "JAM_OPERASIONAL": ["jam operasional", "jam buka", "jam kerja", "buka sampai jam berapa", "cs online"],
+    "PROMO": ["promo", "diskon", "voucher", "kode kupon", "potongan harga"],
 }
 
 

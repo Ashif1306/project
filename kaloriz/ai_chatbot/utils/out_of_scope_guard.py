@@ -1,25 +1,17 @@
 BLOCKED_KEYWORDS = [
-    "pancasila",
-    "sila",
-    "agama",
-    "polit",
-    "presiden",
-    "pilpres",
-    "ujian",
-    "soal",
-    "makalah",
-    "skripsi",
-    "esai",
-    "essay",
     "bom",
+    "senjata",
     "hacker",
+    "hack",
     "peretasan",
-    "ai lain",
+    "rakit",
+    "narkoba",
+    "teror",
 ]
 
 OUT_OF_SCOPE_RESPONSE = (
-    "Maaf, aku hanya bisa membantu pertanyaan seputar Kaloriz ya 😊 Misalnya pemesanan, "
-    "pembayaran, produk, ongkir, promo, atau bantuan pelanggan."
+    "Maaf, aku nggak bisa membantu permintaan itu. Kalau mau, aku bisa bantu hal lain seputar "
+    "Kaloriz atau pertanyaan umum yang aman 😊"
 )
 
 
