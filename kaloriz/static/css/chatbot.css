@@ -198,7 +198,7 @@
   }
 }
 
-.chat-quick-replies {
+#quick-replies {
   padding: 10px 12px;
   background: #fff;
   border-top: 1px solid #e5e7eb;
@@ -207,7 +207,7 @@
   gap: 8px;
 }
 
-.quick-reply {
+.quick-reply-btn {
   border: 1px solid #ddd;
   background: #f4f4f4;
   color: #374151;
@@ -218,7 +218,7 @@
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.quick-reply:hover {
+.quick-reply-btn:hover {
   background: #eaeaea;
   transform: translateY(-1px);
   box-shadow: 0 8px 14px rgba(0, 0, 0, 0.08);
