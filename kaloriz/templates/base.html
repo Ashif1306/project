@@ -44,7 +44,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Custom Styles -->
   <link href="{% static 'css/style.css' %}" rel="stylesheet" />
-  <link href="{% static 'css/chatbot.css' %}" rel="stylesheet" />
 
   {% block extra_head %}{% endblock %}
 </head>
@@ -579,39 +578,6 @@
     </div>
   </footer>
 
-  <!-- Chatbot Widget (include once, near the end of body) -->
-  <div id="kaloriz-chat-bubble" aria-label="Buka chatbot Kaloriz" role="button" tabindex="0">
-    <span class="chat-bubble-icon">💬</span>
-  </div>
-
-  <div id="kaloriz-chat-widget" aria-live="polite" aria-label="Asisten Kaloriz">
-    <div class="chat-header">
-      <div class="chat-header-title">
-        <span class="chat-avatar">🤖</span>
-        <div>
-          <div class="chat-name">Asisten Kaloriz</div>
-          <small class="chat-subtitle">Siap bantu kebutuhanmu</small>
-        </div>
-      </div>
-      <button type="button" class="chat-close" aria-label="Tutup chatbot">&times;</button>
-    </div>
-    <div class="chat-body" id="kaloriz-chat-messages" aria-live="polite"></div>
-
-    <div class="chat-quick-replies" aria-label="Pilihan cepat">
-      <button type="button" class="quick-reply" data-message="Cara pemesanan">Cara pemesanan</button>
-      <button type="button" class="quick-reply" data-message="Metode pembayaran">Metode pembayaran</button>
-      <button type="button" class="quick-reply" data-message="Ongkir">Ongkir</button>
-      <button type="button" class="quick-reply" data-message="Produk">Produk</button>
-      <button type="button" class="quick-reply" data-message="Promo">Promo</button>
-      <button type="button" class="quick-reply" data-message="Kontak admin">Kontak admin</button>
-    </div>
-
-    <form class="chat-footer" id="kaloriz-chat-form">
-      <input type="text" id="kaloriz-chat-input" placeholder="Tulis pesan..." aria-label="Tulis pesan ke Asisten Kaloriz" autocomplete="off" />
-      <button type="submit" class="chat-send" aria-label="Kirim pesan">Kirim</button>
-    </form>
-  </div>
-
   <style>
   .social-icons a {
     transition: transform 0.3s ease, color 0.3s ease;
@@ -669,9 +635,6 @@
     font-size: 1.2rem;
   }
   </style>
-
-  <!-- Chatbot Scripts -->
-  <script src="{% static 'js/chatbot.js' %}"></script>
 
   <!-- Scripts -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

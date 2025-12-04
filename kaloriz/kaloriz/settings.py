@@ -61,7 +61,6 @@ INSTALLED_APPS = [
     "catalog",
     "shipping",
     "payment",
-    "chatbot",
 ]
 
 
