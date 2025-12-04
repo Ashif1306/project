@@ -12,6 +12,16 @@ INTENTS: Dict[str, List[str]] = {
     "SHIPPING_INFO": ["ongkir", "pengiriman", "kirim ke", "kurir"],
     "OPERATIONAL_HOURS": ["jam operasional", "jam buka", "jam kerja", "buka sampai jam berapa"],
     "CONTACT_ADMIN": ["hubungi admin", "kontak admin", "whatsapp admin", "chat admin"],
+    "PRODUCT_INFO": [
+        "produk apa saja",
+        "apa saja produk",
+        "jual apa saja",
+        "menu apa saja",
+        "varian apa saja",
+        "produk yang ditawarkan",
+        "kaloriz jual apa",
+        "produk kaloriz",
+    ],
     "GENERAL_FAQ": ["promo", "diskon", "spesial", "menu", "produk", "varian"],
 }
 
