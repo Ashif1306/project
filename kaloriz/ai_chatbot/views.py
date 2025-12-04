@@ -1,11 +1,59 @@
+from difflib import SequenceMatcher
+from decimal import Decimal
+
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 from ai_chatbot.services.openrouter_client import ask_ai_with_priority
 from ai_chatbot.utils.intent_classifier import classify_intent
-from core.models import Order
 from catalog.models import Product
+from core.models import Order
+from shipping.models import District
+
+
+def format_currency(amount: Decimal) -> str:
+    """Format Decimal to Indonesian Rupiah style (Rp XX.XXX)."""
+
+    try:
+        rounded = int(Decimal(amount).quantize(Decimal("1")))
+    except (TypeError, ValueError):
+        return "Rp 0"
+
+    return f"Rp {rounded:,}".replace(",", ".")
+
+
+def get_district_from_text(message: str):
+    """Cari kecamatan yang disebutkan user berdasarkan kedekatan teks."""
+
+    normalized = (message or "").lower()
+    if not normalized:
+        return None, 0.0
+
+    districts = list(District.objects.filter(is_active=True))
+
+    direct_matches = [d for d in districts if d.name.lower() in normalized]
+    if direct_matches:
+        if len(direct_matches) == 1:
+            return direct_matches[0], 1.0
+
+        best_direct = max(
+            direct_matches,
+            key=lambda d: SequenceMatcher(None, normalized, d.name.lower()).ratio(),
+        )
+        best_score = SequenceMatcher(None, normalized, best_direct.name.lower()).ratio()
+        return best_direct, best_score
+
+    best_match = None
+    best_score = 0.0
+    for district in districts:
+        score = SequenceMatcher(None, normalized, district.name.lower()).ratio()
+        if score > best_score:
+            best_match = district
+            best_score = score
+
+    # Kembalikan kecamatan paling mirip jika skornya cukup tinggi
+    return (best_match if best_score >= 0.6 else None), best_score
 
 
 @login_required
@@ -64,6 +112,35 @@ def chatbot_view(request):
                 lines.append(f"- {kategori}: {contoh}")
 
             reply_text = "\n".join(lines)
+
+    elif intent == "ONGKIR_INFO":
+        district, best_score = get_district_from_text(message)
+
+        if district:
+            reply_text = (
+                f"Ongkir ke Kecamatan {district.name}:\n"
+                f"• Tarif Reguler: {format_currency(district.reg_cost)} (ETA {district.eta_reg})\n"
+                f"• Tarif Express: {format_currency(district.exp_cost)} (ETA {district.eta_exp})"
+            )
+        else:
+            active_districts = District.objects.filter(is_active=True).order_by("name")
+
+            if best_score >= 0.4:
+                reply_text = (
+                    "Maaf, saya belum menemukan data ongkir untuk kecamatan itu. "
+                    "Silakan cek penulisan atau pilih kecamatan yang tersedia."
+                )
+            else:
+                if not active_districts.exists():
+                    reply_text = "Maaf, belum ada data ongkir yang tersedia."
+                else:
+                    lines = ["Berikut daftar ongkir Kaloriz:"]
+                    for dist in active_districts:
+                        lines.append(
+                            f"- {dist.name}: {format_currency(dist.reg_cost)} (Reg) / "
+                            f"{format_currency(dist.exp_cost)} (Express)"
+                        )
+                    reply_text = "\n".join(lines)
 
     elif intent == "CANCEL_ORDER_INFO":
         reply_text = (
