@@ -13,49 +13,15 @@
     return;
   }
 
-  const quickReplies = [
-    { label: 'Lacak pesanan', message: 'Lacak pesanan' },
-    { label: 'Cara pemesanan', message: 'Cara pemesanan' },
-    { label: 'Metode pembayaran', message: 'Metode pembayaran' },
-    { label: 'Ongkir & pengiriman', message: 'Ongkir & pengiriman' },
-    { label: 'Jam operasional', message: 'Jam operasional' },
-    { label: 'Hubungi admin', message: 'Hubungi admin' },
-  ];
-
   let initialized = false;
   let typingEl = null;
-
-  function getCsrfToken() {
-    if (typeof getCookie === 'function') {
-      const token = getCookie('csrftoken');
-      if (token) return token;
-    }
-    const match = document.cookie.match(/csrftoken=([^;]+)/);
-    return match ? decodeURIComponent(match[1]) : '';
-  }
-
-  function renderQuickReplies() {
-    if (!quickReplyContainer) return;
-    quickReplyContainer.innerHTML = '';
-    quickReplies.forEach(({ label, message }) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'quick-reply';
-      button.dataset.message = message;
-      button.textContent = label;
-      quickReplyContainer.appendChild(button);
-    });
-  }
 
   function toggleWidget(show) {
     const shouldShow = typeof show === 'boolean' ? show : !widget.classList.contains('open');
     widget.classList.toggle('open', shouldShow);
     if (shouldShow && !initialized) {
       initialized = true;
-      renderQuickReplies();
-      addMessage('bot', 'Halo! Aku Asisten Kaloriz. Ada yang bisa aku bantu?');
-    }
-    if (shouldShow) {
+      loadGreeting();
       input.focus();
     }
   }
@@ -92,6 +58,21 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
+  async function loadGreeting() {
+    showTyping();
+    try {
+      const response = await fetch('/chatbot/');
+      const data = await response.json();
+      hideTyping();
+      if (data && data.reply) {
+        addMessage('bot', data.reply);
+      }
+    } catch (error) {
+      hideTyping();
+      addMessage('bot', 'Maaf, terjadi masalah saat memulai percakapan.');
+    }
+  }
+
   async function sendMessage(messageText) {
     if (!messageText) return;
     addMessage('user', messageText);
@@ -101,15 +82,14 @@
       const response = await fetch('/chatbot/', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-CSRFToken': getCsrfToken(),
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({ message: messageText }),
+        body: JSON.stringify({ message: messageText }),
       });
 
       const data = await response.json();
       hideTyping();
-      if (response.ok && data && data.reply) {
+      if (data && data.reply) {
         addMessage('bot', data.reply);
       } else {
         addMessage('bot', 'Maaf, terjadi kesalahan mengambil balasan.');
@@ -126,6 +106,13 @@
     if (!text) return;
     input.value = '';
     sendMessage(text);
+  });
+
+  input.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      form.dispatchEvent(new Event('submit'));
+    }
   });
 
   bubble.addEventListener('click', function () {
