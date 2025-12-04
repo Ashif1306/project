@@ -5,6 +5,7 @@ from django.views.decorators.http import require_POST
 from ai_chatbot.services.openrouter_client import ask_ai_with_priority
 from ai_chatbot.utils.intent_classifier import classify_intent
 from core.models import Order
+from catalog.models import Product
 
 
 @login_required
@@ -35,6 +36,33 @@ def chatbot_view(request):
             lines.append(
                 "Jika ingin bantuan lebih lanjut, sebutkan nomor pesanan yang ingin kamu tanyakan."
             )
+            reply_text = "\n".join(lines)
+
+    # Intent produk: jawab langsung dari database, bukan dari AI
+    elif intent == "PRODUCT_INFO":
+        products = (
+            Product.objects.filter(available=True)
+            .select_related("category")
+            .order_by("category__name", "name")
+        )
+
+        if not products.exists():
+            reply_text = (
+                "Saat ini belum ada data produk yang bisa ditampilkan di Kaloriz. "
+                "Silakan cek kembali nanti ya 😊"
+            )
+        else:
+            kategori_map = {}
+            for product in products:
+                kategori = getattr(product, "category", None)
+                kategori_nama = getattr(kategori, "name", "Lainnya")
+                kategori_map.setdefault(kategori_nama, []).append(product.name)
+
+            lines = ["Berikut beberapa produk yang tersedia di Kaloriz:"]
+            for kategori, nama_produk_list in kategori_map.items():
+                contoh = ", ".join(nama_produk_list[:3])
+                lines.append(f"- {kategori}: {contoh}")
+
             reply_text = "\n".join(lines)
 
     elif intent == "CANCEL_ORDER_INFO":
