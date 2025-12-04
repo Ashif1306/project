@@ -819,6 +819,10 @@
     padding-right: 4px;
   }
 
+  .kaloriz-hidden {
+    display: none;
+  }
+
   .kaloriz-chat-quick button {
     border: 1px solid #dbeafe;
     background: #fff;
@@ -1188,6 +1192,9 @@
     ];
 
     let isSending = false;
+    let hasChatted = false;
+    let welcomeShown = false;
+    let quickRendered = false;
     const quickSeen = new Set();
 
     function scrollToBottom() {
@@ -1207,6 +1214,10 @@
     }
 
     function renderQuickReplies() {
+      if (quickRendered) {
+        return;
+      }
+
       quickContainer.innerHTML = '';
       quickSeen.clear();
 
@@ -1227,6 +1238,29 @@
         });
         quickContainer.appendChild(btn);
       });
+
+      quickRendered = true;
+    }
+
+    function showQuickReplies() {
+      if (!quickRendered) {
+        renderQuickReplies();
+      }
+
+      quickContainer.classList.remove('kaloriz-hidden');
+    }
+
+    function hideQuickReplies() {
+      quickContainer.classList.add('kaloriz-hidden');
+    }
+
+    function ensureWelcomeMessage() {
+      if (welcomeShown) {
+        return;
+      }
+
+      addMessage('Halo! Saya Asisten Kaloriz. Ada yang bisa saya bantu hari ini? 😊', 'bot');
+      welcomeShown = true;
     }
 
     function togglePanel(open = true) {
@@ -1234,6 +1268,13 @@
         panel.classList.add('is-open');
         panel.setAttribute('aria-hidden', 'false');
         setTimeout(() => input.focus(), 120);
+
+        if (!hasChatted) {
+          ensureWelcomeMessage();
+          showQuickReplies();
+        } else {
+          hideQuickReplies();
+        }
       } else {
         panel.classList.remove('is-open');
         panel.setAttribute('aria-hidden', 'true');
@@ -1248,6 +1289,8 @@
 
       addMessage(trimmed, 'user');
       input.value = '';
+      hasChatted = true;
+      hideQuickReplies();
       isSending = true;
       setTyping(true);
 
@@ -1285,7 +1328,7 @@
       sendMessage(input.value);
     });
 
-    renderQuickReplies();
+    hideQuickReplies();
   });
 
   (function() {
