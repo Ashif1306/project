@@ -113,6 +113,32 @@ def chatbot_view(request):
 
             reply_text = "\n".join(lines)
 
+    elif intent == "DISTRICT_LIST":
+        districts = District.objects.filter(is_active=True).order_by("name")
+
+        if not districts.exists():
+            reply_text = (
+                "Saat ini belum ada kecamatan yang terdaftar untuk pengiriman Kaloriz. "
+                "Silakan cek kembali nanti ya 😊"
+            )
+        else:
+            lines = ["Berikut daftar kecamatan yang saat ini sudah terdaftar di Kaloriz:\n"]
+
+            for district in districts:
+                lines.append(
+                    (
+                        f"• {district.name} → Tarif Reguler {format_currency(district.reg_cost)}, "
+                        f"Express {format_currency(district.exp_cost)} "
+                        f"(ETA Reguler {district.eta_reg}, ETA Express {district.eta_exp})"
+                    )
+                )
+
+            lines.append(
+                "\nJika kecamatanmu belum ada, silakan hubungi admin Kaloriz ya 😊"
+            )
+
+            reply_text = "\n".join(lines)
+
     elif intent == "ONGKIR_INFO":
         district, best_score = get_district_from_text(message)
 
