@@ -8,8 +8,18 @@ from typing import Dict, List, Optional
 INTENTS: Dict[str, List[str]] = {
     "TRACK_ORDER": ["lacak pesanan", "cek pesanan", "tracking", "order saya", "lacak order"],
     "CANCEL_ORDER_INFO": ["batalkan pesanan", "refund", "batal", "cara membatalkan"],
+    "ONGKIR_INFO": [
+        "ongkir",
+        "pengiriman",
+        "biaya kirim",
+        "kirim ke",
+        "berapa ongkir",
+        "berapa biaya kirim",
+        "harga ongkir",
+        "ongkos kirim",
+    ],
     "PAYMENT_INFO": ["cara bayar", "pembayaran", "metode bayar", "bayar pakai apa"],
-    "SHIPPING_INFO": ["ongkir", "pengiriman", "kirim ke", "kurir"],
+    "SHIPPING_INFO": ["kurir", "status pengiriman", "paket saya", "kapan sampai"],
     "OPERATIONAL_HOURS": ["jam operasional", "jam buka", "jam kerja", "buka sampai jam berapa"],
     "CONTACT_ADMIN": ["hubungi admin", "kontak admin", "whatsapp admin", "chat admin"],
     "PRODUCT_INFO": [
