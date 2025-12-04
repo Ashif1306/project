@@ -17,9 +17,27 @@ MODELS = [
     "deepseek-reasoner-lite",
 ]
 
-API_URL = f"{settings.DEEPSEEK_BASE_URL.rstrip('/')}/chat/completions"
+DEFAULT_BASE_URL = "https://api.deepseek.com"
+DEFAULT_MODEL = "deepseek-chat"
+
+
+def _get_setting(name: str, default: str) -> str:
+    value = getattr(settings, name, None)
+    if not value:
+        print(f"Warning: {name} not set, falling back to default {default}")
+        return default
+    return value
+
+
+DEEPSEEK_BASE_URL = _get_setting("DEEPSEEK_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+DEEPSEEK_DEFAULT_MODEL = _get_setting("DEEPSEEK_DEFAULT_MODEL", DEFAULT_MODEL)
+DEEPSEEK_API_KEY = getattr(settings, "DEEPSEEK_API_KEY", "")
+if not DEEPSEEK_API_KEY:
+    print("Warning: DEEPSEEK_API_KEY not set; requests will likely fail")
+
+API_URL = f"{DEEPSEEK_BASE_URL}/chat/completions"
 HEADERS = {
-    "Authorization": f"Bearer {settings.DEEPSEEK_API_KEY}",
+    "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
     "Content-Type": "application/json",
 }
 
@@ -29,7 +47,7 @@ def ask_ai(message: str) -> str:
 
     for model in MODELS:
         payload = {
-            "model": model,
+            "model": model or DEEPSEEK_DEFAULT_MODEL,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": message},
