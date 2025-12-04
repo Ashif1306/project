@@ -2,10 +2,11 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+load_dotenv()
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv()
+from dotenv import load_dotenv; load_dotenv()
 
 # Load .env dari ROOT PROJECT (selevel manage.py)
 env_file = BASE_DIR / '.env'
@@ -168,13 +169,6 @@ SITE_LOGO = os.getenv("SITE_LOGO", "/static/images/logo.png")
 SITE_DOMAIN = os.getenv("SITE_DOMAIN", "www.kaloriz.store")
 SITE_SCHEME = os.getenv("SITE_SCHEME", "https")
 SITE_ID = int(os.getenv("SITE_ID", 1))
-
-# =========================
-# DEEPSEEK CONFIG
-# =========================
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-DEEPSEEK_DEFAULT_MODEL = os.getenv("DEEPSEEK_DEFAULT_MODEL", "deepseek-chat")
 
 # =========================
 # EMAIL (SMTP) CONFIG
