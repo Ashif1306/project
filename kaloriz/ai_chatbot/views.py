@@ -55,7 +55,30 @@ def jawab_tanggal(user_message: str) -> str | None:
 
     now = datetime.now()
 
-    if "hari ini" in normalized or "sekarang" in normalized:
+    keywords = (
+        "hari ini",
+        "sekarang",
+        "tanggal berapa",
+        "hari apa",
+        "besok",
+        "lusa",
+        "tanggal",
+    )
+
+    has_date_question = any(key in normalized for key in keywords)
+
+    if not has_date_question and not re.search(
+        r"\b(3[01]|[12]?\d)\s+([a-zA-Z]+)(?:\s+(\d{4}))?\b", normalized
+    ):
+        return None
+
+    if (
+        "hari ini" in normalized
+        or "sekarang" in normalized
+        or "tanggal berapa" in normalized
+        or "hari apa" in normalized
+        or "tanggal" in normalized
+    ):
         hari, tanggal, waktu = _format_tanggal(now)
         return f"Hari ini adalah {hari}, {tanggal} pukul {waktu}."
 
@@ -186,6 +209,7 @@ def chatbot_view(request):
             "Jangan pernah mengarang daftar produk. Jika user meminta produk tapi intent produk gagal diproses, jawab:\n"
             "'Silakan cek halaman Produk di website Kaloriz untuk daftar terbaru'.\n"
             "Jangan pernah mengarang daftar pesanan / riwayat order. Jika user bertanya daftar pesanan tapi intent di backend gagal, jawab singkat: 'Silakan buka menu Pesanan Saya di website Kaloriz untuk melihat riwayat lengkap.'"
+            "\nJika user bertanya jam operasional atau jam buka, backend sudah meng-handle, jadi jangan jawab lagi."
         )
         if any(phrase in normalized_message for phrase in ("cara pesan", "cara pemesanan", "cara order")):
             # Intent "cara pesan": balas manual tanpa memanggil AI
@@ -200,6 +224,23 @@ def chatbot_view(request):
                     )
                 }
             )
+
+        operational_phrases = (
+            "jam operasional",
+            "jam buka",
+            "buka jam berapa",
+            "jam kerja",
+            "jadwal buka",
+        )
+        if any(phrase in normalized_message for phrase in operational_phrases):
+            reply = (
+                "Jam operasional Kaloriz:\n"
+                "- Senin – Jumat: 08.00 – 20.00\n"
+                "- Sabtu: 09.00 – 18.00\n"
+                "- Minggu: 10.00 – 16.00\n"
+                "Di luar jam tersebut kamu tetap bisa pesan, tapi akan diproses di jam operasional ya."
+            )
+            return JsonResponse({"reply": reply})
 
         tanggal_reply = jawab_tanggal(message)
         if tanggal_reply:
