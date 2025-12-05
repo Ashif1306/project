@@ -6,6 +6,14 @@ from difflib import SequenceMatcher
 from typing import Dict, List, Optional
 
 INTENTS: Dict[str, List[str]] = {
+    "DATETIME": [
+        "tanggal",
+        "hari ini tanggal berapa",
+        "sekarang tanggal berapa",
+        "hari apa",
+        "jam berapa",
+        "waktu sekarang",
+    ],
     "TRACK_ORDER": ["lacak pesanan", "cek pesanan", "tracking", "order saya", "lacak order"],
     "CANCEL_ORDER_INFO": ["batalkan pesanan", "refund", "batal", "cara membatalkan"],
     "ONGKIR_INFO": [
@@ -58,6 +66,10 @@ def classify_intent(text: str) -> Optional[str]:
     normalized = (text or "").strip().lower()
     if not normalized:
         return None
+
+    datetime_triggers = ["tanggal", "hari ini", "hari apa", "jam", "waktu"]
+    if any(trigger in normalized for trigger in datetime_triggers):
+        return "DATETIME"
 
     best_intent = None
     best_score = 0.0
