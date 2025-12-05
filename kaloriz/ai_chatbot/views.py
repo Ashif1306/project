@@ -1,4 +1,5 @@
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from decimal import Decimal
 
@@ -11,6 +12,79 @@ from ai_chatbot.utils.intent_classifier import classify_intent
 from catalog.models import Product
 from core.models import Order
 from shipping.models import District
+
+DAY_NAMES = {
+    0: "Senin",
+    1: "Selasa",
+    2: "Rabu",
+    3: "Kamis",
+    4: "Jumat",
+    5: "Sabtu",
+    6: "Minggu",
+}
+
+MONTH_NAMES = {
+    1: "Januari",
+    2: "Februari",
+    3: "Maret",
+    4: "April",
+    5: "Mei",
+    6: "Juni",
+    7: "Juli",
+    8: "Agustus",
+    9: "September",
+    10: "Oktober",
+    11: "November",
+    12: "Desember",
+}
+
+
+def _format_tanggal(dt: datetime) -> tuple[str, str, str]:
+    hari = DAY_NAMES[dt.weekday()]
+    bulan = MONTH_NAMES[dt.month]
+    tanggal = f"{dt.day} {bulan} {dt.year}"
+    waktu = dt.strftime("%H:%M")
+    return hari, tanggal, waktu
+
+
+def jawab_tanggal(user_message: str) -> str | None:
+    """Jawab pertanyaan terkait tanggal/hari dalam Bahasa Indonesia."""
+
+    normalized = (user_message or "").lower()
+    if not normalized:
+        return None
+
+    now = datetime.now()
+
+    if "hari ini" in normalized or "sekarang" in normalized:
+        hari, tanggal, waktu = _format_tanggal(now)
+        return f"Hari ini adalah {hari}, {tanggal} pukul {waktu}."
+
+    if "besok" in normalized:
+        besok = now + timedelta(days=1)
+        hari, tanggal, _ = _format_tanggal(besok)
+        return f"Besok adalah {hari}, {tanggal}."
+
+    if "lusa" in normalized:
+        lusa = now + timedelta(days=2)
+        hari, tanggal, _ = _format_tanggal(lusa)
+        return f"Lusa adalah {hari}, {tanggal}."
+
+    month_lookup = {name.lower(): num for num, name in MONTH_NAMES.items()}
+    match = re.search(r"\b(\d{1,2})\s+([a-zA-Z]+)\b", normalized)
+    if match:
+        day_str, month_str = match.groups()
+        month_num = month_lookup.get(month_str.lower())
+        if month_num:
+            try:
+                target_date = datetime(now.year, month_num, int(day_str))
+            except ValueError:
+                return None
+
+            hari, tanggal, _ = _format_tanggal(target_date)
+            return f"Tanggal {tanggal} jatuh pada hari {hari}."
+
+    return None
 
 
 def format_currency(amount: Decimal) -> str:
@@ -106,6 +180,10 @@ def chatbot_view(request):
     message = (request.POST.get("message") or "").strip()
     if not message:
         return JsonResponse({"reply": "Silakan tulis pertanyaanmu dulu ya 😊"})
+
+    tanggal_reply = jawab_tanggal(message)
+    if tanggal_reply:
+        return JsonResponse({"reply": tanggal_reply})
 
     intent = classify_intent(message)
     reply_text = ""
