@@ -1,8 +1,36 @@
 @import url("https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&family=Open+Sans:wght@400;600;700&display=swap");
+:root {
+  --bg-color: #ffffff;
+  --text-color: #1f2933;
+  --muted-text: #4b5563;
+  --navbar-bg: #ffffff;
+  --navbar-surface: rgba(255, 255, 255, 0);
+  --navbar-solid-bg: rgba(255, 255, 255, 0.95);
+  --card-bg: #ffffff;
+  --border-color: #e5e7eb;
+  --input-bg: #ffffff;
+  --section-bg: #f8fafc;
+  --primary-color: #38b6ff;
+}
+
+[data-theme="dark"] {
+  --bg-color: #020617;
+  --text-color: #e5e7eb;
+  --muted-text: #9ca3af;
+  --navbar-bg: #020617;
+  --navbar-surface: rgba(2, 6, 23, 0.6);
+  --navbar-solid-bg: rgba(2, 6, 23, 0.9);
+  --card-bg: #0b1120;
+  --border-color: #1f2937;
+  --input-bg: #0f172a;
+  --section-bg: #0b1120;
+  --primary-color: #38b6ff;
+}
+
 body {
   font-family: "Open Sans", sans-serif;
-  color: #0c0c0c;
-  background-color: #ffffff;
+  color: var(--text-color);
+  background-color: var(--bg-color);
   overflow-x: hidden;
 }
 
@@ -75,6 +103,68 @@ a,
 a:hover,
 a:focus {
   text-decoration: none;
+}
+
+/* Theme surfaces */
+.modern-navbar,
+.navbar,
+.header,
+.footer,
+.footer_section,
+.info_section,
+.card,
+.section-wrapper {
+  background-color: var(--card-bg);
+  color: var(--text-color);
+}
+
+section,
+main,
+.container,
+.section-wrapper p,
+.section-wrapper h2,
+.section-wrapper h3,
+.section-wrapper h4,
+.section-wrapper h5,
+.section-wrapper h6 {
+  color: var(--text-color);
+}
+
+.card,
+.section-wrapper,
+.info_section,
+.footer_section {
+  border-color: var(--border-color);
+}
+
+input,
+select,
+textarea,
+.form-control,
+.search-input {
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+::placeholder {
+  color: var(--muted-text);
+}
+
+.btn,
+.btn-primary,
+.btn-brand,
+.btn-outline-primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary-color), #2196F3);
+  border-color: #2196F3;
+}
+
+[data-theme="dark"] .btn,
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .btn-brand,
+[data-theme="dark"] .btn-outline-primary {
+  box-shadow: 0 8px 20px rgba(56, 182, 255, 0.35);
 }
 
 a:hover,
