@@ -178,138 +178,160 @@ def get_district_from_text(message: str):
 def chatbot_view(request):
     """Endpoint chatbot hybrid (AI + data Order)."""
 
-    message = (request.POST.get("message") or "").strip()
-    if not message:
-        return JsonResponse({"reply": "Silakan tulis pertanyaanmu dulu ya 😊"})
+    try:
+        message = (request.POST.get("message") or "").strip()
+        if not message:
+            return JsonResponse({"reply": "Silakan tulis pertanyaanmu dulu ya 😊"})
 
-    tanggal_reply = jawab_tanggal(message)
-    if tanggal_reply:
-        return JsonResponse({"reply": tanggal_reply})
-
-    intent = classify_intent(message)
-    reply_text = ""
-
-    if intent == "DATETIME":
-        tanggal_info = format_datetime_id()
-        reply_text = (
-            f"Hari ini adalah {tanggal_info['tanggal_lengkap']}\n"
-            f"Sekarang tanggal {tanggal_info['tanggal']} dan hari {tanggal_info['hari']}"
-        )
-
-    elif intent == "TRACK_ORDER":
-        orders = (
-            Order.objects.filter(user=request.user)
-            .order_by("-created_at")[:5]
-        )
-        if not orders:
-            reply_text = "Kamu belum punya pesanan di Kaloriz 😊"
-        else:
-            lines = ["Berikut beberapa pesanan terakhirmu:"]
-            for order in orders:
-                lines.append(
-                    f"- {order.invoice_number} | {order.created_at:%d %b %Y} | {order.status}"
-                )
-            lines.append(
-                "Jika ingin bantuan lebih lanjut, sebutkan nomor pesanan yang ingin kamu tanyakan."
-            )
-            reply_text = "\n".join(lines)
-
-    # Intent produk: jawab langsung dari database, bukan dari AI
-    elif intent == "PRODUCT_INFO":
-        products = (
-            Product.objects.filter(available=True)
-            .select_related("category")
-            .order_by("category__name", "name")
-        )
-
-        if not products.exists():
-            reply_text = (
-                "Saat ini belum ada data produk yang bisa ditampilkan di Kaloriz. "
-                "Silakan cek kembali nanti ya 😊"
-            )
-        else:
-            kategori_map = {}
-            for product in products:
-                kategori = getattr(product, "category", None)
-                kategori_nama = getattr(kategori, "name", "Lainnya")
-                kategori_map.setdefault(kategori_nama, []).append(product.name)
-
-            lines = ["Berikut beberapa produk yang tersedia di Kaloriz:"]
-            for kategori, nama_produk_list in kategori_map.items():
-                contoh = ", ".join(nama_produk_list[:3])
-                lines.append(f"- {kategori}: {contoh}")
-
-            reply_text = "\n".join(lines)
-
-    elif intent == "DISTRICT_LIST":
-        districts = District.objects.filter(is_active=True).order_by("name")
-
-        if not districts.exists():
-            reply_text = (
-                "Saat ini belum ada kecamatan yang terdaftar untuk pengiriman Kaloriz. "
-                "Silakan cek kembali nanti ya 😊"
-            )
-        else:
-            lines = ["Berikut daftar kecamatan yang saat ini sudah terdaftar di Kaloriz:\n"]
-
-            for district in districts:
-                lines.append(
-                    (
-                        f"• {district.name} → Tarif Reguler {format_currency(district.reg_cost)}, "
-                        f"Express {format_currency(district.exp_cost)} "
-                        f"(ETA Reguler {district.eta_reg}, ETA Express {district.eta_exp})"
+        normalized_message = message.lower()
+        if any(phrase in normalized_message for phrase in ("cara pesan", "cara pemesanan", "cara order")):
+            # Intent "cara pesan": balas manual tanpa memanggil AI
+            return JsonResponse(
+                {
+                    "reply": (
+                        "Berikut cara pemesanan di Kaloriz:\n"
+                        "1) Pilih produk dan klik Tambah ke Keranjang,\n"
+                        "2) Buka keranjang dan cek ulang pesanan,\n"
+                        "3) Klik Checkout, isi alamat, pilih metode pembayaran,\n"
+                        "4) Selesaikan pembayaran, dan pesanan akan kami proses. 🙂"
                     )
-                )
-
-            lines.append(
-                "\nJika kecamatanmu belum ada, silakan hubungi admin Kaloriz ya 😊"
+                }
             )
 
-            reply_text = "\n".join(lines)
+        tanggal_reply = jawab_tanggal(message)
+        if tanggal_reply:
+            return JsonResponse({"reply": tanggal_reply})
 
-    elif intent == "ONGKIR_INFO":
-        district, best_score = get_district_from_text(message)
+        intent = classify_intent(message)
+        reply_text = ""
 
-        if district:
+        if intent == "DATETIME":
+            tanggal_info = format_datetime_id()
             reply_text = (
-                f"Ongkir ke Kecamatan {district.name}:\n"
-                f"• Tarif Reguler: {format_currency(district.reg_cost)} (ETA {district.eta_reg})\n"
-                f"• Tarif Express: {format_currency(district.exp_cost)} (ETA {district.eta_exp})"
+                f"Hari ini adalah {tanggal_info['tanggal_lengkap']}\n"
+                f"Sekarang tanggal {tanggal_info['tanggal']} dan hari {tanggal_info['hari']}"
             )
-        else:
-            active_districts = District.objects.filter(is_active=True).order_by("name")
 
-            if best_score >= 0.4:
+        elif intent == "TRACK_ORDER":
+            orders = (
+                Order.objects.filter(user=request.user)
+                .order_by("-created_at")[:5]
+            )
+            if not orders:
+                reply_text = "Kamu belum punya pesanan di Kaloriz 😊"
+            else:
+                lines = ["Berikut beberapa pesanan terakhirmu:"]
+                for order in orders:
+                    lines.append(
+                        f"- {order.invoice_number} | {order.created_at:%d %b %Y} | {order.status}"
+                    )
+                lines.append(
+                    "Jika ingin bantuan lebih lanjut, sebutkan nomor pesanan yang ingin kamu tanyakan."
+                )
+                reply_text = "\n".join(lines)
+
+        # Intent produk: jawab langsung dari database, bukan dari AI
+        elif intent == "PRODUCT_INFO":
+            products = (
+                Product.objects.filter(available=True)
+                .select_related("category")
+                .order_by("category__name", "name")
+            )
+
+            if not products.exists():
                 reply_text = (
-                    "Maaf, saya belum menemukan data ongkir untuk kecamatan itu. "
-                    "Silakan cek penulisan atau pilih kecamatan yang tersedia."
+                    "Saat ini belum ada data produk yang bisa ditampilkan di Kaloriz. "
+                    "Silakan cek kembali nanti ya 😊"
                 )
             else:
-                if not active_districts.exists():
-                    reply_text = "Maaf, belum ada data ongkir yang tersedia."
-                else:
-                    lines = ["Berikut daftar ongkir Kaloriz:"]
-                    for dist in active_districts:
-                        lines.append(
-                            f"- {dist.name}: {format_currency(dist.reg_cost)} (Reg) / "
-                            f"{format_currency(dist.exp_cost)} (Express)"
+                kategori_map = {}
+                for product in products:
+                    kategori = getattr(product, "category", None)
+                    kategori_nama = getattr(kategori, "name", "Lainnya")
+                    kategori_map.setdefault(kategori_nama, []).append(product.name)
+
+                lines = ["Berikut beberapa produk yang tersedia di Kaloriz:"]
+                for kategori, nama_produk_list in kategori_map.items():
+                    contoh = ", ".join(nama_produk_list[:3])
+                    lines.append(f"- {kategori}: {contoh}")
+
+                reply_text = "\n".join(lines)
+
+        elif intent == "DISTRICT_LIST":
+            districts = District.objects.filter(is_active=True).order_by("name")
+
+            if not districts.exists():
+                reply_text = (
+                    "Saat ini belum ada kecamatan yang terdaftar untuk pengiriman Kaloriz. "
+                    "Silakan cek kembali nanti ya 😊"
+                )
+            else:
+                lines = ["Berikut daftar kecamatan yang saat ini sudah terdaftar di Kaloriz:\n"]
+
+                for district in districts:
+                    lines.append(
+                        (
+                            f"• {district.name} → Tarif Reguler {format_currency(district.reg_cost)}, "
+                            f"Express {format_currency(district.exp_cost)} "
+                            f"(ETA Reguler {district.eta_reg}, ETA Express {district.eta_exp})"
                         )
-                    reply_text = "\n".join(lines)
+                    )
 
-    elif intent == "CANCEL_ORDER_INFO":
-        reply_text = (
-            "Pesanan yang sudah dibayar bisa dibatalkan jika statusnya belum dikemas. "
-            "Silakan hubungi admin Kaloriz atau gunakan fitur pembatalan di halaman pesanan jika tersedia."
+                lines.append(
+                    "\nJika kecamatanmu belum ada, silakan hubungi admin Kaloriz ya 😊"
+                )
+
+                reply_text = "\n".join(lines)
+
+        elif intent == "ONGKIR_INFO":
+            district, best_score = get_district_from_text(message)
+
+            if district:
+                reply_text = (
+                    f"Ongkir ke Kecamatan {district.name}:\n"
+                    f"• Tarif Reguler: {format_currency(district.reg_cost)} (ETA {district.eta_reg})\n"
+                    f"• Tarif Express: {format_currency(district.exp_cost)} (ETA {district.eta_exp})"
+                )
+            else:
+                active_districts = District.objects.filter(is_active=True).order_by("name")
+
+                if best_score >= 0.4:
+                    reply_text = (
+                        "Maaf, saya belum menemukan data ongkir untuk kecamatan itu. "
+                        "Silakan cek penulisan atau pilih kecamatan yang tersedia."
+                    )
+                else:
+                    if not active_districts.exists():
+                        reply_text = "Maaf, belum ada data ongkir yang tersedia."
+                    else:
+                        lines = ["Berikut daftar ongkir Kaloriz:"]
+                        for dist in active_districts:
+                            lines.append(
+                                f"- {dist.name}: {format_currency(dist.reg_cost)} (Reg) / "
+                                f"{format_currency(dist.exp_cost)} (Express)"
+                            )
+                        reply_text = "\n".join(lines)
+
+        elif intent == "CANCEL_ORDER_INFO":
+            reply_text = (
+                "Pesanan yang sudah dibayar bisa dibatalkan jika statusnya belum dikemas. "
+                "Silakan hubungi admin Kaloriz atau gunakan fitur pembatalan di halaman pesanan jika tersedia."
+            )
+
+        elif intent in {"PAYMENT_INFO", "SHIPPING_INFO", "OPERATIONAL_HOURS", "CONTACT_ADMIN"}:
+            context_hint = (
+                "Jawab secara singkat dalam Bahasa Indonesia. "
+                "Jika ada informasi harga atau kebijakan, sampaikan secara umum tanpa detail sensitif."
+            )
+            reply_text = ask_ai_with_priority(f"{context_hint}\n\nPertanyaan: {message}")
+
+        else:
+            reply_text = ask_ai_with_priority(message)
+
+        return JsonResponse({"reply": reply_text})
+
+    except Exception as exc:  # Fallback aman saat ada error server
+        logger.exception("Error in chatbot_view: %s", exc)
+        return JsonResponse(
+            {"reply": "Maaf, sedang ada kendala di server chatbot. Coba lagi beberapa saat ya."}
         )
-
-    elif intent in {"PAYMENT_INFO", "SHIPPING_INFO", "OPERATIONAL_HOURS", "CONTACT_ADMIN"}:
-        context_hint = (
-            "Jawab secara singkat dalam Bahasa Indonesia. "
-            "Jika ada informasi harga atau kebijakan, sampaikan secara umum tanpa detail sensitif."
-        )
-        reply_text = ask_ai_with_priority(f"{context_hint}\n\nPertanyaan: {message}")
-
-    else:
-        reply_text = ask_ai_with_priority(message)
-
-    return JsonResponse({"reply": reply_text})

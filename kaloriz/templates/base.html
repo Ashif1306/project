@@ -1302,12 +1302,20 @@
         },
         body: new URLSearchParams({ message: trimmed })
       })
-        .then((response) => response.json())
-        .then((data) => {
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+
+          if (!response.ok) {
+            const fallback = data && data.reply ? data.reply : 'Maaf, terjadi kesalahan.';
+            addMessage(fallback, 'bot');
+            return;
+          }
+
           const reply = data && data.reply ? data.reply : 'Maaf, terjadi kesalahan.';
           addMessage(reply, 'bot');
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error(error);
           addMessage('Maaf, tidak dapat terhubung ke server. Coba lagi ya.', 'bot');
         })
         .finally(() => {
