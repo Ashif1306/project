@@ -1,3 +1,4 @@
+from datetime import datetime
 from difflib import SequenceMatcher
 from decimal import Decimal
 
@@ -21,6 +22,47 @@ def format_currency(amount: Decimal) -> str:
         return "Rp 0"
 
     return f"Rp {rounded:,}".replace(",", ".")
+
+
+def format_datetime_id():
+    """Format datetime sekarang ke gaya Bahasa Indonesia."""
+
+    now = datetime.now()
+    hari_list = [
+        "Senin",
+        "Selasa",
+        "Rabu",
+        "Kamis",
+        "Jumat",
+        "Sabtu",
+        "Minggu",
+    ]
+    bulan_list = [
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember",
+    ]
+
+    hari = hari_list[now.weekday()]
+    bulan = bulan_list[now.month - 1]
+    tanggal = f"{now.day} {bulan} {now.year}"
+    waktu = now.strftime("%H:%M")
+
+    return {
+        "hari": hari,
+        "tanggal": tanggal,
+        "tanggal_lengkap": f"{hari}, {tanggal} pukul {waktu}",
+        "waktu": waktu,
+    }
 
 
 def get_district_from_text(message: str):
@@ -68,7 +110,14 @@ def chatbot_view(request):
     intent = classify_intent(message)
     reply_text = ""
 
-    if intent == "TRACK_ORDER":
+    if intent == "DATETIME":
+        tanggal_info = format_datetime_id()
+        reply_text = (
+            f"Hari ini adalah {tanggal_info['tanggal_lengkap']}\n"
+            f"Sekarang tanggal {tanggal_info['tanggal']} dan hari {tanggal_info['hari']}"
+        )
+
+    elif intent == "TRACK_ORDER":
         orders = (
             Order.objects.filter(user=request.user)
             .order_by("-created_at")[:5]
