@@ -1,0 +1,96 @@
+body.light-mode {
+  background: #ffffff;
+  color: #111827;
+}
+
+body.dark-mode {
+  background: #020617;
+  color: #e5e7eb;
+}
+
+/* Navbar dan header */
+.navbar,
+header,
+.modern-navbar,
+.mobile-menu {
+  background: #ffffff;
+  color: #111827;
+}
+
+body.dark-mode .navbar,
+body.dark-mode header,
+body.dark-mode .modern-navbar,
+body.dark-mode .mobile-menu {
+  background: #020617;
+  color: #e5e7eb;
+}
+
+/* Link navbar */
+.nav-link-modern,
+.mobile-menu-link,
+.mobile-icon-link,
+.nav-icon,
+.theme-toggle-btn {
+  color: inherit;
+}
+
+body.dark-mode .nav-link-modern,
+body.dark-mode .mobile-menu-link,
+body.dark-mode .mobile-icon-link,
+body.dark-mode .nav-icon,
+body.dark-mode .theme-toggle-btn {
+  color: #e5e7eb;
+}
+
+/* Card produk & section utama */
+.product-card,
+.card,
+section,
+footer,
+.kaloriz-chat-card {
+  background: #ffffff;
+  color: #111827;
+}
+
+body.dark-mode .product-card,
+body.dark-mode .card,
+body.dark-mode section,
+body.dark-mode footer,
+body.dark-mode .kaloriz-chat-card {
+  background: #0b1120;
+  color: #e5e7eb;
+}
+
+/* Input & surface pendukung */
+.search-form,
+.search-input,
+.toast-message,
+.kaloriz-chat-input {
+  background: inherit;
+  color: inherit;
+}
+
+body.dark-mode .search-form,
+body.dark-mode .search-input,
+body.dark-mode .toast-message,
+body.dark-mode .kaloriz-chat-input {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e7eb;
+}
+
+/* Biarkan warna brand utama (misalnya tombol biru Kaloriz) tetap sama */
+.btn-primary {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+/* Transisi halus */
+body,
+section,
+.card,
+.product-card,
+footer,
+.modern-navbar,
+.mobile-menu {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
