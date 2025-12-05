@@ -184,6 +184,10 @@ def chatbot_view(request):
             return JsonResponse({"reply": "Silakan tulis pertanyaanmu dulu ya 😊"})
 
         normalized_message = message.lower()
+        ai_product_safety = (
+            "Jangan pernah mengarang daftar produk. Jika user meminta produk tapi intent produk gagal diproses, jawab:\n"
+            "'Silakan cek halaman Produk di website Kaloriz untuk daftar terbaru'."
+        )
         if any(phrase in normalized_message for phrase in ("cara pesan", "cara pemesanan", "cara order")):
             # Intent "cara pesan": balas manual tanpa memanggil AI
             return JsonResponse(
@@ -204,6 +208,44 @@ def chatbot_view(request):
 
         intent = classify_intent(message)
         reply_text = ""
+
+        product_phrases = (
+            "daftar produk yang tersedia",
+            "produk apa saja",
+            "lihat produk",
+            "produk tersedia",
+        )
+        is_product_intent = intent == "PRODUCT_INFO" or any(
+            phrase in normalized_message for phrase in product_phrases
+        )
+
+        if is_product_intent:
+            # Blok intent daftar produk: query langsung database tanpa AI
+            products = (
+                Product.objects.filter(is_active=True, stock__gt=0)
+                .order_by("name")[:10]
+            )
+
+            if not products.exists():
+                return JsonResponse(
+                    {
+                        "reply": (
+                            "Saat ini belum ada produk yang aktif di Kaloriz. "
+                            "Silakan cek kembali nanti ya 😊"
+                        )
+                    }
+                )
+
+            lines = ["Berikut beberapa produk yang saat ini tersedia di Kaloriz:"]
+            for product in products:
+                lines.append(
+                    f"- {product.name} – {format_currency(product.price)}"
+                )
+            lines.append(
+                "Silakan cek halaman katalog untuk detail lengkap 😊"
+            )
+
+            return JsonResponse({"reply": "\n".join(lines)})
 
         if intent == "DATETIME":
             tanggal_info = format_datetime_id()
@@ -228,33 +270,6 @@ def chatbot_view(request):
                 lines.append(
                     "Jika ingin bantuan lebih lanjut, sebutkan nomor pesanan yang ingin kamu tanyakan."
                 )
-                reply_text = "\n".join(lines)
-
-        # Intent produk: jawab langsung dari database, bukan dari AI
-        elif intent == "PRODUCT_INFO":
-            products = (
-                Product.objects.filter(available=True)
-                .select_related("category")
-                .order_by("category__name", "name")
-            )
-
-            if not products.exists():
-                reply_text = (
-                    "Saat ini belum ada data produk yang bisa ditampilkan di Kaloriz. "
-                    "Silakan cek kembali nanti ya 😊"
-                )
-            else:
-                kategori_map = {}
-                for product in products:
-                    kategori = getattr(product, "category", None)
-                    kategori_nama = getattr(kategori, "name", "Lainnya")
-                    kategori_map.setdefault(kategori_nama, []).append(product.name)
-
-                lines = ["Berikut beberapa produk yang tersedia di Kaloriz:"]
-                for kategori, nama_produk_list in kategori_map.items():
-                    contoh = ", ".join(nama_produk_list[:3])
-                    lines.append(f"- {kategori}: {contoh}")
-
                 reply_text = "\n".join(lines)
 
         elif intent == "DISTRICT_LIST":
@@ -323,10 +338,14 @@ def chatbot_view(request):
                 "Jawab secara singkat dalam Bahasa Indonesia. "
                 "Jika ada informasi harga atau kebijakan, sampaikan secara umum tanpa detail sensitif."
             )
-            reply_text = ask_ai_with_priority(f"{context_hint}\n\nPertanyaan: {message}")
+            reply_text = ask_ai_with_priority(
+                f"{context_hint}\n\n{ai_product_safety}\n\nPertanyaan: {message}"
+            )
 
         else:
-            reply_text = ask_ai_with_priority(message)
+            reply_text = ask_ai_with_priority(
+                f"{ai_product_safety}\n\nPertanyaan: {message}"
+            )
 
         return JsonResponse({"reply": reply_text})
 
