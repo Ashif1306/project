@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from decimal import Decimal
 
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
@@ -173,7 +172,6 @@ def get_district_from_text(message: str):
     return (best_match if best_score >= 0.6 else None), best_score
 
 
-@login_required
 @require_POST
 def chatbot_view(request):
     """Endpoint chatbot hybrid (AI + data Order)."""
@@ -186,7 +184,8 @@ def chatbot_view(request):
         normalized_message = message.lower()
         ai_product_safety = (
             "Jangan pernah mengarang daftar produk. Jika user meminta produk tapi intent produk gagal diproses, jawab:\n"
-            "'Silakan cek halaman Produk di website Kaloriz untuk daftar terbaru'."
+            "'Silakan cek halaman Produk di website Kaloriz untuk daftar terbaru'.\n"
+            "Jangan pernah mengarang daftar pesanan / riwayat order. Jika user bertanya daftar pesanan tapi intent di backend gagal, jawab singkat: 'Silakan buka menu Pesanan Saya di website Kaloriz untuk melihat riwayat lengkap.'"
         )
         if any(phrase in normalized_message for phrase in ("cara pesan", "cara pemesanan", "cara order")):
             # Intent "cara pesan": balas manual tanpa memanggil AI
@@ -205,6 +204,59 @@ def chatbot_view(request):
         tanggal_reply = jawab_tanggal(message)
         if tanggal_reply:
             return JsonResponse({"reply": tanggal_reply})
+
+        # Intent: daftar pesanan (tanpa AI, pakai data Order user)
+        order_history_phrases = (
+            "daftar pesanan",
+            "pesanan saya",
+            "order saya",
+            "riwayat pesanan",
+        )
+        if any(phrase in normalized_message for phrase in order_history_phrases):
+            if request.user.is_anonymous:
+                return JsonResponse(
+                    {
+                        "reply": (
+                            "Untuk melihat daftar pesanan, silakan login terlebih dahulu ya 🙂"
+                        )
+                    }
+                )
+
+            orders = (
+                Order.objects.filter(user=request.user)
+                .order_by("-created_at")[:5]
+            )
+
+            if not orders:
+                return JsonResponse(
+                    {
+                        "reply": (
+                            "Kamu belum memiliki pesanan di Kaloriz. "
+                            "Yuk coba checkout produk pertama kamu! 😊"
+                        )
+                    }
+                )
+
+            lines = ["Berikut 5 pesanan terakhir kamu:"]
+            for idx, order in enumerate(orders, start=1):
+                created_at = order.created_at
+                month_name = MONTH_NAMES.get(created_at.month, "")[:3]
+                tanggal_str = f"{created_at.day:02d} {month_name} {created_at.year}"
+                nomor_pesanan = (
+                    getattr(order, "order_number", "")
+                    or getattr(order, "invoice_number", "")
+                    or str(order.pk)
+                )
+                status_display = getattr(order, "get_status_display", lambda: order.status)()
+                lines.append(
+                    f"{idx}. {nomor_pesanan} – {tanggal_str} – {status_display}"
+                )
+
+            lines.append(
+                "Kamu bisa melihat detail lengkap di halaman 'Pesanan Saya' di website Kaloriz."
+            )
+
+            return JsonResponse({"reply": "\n".join(lines)})
 
         intent = classify_intent(message)
         reply_text = ""
