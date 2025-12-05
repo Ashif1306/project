@@ -1,11 +1,26 @@
-body.light-mode {
-  background: #ffffff;
-  color: #111827;
+:root {
+  --bg-main: #f3f4f6;
+  --bg-card: #ffffff;
+  --bg-navbar: #ffffff;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --border-soft: #e5e7eb;
+  --brand-primary: #2563eb;
+  --brand-primary-hover: #1d4ed8;
 }
 
 body.dark-mode {
-  background: #020617;
-  color: #e5e7eb;
+  --bg-main: #020617;
+  --bg-card: #0b1120;
+  --bg-navbar: #020617;
+  --text-main: #e5e7eb;
+  --text-muted: #9ca3af;
+  --border-soft: #1f2937;
+}
+
+body {
+  background: var(--bg-main);
+  color: var(--text-main);
 }
 
 /* Navbar dan header */
@@ -13,16 +28,9 @@ body.dark-mode {
 header,
 .modern-navbar,
 .mobile-menu {
-  background: #ffffff;
-  color: #111827;
-}
-
-body.dark-mode .navbar,
-body.dark-mode header,
-body.dark-mode .modern-navbar,
-body.dark-mode .mobile-menu {
-  background: #020617;
-  color: #e5e7eb;
+  background: var(--bg-navbar);
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border-soft);
 }
 
 /* Link navbar */
@@ -31,7 +39,7 @@ body.dark-mode .mobile-menu {
 .mobile-icon-link,
 .nav-icon,
 .theme-toggle-btn {
-  color: inherit;
+  color: var(--text-main);
 }
 
 body.dark-mode .nav-link-modern,
@@ -39,35 +47,82 @@ body.dark-mode .mobile-menu-link,
 body.dark-mode .mobile-icon-link,
 body.dark-mode .nav-icon,
 body.dark-mode .theme-toggle-btn {
-  color: #e5e7eb;
+  color: var(--text-main);
 }
 
 /* Card produk & section utama */
 .product-card,
 .card,
+.category-card,
 section,
 footer,
 .kaloriz-chat-card {
-  background: #ffffff;
-  color: #111827;
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid transparent;
 }
 
 body.dark-mode .product-card,
 body.dark-mode .card,
+body.dark-mode .category-card,
 body.dark-mode section,
 body.dark-mode footer,
 body.dark-mode .kaloriz-chat-card {
-  background: #0b1120;
-  color: #e5e7eb;
+  border-color: var(--border-soft);
+}
+
+/* Typografi dan teks */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.heading_container h2,
+.card-title,
+.stat-item h3,
+.category-card .card-title,
+.product-card .card-title,
+.footer h5,
+footer h5 {
+  color: var(--text-main);
+}
+
+.text-muted,
+.muted-text,
+p.text-muted,
+small,
+label,
+.form-text,
+.category-card .card-text,
+.product-card .card-text,
+.stat-item p,
+.price-old,
+::placeholder {
+  color: var(--text-muted) !important;
+}
+
+.navbar a,
+.navbar .nav-link,
+footer a,
+.footer a,
+footer p,
+.footer p {
+  color: var(--text-main);
 }
 
 /* Input & surface pendukung */
 .search-form,
 .search-input,
 .toast-message,
-.kaloriz-chat-input {
+.kaloriz-chat-input,
+input,
+textarea,
+select,
+option {
   background: inherit;
-  color: inherit;
+  color: var(--text-main);
+  border-color: var(--border-soft);
 }
 
 body.dark-mode .search-form,
@@ -75,13 +130,31 @@ body.dark-mode .search-input,
 body.dark-mode .toast-message,
 body.dark-mode .kaloriz-chat-input {
   background: rgba(255, 255, 255, 0.06);
-  color: #e5e7eb;
+  color: var(--text-main);
+  border-color: var(--border-soft);
 }
 
-/* Biarkan warna brand utama (misalnya tombol biru Kaloriz) tetap sama */
+/* Link dan tombol brand */
+a {
+  color: var(--brand-primary);
+}
+
+a:hover,
+a:focus {
+  color: var(--brand-primary-hover);
+}
+
 .btn-primary {
-  background: #1d4ed8;
+  background: var(--brand-primary);
   color: #ffffff;
+  border-color: var(--brand-primary-hover);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background: var(--brand-primary-hover);
+  color: #ffffff;
+  border-color: var(--brand-primary-hover);
 }
 
 /* Transisi halus */
@@ -92,5 +165,5 @@ section,
 footer,
 .modern-navbar,
 .mobile-menu {
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
