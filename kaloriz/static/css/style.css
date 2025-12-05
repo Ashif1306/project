@@ -1,12 +1,13 @@
 @import url("https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&family=Open+Sans:wght@400;600;700&display=swap");
 :root {
   --bg-color: #ffffff;
-  --text-color: #1f2933;
-  --muted-text: #4b5563;
-  --navbar-bg: #ffffff;
-  --navbar-surface: rgba(255, 255, 255, 0);
-  --navbar-solid-bg: rgba(255, 255, 255, 0.95);
+  --text-color: #111827;
   --card-bg: #ffffff;
+  --navbar-bg: #ffffff;
+  --footer-bg: #ffffff;
+  --muted-text: #4b5563;
+  --navbar-surface: var(--navbar-bg);
+  --navbar-solid-bg: var(--navbar-bg);
   --border-color: #e5e7eb;
   --input-bg: #ffffff;
   --section-bg: #f8fafc;
@@ -16,11 +17,12 @@
 [data-theme="dark"] {
   --bg-color: #020617;
   --text-color: #e5e7eb;
-  --muted-text: #9ca3af;
+  --card-bg: #0b1120;
   --navbar-bg: #020617;
+  --footer-bg: #0b1120;
+  --muted-text: #9ca3af;
   --navbar-surface: rgba(2, 6, 23, 0.6);
   --navbar-solid-bg: rgba(2, 6, 23, 0.9);
-  --card-bg: #0b1120;
   --border-color: #1f2937;
   --input-bg: #0f172a;
   --section-bg: #0b1120;
@@ -106,18 +108,7 @@ a:focus {
 }
 
 /* Theme surfaces */
-.modern-navbar,
-.navbar,
-.header,
-.footer,
-.footer_section,
-.info_section,
-.card,
-.section-wrapper {
-  background-color: var(--card-bg);
-  color: var(--text-color);
-}
-
+body,
 section,
 main,
 .container,
@@ -130,10 +121,37 @@ main,
   color: var(--text-color);
 }
 
+.modern-navbar,
+.navbar,
+header,
+.header {
+  background-color: var(--navbar-bg);
+  color: var(--text-color);
+}
+
+.product-card,
+.card,
+.footer,
+.footer_section,
+.info_section,
+.section-wrapper,
+section {
+  background-color: var(--card-bg);
+  color: var(--text-color);
+}
+
+.footer,
+.footer_section,
+.info_section {
+  background-color: var(--footer-bg);
+}
+
 .card,
 .section-wrapper,
 .info_section,
-.footer_section {
+.footer_section,
+header,
+.modern-navbar {
   border-color: var(--border-color);
 }
 

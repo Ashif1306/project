@@ -117,8 +117,8 @@
           </div>
           {% endif %}
 
-          <button class="theme-toggle d-none d-md-inline-flex" type="button" aria-label="Toggle tema" title="Ganti tema">
-            🌙
+          <button id="theme-toggle" class="theme-toggle d-none d-md-inline-flex" type="button" data-theme-toggle aria-label="Ganti tema" title="Ganti tema">
+            <span class="theme-toggle-icon" aria-hidden="true">🌞</span>
           </button>
         </div>
 
@@ -136,8 +136,9 @@
         <a href="{% url 'catalog:contact' %}" class="mobile-menu-link {% if current_url == 'contact' %}active{% endif %}">Kontak</a>
         {% endwith %}
         <div class="mobile-menu-divider"></div>
-        <button class="theme-toggle w-100" type="button" aria-label="Toggle tema" title="Ganti tema">
-          🌙 Mode
+        <button id="theme-toggle-mobile" class="theme-toggle w-100" type="button" data-theme-toggle aria-label="Ganti tema" title="Ganti tema">
+          <span class="theme-toggle-icon" aria-hidden="true">🌞</span>
+          <span class="theme-toggle-label ml-2">Mode Gelap</span>
         </button>
         <div class="mobile-menu-icons">
           {% if user.is_authenticated %}
@@ -943,44 +944,48 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-  (function() {
+  document.addEventListener('DOMContentLoaded', () => {
     const THEME_KEY = 'kaloriz-theme';
+    const body = document.body;
+    const toggles = document.querySelectorAll('[data-theme-toggle]');
+
+    function updateToggleDisplay(theme) {
+      const isDark = theme === 'dark';
+      toggles.forEach((button) => {
+        const icon = button.querySelector('.theme-toggle-icon') || button;
+        const label = button.querySelector('.theme-toggle-label');
+        if (icon) {
+          icon.textContent = isDark ? '☀️' : '🌙';
+        }
+        if (label) {
+          label.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
+        }
+        const title = isDark ? 'Ganti ke mode terang' : 'Ganti ke mode gelap';
+        button.setAttribute('aria-label', title);
+        button.setAttribute('title', title);
+        button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+      });
+    }
 
     function setTheme(theme) {
-      const body = document.body;
-      if (!body) return;
       const nextTheme = theme === 'dark' ? 'dark' : 'light';
       body.setAttribute('data-theme', nextTheme);
       localStorage.setItem(THEME_KEY, nextTheme);
-      updateToggleIcons(nextTheme);
+      updateToggleDisplay(nextTheme);
     }
 
-    function updateToggleIcons(theme) {
-      const toggles = document.querySelectorAll('.theme-toggle');
-      const isDark = theme === 'dark';
-      toggles.forEach((button) => {
-        button.textContent = isDark ? '☀️' : '🌙';
-        button.setAttribute('aria-label', isDark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap');
-        button.setAttribute('title', isDark ? 'Mode terang' : 'Mode gelap');
-      });
-    }
+    const stored = localStorage.getItem(THEME_KEY);
+    const initialTheme = stored === 'dark' || stored === 'light' ? stored : 'light';
+    setTheme(initialTheme);
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const stored = localStorage.getItem(THEME_KEY);
-      const initialTheme = stored === 'dark' || stored === 'light' ? stored : 'light';
-      document.body.setAttribute('data-theme', initialTheme);
-      updateToggleIcons(initialTheme);
-
-      const toggles = document.querySelectorAll('.theme-toggle');
-      toggles.forEach((button) => {
-        button.addEventListener('click', () => {
-          const current = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-          const next = current === 'dark' ? 'light' : 'dark';
-          setTheme(next);
-        });
+    toggles.forEach((button) => {
+      button.addEventListener('click', () => {
+        const current = body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        const next = current === 'dark' ? 'light' : 'dark';
+        setTheme(next);
       });
     });
-  })();
+  });
   </script>
 
   <script>
