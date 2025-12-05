@@ -71,13 +71,14 @@ def jawab_tanggal(user_message: str) -> str | None:
         return f"Lusa adalah {hari}, {tanggal}."
 
     month_lookup = {name.lower(): num for num, name in MONTH_NAMES.items()}
-    match = re.search(r"\b(\d{1,2})\s+([a-zA-Z]+)\b", normalized)
+    match = re.search(r"\b(3[01]|[12]?\d)\s+([a-zA-Z]+)(?:\s+(\d{4}))?\b", normalized)
     if match:
-        day_str, month_str = match.groups()
+        day_str, month_str, year_str = match.groups()
         month_num = month_lookup.get(month_str.lower())
         if month_num:
+            year = int(year_str) if year_str else now.year
             try:
-                target_date = datetime(now.year, month_num, int(day_str))
+                target_date = datetime(year, month_num, int(day_str))
             except ValueError:
                 return None
 
