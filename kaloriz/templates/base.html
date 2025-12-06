@@ -46,11 +46,9 @@
   <link href="{% static 'css/style.css' %}" rel="stylesheet" />
 
   {% block extra_head %}{% endblock %}
-
-  <link href="{% static 'css/theme.css' %}" rel="stylesheet" />
 </head>
 
-<body class="light-mode {% block body_class %}{% endblock %}">
+<body class="{% block body_class %}{% endblock %}">
   <!-- Modern Minimalist Navbar -->
   {% block navbar %}
   <nav class="modern-navbar">
@@ -118,10 +116,6 @@
             </a>
           </div>
           {% endif %}
-
-          <button id="theme-toggle" class="theme-toggle theme-toggle-btn d-none d-md-inline-flex" type="button" data-theme-toggle aria-label="Ganti tema" title="Ganti tema">
-            <span class="theme-toggle-icon" aria-hidden="true">🌞</span>
-          </button>
         </div>
 
         <!-- Mobile Toggle -->
@@ -138,10 +132,6 @@
         <a href="{% url 'catalog:contact' %}" class="mobile-menu-link {% if current_url == 'contact' %}active{% endif %}">Kontak</a>
         {% endwith %}
         <div class="mobile-menu-divider"></div>
-        <button id="theme-toggle-mobile" class="theme-toggle theme-toggle-btn w-100" type="button" data-theme-toggle aria-label="Ganti tema" title="Ganti tema">
-          <span class="theme-toggle-icon" aria-hidden="true">🌞</span>
-          <span class="theme-toggle-label ml-2">Mode Gelap</span>
-        </button>
         <div class="mobile-menu-icons">
           {% if user.is_authenticated %}
           <a href="{% url 'core:profile' %}" class="mobile-icon-link" title="Profil">
@@ -185,7 +175,7 @@
 
   /* Modern Minimalist Navbar */
   .modern-navbar {
-    background: var(--navbar-surface);
+    background: rgba(255, 255, 255, 0);
     box-shadow: none;
     position: fixed;
     top: 0;
@@ -215,7 +205,7 @@
   }
 
   .nav-link-modern {
-    color: var(--text-color);
+    color: #2d3748;
     text-decoration: none;
     font-weight: 500;
     font-size: 0.95rem;
@@ -252,7 +242,7 @@
   }
 
   .modern-navbar.is-sticky {
-    background: var(--navbar-solid-bg);
+    background: rgba(255, 255, 255, 0.95);
     box-shadow: 0 18px 35px rgba(56, 182, 255, 0.22);
     backdrop-filter: blur(12px);
     animation: navbarSlideDown 0.4s ease forwards;
@@ -288,34 +278,12 @@
     justify-content: flex-end;
   }
 
-  .theme-toggle {
-    border: 1px solid var(--border-color);
-    background: var(--card-bg);
-    color: var(--text-color);
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-  }
-
-  .theme-toggle:hover {
-    color: #38b6ff;
-    border-color: rgba(56, 182, 255, 0.6);
-    transform: translateY(-1px);
-  }
-
   .nav-icon-wrapper {
     position: relative;
   }
 
   .nav-icon {
-    color: var(--text-color);
+    color: #2d3748;
     font-size: 1.2rem;
     text-decoration: none;
     transition: all 0.3s ease;
@@ -350,7 +318,7 @@
   .search-form {
     display: flex;
     align-items: center;
-    background: var(--card-bg);
+    background: white;
     border-radius: 25px;
     padding: 5px 10px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -368,7 +336,6 @@
     font-size: 0.9rem;
     width: 180px;
     background: transparent;
-    color: var(--text-color);
   }
 
   .search-btn {
@@ -391,7 +358,7 @@
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: var(--text-color);
+    color: #2d3748;
     cursor: pointer;
     transition: color 0.3s ease;
   }
@@ -414,7 +381,7 @@
     top: calc(100% + 15px);
     right: 0;
     left: 0;
-    background: var(--navbar-solid-bg);
+    background: rgba(255, 255, 255, 0.97);
     box-shadow: 0 18px 35px rgba(56, 182, 255, 0.12);
     border-radius: 16px;
     padding: 20px 24px;
@@ -423,15 +390,6 @@
     visibility: hidden;
     pointer-events: none;
     transition: all 0.3s ease;
-  }
-
-  .mobile-menu .theme-toggle {
-    width: 100%;
-    border-radius: 12px;
-    height: auto;
-    justify-content: center;
-    padding: 10px 12px;
-    margin-bottom: 10px;
   }
 
   .mobile-menu.open {
@@ -443,7 +401,7 @@
 
   .mobile-menu-link {
     display: block;
-    color: var(--text-color);
+    color: #2d3748;
     text-decoration: none;
     font-weight: 500;
     padding: 10px 0;
@@ -480,7 +438,7 @@
     padding: 10px;
     border-radius: 12px;
     background: rgba(102, 126, 234, 0.08);
-    color: var(--text-color);
+    color: #2d3748;
     text-decoration: none;
     font-weight: 500;
     transition: all 0.3s ease;
@@ -944,51 +902,6 @@
   <!-- Scripts -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const THEME_KEY = 'kaloriz-theme';
-    const body = document.body;
-    const toggles = document.querySelectorAll('[data-theme-toggle]');
-
-    function updateToggleDisplay(theme) {
-      const isDark = theme === 'dark';
-      toggles.forEach((button) => {
-        const icon = button.querySelector('.theme-toggle-icon') || button;
-        const label = button.querySelector('.theme-toggle-label');
-        if (icon) {
-          icon.textContent = isDark ? '🌙' : '🌞';
-        }
-        if (label) {
-          label.textContent = isDark ? 'Mode Gelap' : 'Mode Terang';
-        }
-        const title = isDark ? 'Ganti ke mode terang' : 'Ganti ke mode gelap';
-        button.setAttribute('aria-label', title);
-        button.setAttribute('title', title);
-        button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
-      });
-    }
-
-    function setTheme(theme) {
-      const useDark = theme === 'dark';
-      body.classList.toggle('dark-mode', useDark);
-      body.classList.toggle('light-mode', !useDark);
-      localStorage.setItem(THEME_KEY, useDark ? 'dark' : 'light');
-      updateToggleDisplay(useDark ? 'dark' : 'light');
-    }
-
-    const stored = localStorage.getItem(THEME_KEY);
-    const initialTheme = stored === 'dark' ? 'dark' : 'light';
-    setTheme(initialTheme);
-
-    toggles.forEach((button) => {
-      button.addEventListener('click', () => {
-        const isCurrentlyDark = body.classList.contains('dark-mode');
-        setTheme(isCurrentlyDark ? 'light' : 'dark');
-      });
-    });
-  });
-  </script>
 
   <script>
   function getCookie(name){
